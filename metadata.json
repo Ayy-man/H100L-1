@@ -1,0 +1,5 @@
+{
+  "name": "SniperZone Hockey Training",
+  "description": "A professional hockey training registration system for the H100L project. This application provides a landing page for athletes to view program details and sign up for monthly subscriptions.",
+  "requestFramePermissions": []
+}
