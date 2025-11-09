@@ -25,13 +25,20 @@ const FormStep3: React.FC<FormStep3Props> = ({ data, errors, handleChange }) => 
             <FormInput label="Current Level (e.g., AA, AAA)" name="currentLevel" type="text" value={data.currentLevel} handleChange={handleChange} />
              <FormSelect label="Jersey Size" name="jerseySize" value={data.jerseySize} handleChange={handleChange} error={errors.jerseySize} required>
                 <option value="">-- Select Size --</option>
-                <option value="Youth S">Youth S</option>
-                <option value="Youth M">Youth M</option>
-                <option value="Youth L">Youth L</option>
-                <option value="Youth XL">Youth XL</option>
-                <option value="Adult S">Adult S</option>
-                <option value="Adult M">Adult M</option>
-                <option value="Adult L">Adult L</option>
+                <option value="YS">YS (Youth Small)</option>
+                <option value="YM">YM (Youth Medium)</option>
+                <option value="YL">YL (Youth Large)</option>
+                <option value="S">S (Adult Small)</option>
+                <option value="M">M (Adult Medium)</option>
+                <option value="L">L (Adult Large)</option>
+                <option value="XL">XL (Adult Extra Large)</option>
+             </FormSelect>
+             <FormSelect label="Primary Training Objective" name="primaryObjective" value={data.primaryObjective} handleChange={handleChange} error={errors.primaryObjective} required>
+                <option value="">-- Select Objective --</option>
+                <option value="Shooting">Shooting</option>
+                <option value="Puck Handling">Puck Handling</option>
+                <option value="Skating">Skating</option>
+                <option value="Endurance">Endurance</option>
              </FormSelect>
         </div>
 
@@ -46,7 +53,41 @@ const FormStep3: React.FC<FormStep3Props> = ({ data, errors, handleChange }) => 
       {data.hasMedicalConditions && (
           <FormInput label="Please provide details" name="medicalConditionsDetails" type="textarea" value={data.medicalConditionsDetails} handleChange={handleChange} />
       )}
-       
+
+      <FormCheckbox
+        label="Player carries medication (EpiPen, inhaler, etc.)"
+        name="carriesMedication"
+        checked={data.carriesMedication}
+        handleChange={handleChange}
+      />
+      {data.carriesMedication && (
+        <div className="space-y-4 pl-6 border-l-2 border-[#9BD4FF]/20">
+          <FormInput
+            label="Medication Details"
+            name="medicationDetails"
+            type="textarea"
+            value={data.medicationDetails}
+            handleChange={handleChange}
+            error={errors.medicationDetails}
+            required
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Upload Action Plan (PDF, max 5MB) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="file"
+              name="medicationActionPlan"
+              onChange={handleChange}
+              accept=".pdf"
+              className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#9BD4FF]/10 file:text-[#9BD4FF] hover:file:bg-[#9BD4FF]/20"
+            />
+            {errors.medicationActionPlan && <p className="mt-2 text-sm text-red-500">{errors.medicationActionPlan}</p>}
+            <p className="text-xs text-gray-400 mt-1">Please upload your emergency action plan for medication administration</p>
+          </div>
+        </div>
+      )}
+
        <div>
          <label className="block text-sm font-medium text-gray-300 mb-2">Upload Medical Report (Optional, PDF only, max 5MB)</label>
          <input type="file" name="medicalReport" onChange={handleChange} accept=".pdf" className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#9BD4FF]/10 file:text-[#9BD4FF] hover:file:bg-[#9BD4FF]/20"/>

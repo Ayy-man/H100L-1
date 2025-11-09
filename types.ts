@@ -63,10 +63,14 @@ export interface FormData {
   dominantHand: 'Left' | 'Right' | '';
   currentLevel: string;
   jerseySize: string;
+  primaryObjective: string;
   hasAllergies: boolean;
   allergiesDetails: string;
   hasMedicalConditions: boolean;
   medicalConditionsDetails: string;
+  carriesMedication: boolean;
+  medicationDetails: string;
+  medicationActionPlan: File | null;
   medicalReport: File | null;
   photoVideoConsent: boolean;
   policyAcceptance: boolean;

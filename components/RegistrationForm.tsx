@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FormData } from '../types';
 import { supabase } from '../lib/supabase';
+import { uploadMedicalReport, uploadMedicationActionPlan } from '../lib/fileUpload';
 import ProgressIndicator from './form/ProgressIndicator';
 import FormStep1 from './form/FormStep1';
 import FormStep2 from './form/FormStep2';
@@ -19,8 +20,9 @@ const initialFormData: FormData = {
   programType: '', groupFrequency: '', groupDay: '', sundayPractice: false, privateFrequency: '',
   privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
   semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
-  dominantHand: '', currentLevel: '', jerseySize: '', hasAllergies: false,
+  dominantHand: '', currentLevel: '', jerseySize: '', primaryObjective: '', hasAllergies: false,
   allergiesDetails: '', hasMedicalConditions: false, medicalConditionsDetails: '',
+  carriesMedication: false, medicationDetails: '', medicationActionPlan: null,
   medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
 };
 
@@ -84,8 +86,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
     }
     if (currentStep === 3) {
         if (!formData.jerseySize) newErrors.jerseySize = 'Please select a jersey size.';
+        if (!formData.primaryObjective) newErrors.primaryObjective = 'Please select a primary objective.';
         if (!formData.policyAcceptance) newErrors.policyAcceptance = 'You must accept the policies to continue.';
         if (!formData.photoVideoConsent) newErrors.photoVideoConsent = 'You must provide consent to continue.';
+
+        // Medication validation
+        if (formData.carriesMedication) {
+          if (!formData.medicationDetails) newErrors.medicationDetails = 'Please provide medication details.';
+          if (!formData.medicationActionPlan) newErrors.medicationActionPlan = 'Please upload an action plan for medication.';
+          if (formData.medicationActionPlan && formData.medicationActionPlan.size > 5 * 1024 * 1024) {
+            newErrors.medicationActionPlan = "File size cannot exceed 5MB.";
+          }
+          if (formData.medicationActionPlan && formData.medicationActionPlan.type !== 'application/pdf') {
+            newErrors.medicationActionPlan = "Only PDF files are allowed.";
+          }
+        }
+
+        // Medical report validation (optional)
         if(formData.medicalReport && formData.medicalReport.size > 5 * 1024 * 1024) newErrors.medicalReport = "File size cannot exceed 5MB.";
         if(formData.medicalReport && formData.medicalReport.type !== 'application/pdf') newErrors.medicalReport = "Only PDF files are allowed.";
     }
@@ -136,19 +153,55 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Create a copy of the data and remove the File object before insertion
+    // Create a copy of the data and remove File objects before insertion
     const dataToSubmit = { ...formData };
     delete (dataToSubmit as Partial<FormData>).medicalReport; // Can't insert File object as JSON
+    delete (dataToSubmit as Partial<FormData>).medicationActionPlan; // Can't insert File object as JSON
 
     try {
-      const { error } = await supabase
+      // Step 1: Insert registration data
+      const { data: registrationData, error: insertError } = await supabase
         .from('registrations')
-        .insert({ form_data: dataToSubmit });
+        .insert({ form_data: dataToSubmit })
+        .select()
+        .single();
 
-      if (error) {
-        throw error;
+      if (insertError) {
+        throw insertError;
       }
-      
+
+      const registrationId = registrationData.id;
+
+      // Step 2: Upload files to Supabase Storage (if any)
+      const fileUploads: { [key: string]: string | null } = {};
+
+      if (formData.medicalReport) {
+        const medicalReportPath = await uploadMedicalReport(formData.medicalReport, registrationId);
+        if (medicalReportPath) {
+          fileUploads.medical_report_path = medicalReportPath;
+        }
+      }
+
+      if (formData.medicationActionPlan) {
+        const actionPlanPath = await uploadMedicationActionPlan(formData.medicationActionPlan, registrationId);
+        if (actionPlanPath) {
+          fileUploads.medication_action_plan_path = actionPlanPath;
+        }
+      }
+
+      // Step 3: Update registration with file paths (if any were uploaded)
+      if (Object.keys(fileUploads).length > 0) {
+        const { error: updateError } = await supabase
+          .from('registrations')
+          .update(fileUploads)
+          .eq('id', registrationId);
+
+        if (updateError) {
+          console.error('Error updating file paths:', updateError);
+          // Don't fail the whole registration if file path update fails
+        }
+      }
+
       alert('Registration Submitted Successfully!');
       localStorage.removeItem('registrationFormData');
       onClose();
