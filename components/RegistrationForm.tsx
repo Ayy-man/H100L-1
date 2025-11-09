@@ -13,9 +13,10 @@ interface RegistrationFormProps {
 }
 
 const initialFormData: FormData = {
-  playerFullName: '', dateOfBirth: '', parentEmail: '', parentPhone: '',
+  playerFullName: '', dateOfBirth: '', playerCategory: '', parentFullName: '', parentEmail: '',
+  parentPhone: '', parentCity: '', parentPostalCode: '', communicationLanguage: '',
   emergencyContactName: '', emergencyContactPhone: '', emergencyRelationship: '',
-  programType: '', groupFrequency: '', groupDay: '', privateFrequency: '',
+  programType: '', groupFrequency: '', groupDay: '', sundayPractice: false, privateFrequency: '',
   privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
   semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
   dominantHand: '', currentLevel: '', jerseySize: '', hasAllergies: false,
@@ -58,11 +59,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
     if (currentStep === 1) {
       if (!formData.playerFullName) newErrors.playerFullName = 'Player name is required.';
       if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required.';
+      if (!formData.playerCategory) newErrors.playerCategory = 'Player category is required.';
+      if (!formData.parentFullName) newErrors.parentFullName = 'Parent/guardian name is required.';
       if (!formData.parentEmail || !/\S+@\S+\.\S+/.test(formData.parentEmail)) newErrors.parentEmail = 'A valid email is required.';
       if (!formData.parentPhone || !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.parentPhone)) newErrors.parentPhone = 'A valid phone number is required.';
+      if (!formData.parentCity) newErrors.parentCity = 'City is required.';
+      if (!formData.parentPostalCode) newErrors.parentPostalCode = 'Postal code is required.';
+      if (!formData.communicationLanguage) newErrors.communicationLanguage = 'Preferred communication language is required.';
       if (!formData.emergencyContactName) newErrors.emergencyContactName = 'Emergency contact name is required.';
       if (!formData.emergencyContactPhone) newErrors.emergencyContactPhone = 'Emergency contact phone is required.';
-      if (formData.parentPhone === formData.emergencyContactPhone) newErrors.emergencyContactPhone = 'Emergency phone must be different from parent phone.';
+
+      // Check both phone AND name to ensure emergency contact is a different person
+      const samePhone = formData.emergencyContactPhone === formData.parentPhone;
+      const sameName = formData.emergencyContactName.toLowerCase().trim() === formData.parentFullName.toLowerCase().trim();
+
+      if (samePhone || sameName) {
+        newErrors.emergencyContactName = 'Emergency contact must be a different person than parent/guardian';
+      }
     }
     if (currentStep === 2) {
         if (!formData.programType) newErrors.programType = 'Please select a program type.';

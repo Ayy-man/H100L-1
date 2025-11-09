@@ -29,8 +29,13 @@ export interface FormData {
   // Step 1
   playerFullName: string;
   dateOfBirth: string;
+  playerCategory: 'M9' | 'M11' | 'M13' | 'M15' | 'M18' | 'Junior' | '';
+  parentFullName: string;
   parentEmail: string;
   parentPhone: string;
+  parentCity: string;
+  parentPostalCode: string;
+  communicationLanguage: 'French' | 'English' | '';
   emergencyContactName: string;
   emergencyContactPhone: string;
   emergencyRelationship: string;
@@ -41,6 +46,7 @@ export interface FormData {
   // Group Details
   groupFrequency: '1x' | '2x' | '';
   groupDay: 'tuesday' | 'friday' | '';
+  sundayPractice: boolean;
 
   // Private Details
   privateFrequency: '1x' | '2x' | 'one-time' | '';
