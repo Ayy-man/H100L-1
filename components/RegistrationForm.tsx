@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FormData } from '../types';
+import { FormData, ProgramType } from '../types';
 import { supabase } from '../lib/supabase';
 import { uploadMedicalReport, uploadMedicationActionPlan } from '../lib/fileUpload';
 import ProgressIndicator from './form/ProgressIndicator';
@@ -11,6 +11,10 @@ import FormStep4 from './form/FormStep4';
 
 interface RegistrationFormProps {
   onClose: () => void;
+  preSelectedProgram?: {
+    programType: ProgramType | '';
+    frequency: '1x' | '2x' | '';
+  };
 }
 
 const initialFormData: FormData = {
@@ -33,7 +37,7 @@ const formSteps = [
   { id: 4, title: 'Review & Confirm' }
 ];
 
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -47,9 +51,24 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
       const parsedData = JSON.parse(savedData);
       // Don't restore file objects
       parsedData.medicalReport = null;
+      parsedData.medicationActionPlan = null;
       setFormData(parsedData);
     }
   }, []);
+
+  // Pre-fill program selection when coming from program cards
+  useEffect(() => {
+    if (preSelectedProgram && preSelectedProgram.programType) {
+      setFormData(prev => ({
+        ...prev,
+        programType: preSelectedProgram.programType,
+        groupFrequency: preSelectedProgram.programType === 'group' ? preSelectedProgram.frequency : '',
+        privateFrequency: preSelectedProgram.programType === 'private' ? preSelectedProgram.frequency : '',
+      }));
+      // Skip to step 2 if program is pre-selected
+      setCurrentStep(2);
+    }
+  }, [preSelectedProgram]);
 
   // Save to localStorage on change
   useEffect(() => {
