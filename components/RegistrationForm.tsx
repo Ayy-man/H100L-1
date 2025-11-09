@@ -179,6 +179,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
 
     try {
       // Step 1: Insert registration data
+      console.log('Attempting to insert:', { form_data: dataToSubmit });
+
       const { data: registrationData, error: insertError } = await supabase
         .from('registrations')
         .insert({ form_data: dataToSubmit })
@@ -186,6 +188,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         .single();
 
       if (insertError) {
+        console.error('Full insert error:', JSON.stringify(insertError, null, 2));
+        console.error('Error details:', {
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          code: insertError.code
+        });
         throw insertError;
       }
 
