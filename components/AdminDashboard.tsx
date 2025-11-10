@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 
 interface Registration {
@@ -17,10 +17,25 @@ interface StatsCardProps {
   color: string;
 }
 
-interface TimeSlot {
+interface CapacitySlot {
+  id: string;
   time_slot_name: string;
+  day_of_week: string;
+  applicable_categories: string[];
   capacity: number;
   current_registrations: number;
+  is_active: boolean;
+  status: 'FULL' | 'ALMOST_FULL' | 'HALF_FULL' | 'AVAILABLE';
+  fill_percentage: number;
+  spots_remaining: number;
+}
+
+interface SlotRegistration {
+  id: string;
+  player_name: string;
+  player_category: string;
+  parent_email: string;
+  created_at: string;
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, color }) => (
@@ -42,7 +57,7 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, color }) => (
 const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setAuthenticated] = useState(false);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [capacitySlots, setCapacitySlots] = useState<CapacitySlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +72,11 @@ const AdminDashboard: React.FC = () => {
   // Selected registration for detail view
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
 
+  // Selected slot for viewing registered players
+  const [selectedSlot, setSelectedSlot] = useState<CapacitySlot | null>(null);
+  const [slotPlayers, setSlotPlayers] = useState<SlotRegistration[]>([]);
+  const [loadingSlotDetails, setLoadingSlotDetails] = useState(false);
+
   useEffect(() => {
     const password = prompt('Enter admin password:');
     if (password === 'sniperzone2025') {
@@ -70,44 +90,106 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchData();
+
+      // Set up real-time subscription for capacity updates
+      const channel = supabase
+        .channel('capacity_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, () => {
+          fetchCapacityData();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [isAuthenticated]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-
-      // Fetch registrations
-      const { data: regData, error: regError } = await supabase
-        .from('registrations')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (regError) throw regError;
-
-      // Parse form_data if it's a string
-      const parsedData = regData.map((reg: any) => ({
-        ...reg,
-        form_data: typeof reg.form_data === 'string'
-          ? JSON.parse(reg.form_data)
-          : reg.form_data
-      }));
-
-      setRegistrations(parsedData);
-
-      // Fetch time slots for capacity info
-      const { data: slotsData, error: slotsError } = await supabase
-        .from('time_slots')
-        .select('time_slot_name, capacity, current_registrations');
-
-      if (!slotsError && slotsData) {
-        setTimeSlots(slotsData);
-      }
-
+      await Promise.all([fetchRegistrations(), fetchCapacityData()]);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRegistrations = async () => {
+    const { data: regData, error: regError } = await supabase
+      .from('registrations')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (regError) throw regError;
+
+    const parsedData = regData.map((reg: any) => ({
+      ...reg,
+      form_data: typeof reg.form_data === 'string'
+        ? JSON.parse(reg.form_data)
+        : reg.form_data
+    }));
+
+    setRegistrations(parsedData);
+  };
+
+  const fetchCapacityData = async () => {
+    const { data: capacityData, error: capacityError } = await supabase
+      .from('capacity_overview')
+      .select('*');
+
+    if (!capacityError && capacityData) {
+      setCapacitySlots(capacityData);
+    }
+  };
+
+  const fetchSlotDetails = async (slot: CapacitySlot) => {
+    setSelectedSlot(slot);
+    setLoadingSlotDetails(true);
+
+    try {
+      // Get registrations for this slot
+      const players = registrations
+        .filter(reg => {
+          const formData = reg.form_data || {};
+          const programType = formData.programType;
+          const playerCategory = formData.playerCategory;
+
+          // Check if player's category matches slot's applicable categories
+          if (!slot.applicable_categories.includes(playerCategory)) {
+            return false;
+          }
+
+          // For group training
+          if (programType === 'group') {
+            const frequency = formData.groupFrequency;
+            const selectedDay = formData.groupDay;
+
+            // 1x per week - must match the day
+            if (frequency === '1x' && selectedDay === slot.day_of_week.toLowerCase()) {
+              return true;
+            }
+
+            // 2x per week - matches both days
+            if (frequency === '2x') {
+              return true;
+            }
+          }
+
+          return false;
+        })
+        .map(reg => ({
+          id: reg.id,
+          player_name: reg.form_data?.playerFullName || 'N/A',
+          player_category: reg.form_data?.playerCategory || 'N/A',
+          parent_email: reg.form_data?.parentEmail || 'N/A',
+          created_at: reg.created_at
+        }));
+
+      setSlotPlayers(players);
+    } finally {
+      setLoadingSlotDetails(false);
     }
   };
 
@@ -163,6 +245,13 @@ const AdminDashboard: React.FC = () => {
     return Array.from(cats).sort();
   }, [registrations]);
 
+  // Group capacity slots by day
+  const slotsByDay = useMemo(() => {
+    const tuesday = capacitySlots.filter(s => s.day_of_week === 'Tuesday');
+    const friday = capacitySlots.filter(s => s.day_of_week === 'Friday');
+    return { tuesday, friday };
+  }, [capacitySlots]);
+
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this registration?')) return;
 
@@ -176,6 +265,9 @@ const AdminDashboard: React.FC = () => {
 
       setRegistrations(prev => prev.filter(r => r.id !== id));
       alert('Registration deleted successfully');
+
+      // Refresh capacity data
+      fetchCapacityData();
     } catch (err: any) {
       alert(`Error deleting registration: ${err.message}`);
     }
@@ -188,6 +280,88 @@ const AdminDashboard: React.FC = () => {
       case 'failed': return 'bg-red-500/10 text-red-400 border-red-500/20';
       default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
+  };
+
+  const getCapacityColor = (status: string) => {
+    switch (status) {
+      case 'FULL': return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/50', bar: 'bg-red-500' };
+      case 'ALMOST_FULL': return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/50', bar: 'bg-yellow-500' };
+      case 'HALF_FULL': return { bg: 'bg-blue-500/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50', bar: 'bg-[#9BD4FF]' };
+      default: return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50', bar: 'bg-green-400' };
+    }
+  };
+
+  const CapacitySlotCard: React.FC<{ slot: CapacitySlot }> = ({ slot }) => {
+    const colors = getCapacityColor(slot.status);
+    const isFull = slot.status === 'FULL';
+    const needsWarning = slot.status === 'ALMOST_FULL' || slot.status === 'FULL';
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ scale: 1.02 }}
+        onClick={() => fetchSlotDetails(slot)}
+        className={`relative bg-black border ${colors.border} rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg ${colors.bg}`}
+      >
+        {/* Full Overlay */}
+        {isFull && (
+          <div className="absolute inset-0 bg-red-500/10 rounded-lg flex items-center justify-center backdrop-blur-[1px]">
+            <span className="text-red-400 font-black text-2xl uppercase tracking-wider rotate-[-15deg] border-4 border-red-500 px-6 py-2 rounded-lg">
+              FULL
+            </span>
+          </div>
+        )}
+
+        {/* Warning Badge */}
+        {needsWarning && !isFull && (
+          <div className="absolute top-2 right-2">
+            <span className="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2 py-1 rounded-full border border-yellow-500/50">
+              ⚠️ {slot.spots_remaining} left
+            </span>
+          </div>
+        )}
+
+        {/* Time Slot */}
+        <p className="text-white font-bold text-lg mb-2">
+          {slot.time_slot_name.replace(slot.day_of_week + ' ', '')}
+        </p>
+
+        {/* Applicable Categories */}
+        <div className="flex gap-1 mb-3 flex-wrap">
+          {slot.applicable_categories.map(cat => (
+            <span key={cat} className="bg-white/10 text-gray-300 text-xs px-2 py-1 rounded">
+              {cat}
+            </span>
+          ))}
+        </div>
+
+        {/* Capacity Info */}
+        <div className="flex items-center justify-between mb-2">
+          <span className={`${colors.text} font-bold text-lg`}>
+            {slot.current_registrations}/{slot.capacity}
+          </span>
+          <span className={`text-sm ${colors.text}`}>
+            {slot.fill_percentage}%
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(slot.fill_percentage, 100)}%` }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className={`h-3 rounded-full ${colors.bar}`}
+          />
+        </div>
+
+        {/* Click hint */}
+        <p className="text-gray-500 text-xs mt-2 text-center">
+          Click to view registrations
+        </p>
+      </motion.div>
+    );
   };
 
   if (!isAuthenticated) {
@@ -248,36 +422,43 @@ const AdminDashboard: React.FC = () => {
           />
         </div>
 
-        {/* Capacity Status */}
-        {timeSlots.length > 0 && (
+        {/* ENHANCED CAPACITY OVERVIEW */}
+        {capacitySlots.length > 0 && (
           <div className="bg-black border border-white/10 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-bold text-white mb-4 uppercase tracking-wider">
-              Capacity Status
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {timeSlots.map((slot, idx) => {
-                const percentage = (slot.current_registrations / slot.capacity) * 100;
-                const isFull = percentage >= 100;
-                return (
-                  <div key={idx} className="bg-white/5 rounded-lg p-4">
-                    <p className="text-gray-300 text-sm mb-2">{slot.time_slot_name}</p>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-white font-bold">{slot.current_registrations}/{slot.capacity}</span>
-                      <span className={`text-sm ${isFull ? 'text-red-400' : 'text-green-400'}`}>
-                        {percentage.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          isFull ? 'bg-red-500' : 'bg-[#9BD4FF]'
-                        }`}
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
+                🏒 Capacity Overview
+              </h2>
+              <button
+                onClick={() => fetchCapacityData()}
+                className="text-[#9BD4FF] hover:text-[#7db4d9] transition-colors text-sm flex items-center gap-2"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {/* Tuesday Slots */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-[#9BD4FF] mb-4 uppercase tracking-wider">
+                Tuesday Sessions
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {slotsByDay.tuesday.map(slot => (
+                  <CapacitySlotCard key={slot.id} slot={slot} />
+                ))}
+              </div>
+            </div>
+
+            {/* Friday Slots */}
+            <div>
+              <h3 className="text-xl font-bold text-[#9BD4FF] mb-4 uppercase tracking-wider">
+                Friday Sessions
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {slotsByDay.friday.map(slot => (
+                  <CapacitySlotCard key={slot.id} slot={slot} />
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -501,62 +682,150 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Detail Modal */}
-      {selectedRegistration && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setSelectedRegistration(null)}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-gray-900 border border-white/10 rounded-xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+      {/* Slot Details Modal */}
+      <AnimatePresence>
+        {selectedSlot && (
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => setSelectedSlot(null)}
           >
-            <div className="flex justify-between items-start mb-6">
-              <h2 className="text-2xl font-bold text-white uppercase tracking-wider">Registration Details</h2>
-              <button
-                onClick={() => setSelectedRegistration(null)}
-                className="text-gray-400 hover:text-white text-2xl"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(selectedRegistration.form_data || {}).map(([key, value]) => (
-                <div key={key} className="border-b border-white/10 pb-2">
-                  <p className="text-gray-400 text-sm uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                  <p className="text-white mt-1">
-                    {typeof value === 'boolean' ? (value ? 'Yes' : 'No') :
-                     Array.isArray(value) ? value.join(', ') :
-                     value?.toString() || 'N/A'}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gray-900 border border-white/10 rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
+                    {selectedSlot.time_slot_name}
+                  </h2>
+                  <div className="flex gap-2 mt-2">
+                    {selectedSlot.applicable_categories.map(cat => (
+                      <span key={cat} className="bg-[#9BD4FF]/20 text-[#9BD4FF] text-xs px-3 py-1 rounded-full">
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-gray-400 mt-2">
+                    Capacity: {selectedSlot.current_registrations}/{selectedSlot.capacity} ({selectedSlot.fill_percentage}% full)
                   </p>
                 </div>
-              ))}
-
-              <div className="border-b border-white/10 pb-2">
-                <p className="text-gray-400 text-sm uppercase tracking-wider">Registration ID</p>
-                <p className="text-white mt-1 font-mono text-xs">{selectedRegistration.id}</p>
+                <button
+                  onClick={() => setSelectedSlot(null)}
+                  className="text-gray-400 hover:text-white text-2xl"
+                >
+                  ×
+                </button>
               </div>
 
-              <div className="border-b border-white/10 pb-2">
-                <p className="text-gray-400 text-sm uppercase tracking-wider">Created At</p>
-                <p className="text-white mt-1">{new Date(selectedRegistration.created_at).toLocaleString()}</p>
-              </div>
+              {loadingSlotDetails ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#9BD4FF] mx-auto"></div>
+                  <p className="text-gray-400 mt-4">Loading registrations...</p>
+                </div>
+              ) : slotPlayers.length > 0 ? (
+                <div className="space-y-3">
+                  <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                    Registered Players ({slotPlayers.length})
+                  </h3>
+                  {slotPlayers.map((player, idx) => (
+                    <div
+                      key={player.id}
+                      className="bg-black border border-white/10 rounded-lg p-4 hover:border-[#9BD4FF]/50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-white font-bold">{idx + 1}. {player.player_name}</p>
+                          <p className="text-gray-400 text-sm">{player.player_category} • {player.parent_email}</p>
+                        </div>
+                        <p className="text-gray-500 text-xs">
+                          {new Date(player.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 text-lg">No registrations for this slot yet.</p>
+                </div>
+              )}
 
-              <div className="border-b border-white/10 pb-2">
-                <p className="text-gray-400 text-sm uppercase tracking-wider">Payment Status</p>
-                <p className="text-white mt-1 capitalize">{selectedRegistration.payment_status || 'Pending'}</p>
-              </div>
-            </div>
+              <button
+                onClick={() => setSelectedSlot(null)}
+                className="mt-6 w-full bg-[#9BD4FF] text-black font-bold py-3 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-            <button
-              onClick={() => setSelectedRegistration(null)}
-              className="mt-6 w-full bg-[#9BD4FF] text-black font-bold py-3 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all"
+      {/* Registration Detail Modal */}
+      <AnimatePresence>
+        {selectedRegistration && (
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => setSelectedRegistration(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gray-900 border border-white/10 rounded-xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
             >
-              Close
-            </button>
-          </motion.div>
-        </div>
-      )}
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-bold text-white uppercase tracking-wider">Registration Details</h2>
+                <button
+                  onClick={() => setSelectedRegistration(null)}
+                  className="text-gray-400 hover:text-white text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {Object.entries(selectedRegistration.form_data || {}).map(([key, value]) => (
+                  <div key={key} className="border-b border-white/10 pb-2">
+                    <p className="text-gray-400 text-sm uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                    <p className="text-white mt-1">
+                      {typeof value === 'boolean' ? (value ? 'Yes' : 'No') :
+                       Array.isArray(value) ? value.join(', ') :
+                       value?.toString() || 'N/A'}
+                    </p>
+                  </div>
+                ))}
+
+                <div className="border-b border-white/10 pb-2">
+                  <p className="text-gray-400 text-sm uppercase tracking-wider">Registration ID</p>
+                  <p className="text-white mt-1 font-mono text-xs">{selectedRegistration.id}</p>
+                </div>
+
+                <div className="border-b border-white/10 pb-2">
+                  <p className="text-gray-400 text-sm uppercase tracking-wider">Created At</p>
+                  <p className="text-white mt-1">{new Date(selectedRegistration.created_at).toLocaleString()}</p>
+                </div>
+
+                <div className="border-b border-white/10 pb-2">
+                  <p className="text-gray-400 text-sm uppercase tracking-wider">Payment Status</p>
+                  <p className="text-white mt-1 capitalize">{selectedRegistration.payment_status || 'Pending'}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedRegistration(null)}
+                className="mt-6 w-full bg-[#9BD4FF] text-black font-bold py-3 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
