@@ -113,6 +113,10 @@ const AdminDashboard: React.FC = () => {
   // Dashboard tab state
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics'>('overview');
 
+  // Mobile responsiveness
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [programFilter, setProgramFilter] = useState<string>('all');
@@ -146,6 +150,18 @@ const AdminDashboard: React.FC = () => {
       alert('Incorrect password.');
       window.location.href = '/';
     }
+  }, []);
+
+  // Mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+    };
+
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -389,6 +405,66 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Mobile Registration Card Component
+  const MobileRegistrationCard: React.FC<{ registration: Registration }> = ({ registration }) => {
+    const formData = registration.form_data || {};
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-black border border-white/10 rounded-lg p-4 mb-3 hover:border-[#9BD4FF]/50 transition-all"
+      >
+        {/* Header */}
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1">
+            <h3 className="text-white font-bold text-lg">{formData.playerFullName || 'N/A'}</h3>
+            <p className="text-gray-400 text-sm">{formData.parentEmail || 'N/A'}</p>
+          </div>
+          <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(registration.payment_status)}`}>
+            {registration.payment_status || 'Pending'}
+          </span>
+        </div>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+          <div>
+            <p className="text-gray-500 text-xs uppercase">Category</p>
+            <p className="text-white">{formData.playerCategory || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase">Program</p>
+            <p className="text-white capitalize">{formData.programType || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase">Frequency</p>
+            <p className="text-white">{formData.groupFrequency || formData.privateFrequency || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-gray-500 text-xs uppercase">Date</p>
+            <p className="text-white">{new Date(registration.created_at).toLocaleDateString()}</p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-3 border-t border-white/10">
+          <button
+            onClick={() => setSelectedRegistration(registration)}
+            className="flex-1 bg-[#9BD4FF] text-black font-bold py-2 px-4 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all text-sm"
+          >
+            View Details
+          </button>
+          <button
+            onClick={() => handleDelete(registration.id)}
+            className="bg-red-500/20 text-red-400 font-bold py-2 px-4 rounded-lg hover:bg-red-500/30 border border-red-500/50 transition-all text-sm"
+          >
+            Delete
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
   const CapacitySlotCard: React.FC<{ slot: CapacitySlot }> = ({ slot }) => {
     const colors = getCapacityColor(slot.status);
     const isFull = slot.status === 'FULL';
@@ -482,18 +558,18 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-900 min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="container mx-auto max-w-7xl">
+    <div className="bg-gray-900 min-h-screen pb-20 md:pb-8">
+      <div className="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl md:text-5xl uppercase font-black tracking-wider text-white mb-2">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl md:text-3xl lg:text-5xl uppercase font-black tracking-wider text-white mb-1 md:mb-2">
             Admin Dashboard
           </h1>
-          <p className="text-gray-400">Manage SniperZone registrations and track performance</p>
+          <p className="text-gray-400 text-sm md:text-base">Manage SniperZone registrations and track performance</p>
         </div>
 
-        {/* Dashboard Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-white/10">
+        {/* Desktop/Tablet Tabs - Hidden on Mobile */}
+        <div className="hidden md:flex gap-4 mb-8 border-b border-white/10">
           <button
             onClick={() => setDashboardTab('overview')}
             className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
@@ -598,14 +674,14 @@ const AdminDashboard: React.FC = () => {
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-[#9BD4FF] transition-colors"
+              className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             />
 
             {/* Program Type Filter */}
             <select
               value={programFilter}
               onChange={(e) => setProgramFilter(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors"
+              className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             >
               <option value="all">All Programs</option>
               <option value="group">Group Training</option>
@@ -617,7 +693,7 @@ const AdminDashboard: React.FC = () => {
             <select
               value={paymentFilter}
               onChange={(e) => setPaymentFilter(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors"
+              className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             >
               <option value="all">All Payment Status</option>
               <option value="paid">Paid</option>
@@ -629,7 +705,7 @@ const AdminDashboard: React.FC = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors"
+              className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             >
               <option value="all">All Categories</option>
               {categories.map(cat => (
@@ -691,120 +767,158 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Table */}
-        <div className="bg-black border border-white/10 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-white/10">
-              <thead className="bg-[#9BD4FF]/10">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Player</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Program</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Frequency</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Parent Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {paginatedRegistrations.length > 0 ? (
-                  paginatedRegistrations.map((reg) => (
-                    <motion.tr
-                      key={reg.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="hover:bg-white/5 transition-colors cursor-pointer"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {new Date(reg.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                        {reg.form_data?.playerFullName || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {reg.form_data?.playerCategory || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 capitalize">
-                        {reg.form_data?.programType || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {reg.form_data?.groupFrequency || reg.form_data?.privateFrequency || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {reg.form_data?.parentEmail || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(reg.payment_status)}`}>
-                          {reg.payment_status || 'Pending'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setSelectedRegistration(reg)}
-                            className="text-[#9BD4FF] hover:text-[#7db4d9] transition-colors"
-                            title="View Details"
-                          >
-                            👁️
-                          </button>
-                          <button
-                            onClick={() => handleDelete(reg.id)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
-                            title="Delete"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                      No registrations found matching your filters.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-t border-white/10">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <div className="flex items-center gap-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 rounded-lg transition-colors ${
-                      currentPage === page
-                        ? 'bg-[#9BD4FF] text-black font-bold'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+        {/* Mobile Card View (< 768px) */}
+        {isMobile ? (
+          <div className="space-y-3">
+            {paginatedRegistrations.length > 0 ? (
+              paginatedRegistrations.map((reg) => (
+                <MobileRegistrationCard key={reg.id} registration={reg} />
+              ))
+            ) : (
+              <div className="bg-black border border-white/10 rounded-lg p-8 text-center">
+                <p className="text-gray-500">No registrations found matching your filters.</p>
               </div>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
+            )}
+          </div>
+        ) : (
+          /* Desktop/Tablet Table View (>= 768px) */
+          <div className="bg-black border border-white/10 rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-white/10">
+                <thead className="bg-[#9BD4FF]/10">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Player</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Program</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Frequency</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Parent Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {paginatedRegistrations.length > 0 ? (
+                    paginatedRegistrations.map((reg) => (
+                      <motion.tr
+                        key={reg.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {new Date(reg.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                          {reg.form_data?.playerFullName || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {reg.form_data?.playerCategory || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 capitalize">
+                          {reg.form_data?.programType || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {reg.form_data?.groupFrequency || reg.form_data?.privateFrequency || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {reg.form_data?.parentEmail || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(reg.payment_status)}`}>
+                            {reg.payment_status || 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSelectedRegistration(reg)}
+                              className="text-[#9BD4FF] hover:text-[#7db4d9] transition-colors"
+                              title="View Details"
+                            >
+                              👁️
+                            </button>
+                            <button
+                              onClick={() => handleDelete(reg.id)}
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                              title="Delete"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                        No registrations found matching your filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+
+            {/* Pagination for Desktop/Tablet */}
+            {totalPages > 1 && (
+              <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-t border-white/10">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1 rounded-lg transition-colors ${
+                        currentPage === page
+                          ? 'bg-[#9BD4FF] text-black font-bold'
+                          : 'bg-white/10 text-white hover:bg-white/20'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mobile Pagination */}
+        {isMobile && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold min-h-[48px]"
+            >
+              ← Previous
+            </button>
+            <span className="text-white font-bold">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold min-h-[48px]"
+            >
+              Next →
+            </button>
+          </div>
+        )}
           </>
         )}
 
@@ -1474,6 +1588,34 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Mobile Bottom Navigation Bar */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 px-6 py-3 flex justify-around items-center z-40">
+          <button
+            onClick={() => setDashboardTab('overview')}
+            className={`flex flex-col items-center justify-center min-w-[80px] min-h-[48px] py-2 px-3 rounded-lg transition-all ${
+              dashboardTab === 'overview'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-2xl mb-1">📊</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Overview</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('analytics')}
+            className={`flex flex-col items-center justify-center min-w-[80px] min-h-[48px] py-2 px-3 rounded-lg transition-all ${
+              dashboardTab === 'analytics'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-2xl mb-1">📈</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Analytics</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
