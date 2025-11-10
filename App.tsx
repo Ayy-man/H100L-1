@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Elements } from '@stripe/react-stripe-js';
 import { Language, ProgramType } from './types';
 import { content } from './constants';
+import { stripePromise } from './lib/stripe';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Features from './components/Features';
@@ -57,10 +59,12 @@ function App() {
       
       <AnimatePresence>
         {isFormOpen && (
-          <RegistrationForm
-            onClose={closeForm}
-            preSelectedProgram={selectedProgram}
-          />
+          <Elements stripe={stripePromise}>
+            <RegistrationForm
+              onClose={closeForm}
+              preSelectedProgram={selectedProgram}
+            />
+          </Elements>
         )}
       </AnimatePresence>
     </div>

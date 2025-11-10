@@ -8,6 +8,7 @@ import FormStep1 from './form/FormStep1';
 import FormStep2 from './form/FormStep2';
 import FormStep3 from './form/FormStep3';
 import FormStep4 from './form/FormStep4';
+import PaymentForm from './PaymentForm';
 
 interface RegistrationFormProps {
   onClose: () => void;
@@ -34,7 +35,8 @@ const formSteps = [
   { id: 1, title: 'Player & Parent Info' },
   { id: 2, title: 'Program Selection' },
   { id: 3, title: 'Health & Consents' },
-  { id: 4, title: 'Review & Confirm' }
+  { id: 4, title: 'Review & Confirm' },
+  { id: 5, title: 'Payment' }
 ];
 
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram }) => {
@@ -43,6 +45,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -170,7 +174,20 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
     });
   };
 
-  const handleSubmit = async () => {
+  const handlePaymentSuccess = async (paymentMethod: string) => {
+    setPaymentMethodId(paymentMethod);
+    setPaymentError(null);
+
+    // Proceed to submit the registration with payment info
+    await handleSubmit(paymentMethod);
+  };
+
+  const handlePaymentError = (error: string) => {
+    setPaymentError(error);
+    alert(`Payment failed: ${error}`);
+  };
+
+  const handleSubmit = async (paymentMethod?: string) => {
     setIsSubmitting(true);
     // Create a copy of the data and remove File objects before insertion
     const dataToSubmit = { ...formData };
@@ -178,10 +195,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
     delete (dataToSubmit as Partial<FormData>).medicationActionPlan; // Can't insert File object as JSON
 
     try {
-      // Step 1: Insert registration data
+      // Step 1: Insert registration data first (without payment info)
       const { data: registrationData, error: insertError } = await supabase
         .from('registrations')
-        .insert({ form_data: dataToSubmit })
+        .insert({
+          form_data: dataToSubmit,
+          payment_status: 'pending',
+        })
         .select()
         .single();
 
@@ -191,7 +211,49 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
 
       const registrationId = registrationData.id;
 
-      // Step 2: Upload files to Supabase Storage (if any)
+      // Step 2: Process payment if payment method provided
+      if (paymentMethod) {
+        try {
+          // Determine program type and frequency
+          let programType = formData.programType as 'group' | 'private' | 'semi-private';
+          let frequency: '1x' | '2x' | 'one-time' = '1x';
+
+          if (programType === 'group') {
+            frequency = formData.groupFrequency as '1x' | '2x';
+          } else if (programType === 'private') {
+            frequency = formData.privateFrequency as '1x' | '2x' | 'one-time';
+          }
+
+          const response = await fetch('/api/create-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentMethodId: paymentMethod,
+              registrationId: registrationId,
+              customerEmail: formData.parentEmail,
+              customerName: formData.playerFullName,
+              programType: programType,
+              frequency: frequency,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create subscription');
+          }
+
+          const subscriptionData = await response.json();
+          console.log('Payment successful:', subscriptionData);
+
+        } catch (paymentError: any) {
+          console.error('Payment error:', paymentError);
+          // Even if payment fails, registration is created
+          // User will need to complete payment separately
+          alert(`Registration created but payment failed: ${paymentError.message}. Please contact support to complete payment.`);
+        }
+      }
+
+      // Step 3: Upload files to Supabase Storage (if any)
       const fileUploads: { [key: string]: string | null } = {};
 
       if (formData.medicalReport) {
@@ -208,7 +270,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         }
       }
 
-      // Step 3: Update registration with file paths (if any were uploaded)
+      // Step 4: Update registration with file paths (if any were uploaded)
       if (Object.keys(fileUploads).length > 0) {
         const { error: updateError } = await supabase
           .from('registrations')
@@ -284,32 +346,53 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                     {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} />}
                     {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} />}
                     {currentStep === 4 && <FormStep4 data={formData} />}
+                    {currentStep === 5 && (
+                      <PaymentForm
+                        formData={formData}
+                        onPaymentSuccess={handlePaymentSuccess}
+                        onPaymentError={handlePaymentError}
+                      />
+                    )}
                 </motion.div>
             </AnimatePresence>
         </div>
         
-        <div className="p-8 border-t border-white/10 mt-auto flex justify-between items-center">
-            <button 
-                onClick={prevStep} 
-                disabled={currentStep === 1}
-                className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                Back
-            </button>
-            {currentStep < formSteps.length ? (
-                <button onClick={nextStep} className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition">
-                    Next
-                </button>
-            ) : (
-                <button 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting}
-                  className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isSubmitting ? 'Submitting...' : 'Submit Registration'}
-                </button>
-            )}
-        </div>
+        {currentStep !== 5 && (
+          <div className="p-8 border-t border-white/10 mt-auto flex justify-between items-center">
+              <button
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                  className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                  Back
+              </button>
+              {currentStep < 4 ? (
+                  <button onClick={nextStep} className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition">
+                      Next
+                  </button>
+              ) : currentStep === 4 ? (
+                  <button
+                    onClick={nextStep}
+                    className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition"
+                  >
+                      Proceed to Payment
+                  </button>
+              ) : null}
+          </div>
+        )}
+        {currentStep === 5 && (
+          <div className="p-8 border-t border-white/10 mt-auto flex justify-between items-center">
+              <button
+                  onClick={prevStep}
+                  className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition"
+              >
+                  Back
+              </button>
+              {paymentError && (
+                <p className="text-red-400 text-sm">{paymentError}</p>
+              )}
+          </div>
+        )}
       </motion.div>
     </div>
   );
