@@ -71,6 +71,7 @@ const AdminDashboard: React.FC = () => {
 
   // Selected registration for detail view
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('player');
 
   // Selected slot for viewing registered players
   const [selectedSlot, setSelectedSlot] = useState<CapacitySlot | null>(null);
@@ -764,64 +765,389 @@ const AdminDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Registration Detail Modal */}
+      {/* Enhanced Registration Detail Modal with Tabs */}
       <AnimatePresence>
         {selectedRegistration && (
           <div
             className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            onClick={() => setSelectedRegistration(null)}
+            onClick={() => {
+              setSelectedRegistration(null);
+              setActiveTab('player');
+            }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-gray-900 border border-white/10 rounded-xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-gray-900 border border-white/10 rounded-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
             >
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-bold text-white uppercase tracking-wider">Registration Details</h2>
+              {/* Header */}
+              <div className="flex justify-between items-start p-6 border-b border-white/10">
+                <div>
+                  <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
+                    Registration Details
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    {selectedRegistration.form_data?.playerFullName || 'Unknown Player'}
+                  </p>
+                </div>
                 <button
-                  onClick={() => setSelectedRegistration(null)}
+                  onClick={() => {
+                    setSelectedRegistration(null);
+                    setActiveTab('player');
+                  }}
                   className="text-gray-400 hover:text-white text-2xl"
                 >
                   ×
                 </button>
               </div>
 
-              <div className="space-y-4">
-                {Object.entries(selectedRegistration.form_data || {}).map(([key, value]) => (
-                  <div key={key} className="border-b border-white/10 pb-2">
-                    <p className="text-gray-400 text-sm uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                    <p className="text-white mt-1">
-                      {typeof value === 'boolean' ? (value ? 'Yes' : 'No') :
-                       Array.isArray(value) ? value.join(', ') :
-                       value?.toString() || 'N/A'}
-                    </p>
-                  </div>
+              {/* Tabs */}
+              <div className="flex border-b border-white/10 overflow-x-auto">
+                {[
+                  { id: 'player', label: '👤 Player Info', icon: '👤' },
+                  { id: 'parent', label: '👨‍👩‍👦 Parent/Contact', icon: '👨‍👩‍👦' },
+                  { id: 'program', label: '🏒 Program', icon: '🏒' },
+                  { id: 'health', label: '🏥 Health & Consent', icon: '🏥' },
+                  { id: 'payment', label: '💳 Payment', icon: '💳' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF] bg-[#9BD4FF]/10'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
                 ))}
-
-                <div className="border-b border-white/10 pb-2">
-                  <p className="text-gray-400 text-sm uppercase tracking-wider">Registration ID</p>
-                  <p className="text-white mt-1 font-mono text-xs">{selectedRegistration.id}</p>
-                </div>
-
-                <div className="border-b border-white/10 pb-2">
-                  <p className="text-gray-400 text-sm uppercase tracking-wider">Created At</p>
-                  <p className="text-white mt-1">{new Date(selectedRegistration.created_at).toLocaleString()}</p>
-                </div>
-
-                <div className="border-b border-white/10 pb-2">
-                  <p className="text-gray-400 text-sm uppercase tracking-wider">Payment Status</p>
-                  <p className="text-white mt-1 capitalize">{selectedRegistration.payment_status || 'Pending'}</p>
-                </div>
               </div>
 
-              <button
-                onClick={() => setSelectedRegistration(null)}
-                className="mt-6 w-full bg-[#9BD4FF] text-black font-bold py-3 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all"
-              >
-                Close
-              </button>
+              {/* Tab Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {/* Player Info Tab */}
+                    {activeTab === 'player' && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                          Player Information
+                        </h3>
+                        {[
+                          { label: 'Full Name', value: selectedRegistration.form_data?.playerFullName },
+                          { label: 'Date of Birth', value: selectedRegistration.form_data?.dateOfBirth },
+                          { label: 'Category', value: selectedRegistration.form_data?.playerCategory },
+                          { label: 'Position', value: selectedRegistration.form_data?.position },
+                          { label: 'Dominant Hand', value: selectedRegistration.form_data?.dominantHand },
+                          { label: 'Current Level', value: selectedRegistration.form_data?.currentLevel },
+                          { label: 'Jersey Size', value: selectedRegistration.form_data?.jerseySize },
+                          { label: 'Primary Objective', value: selectedRegistration.form_data?.primaryObjective }
+                        ].map(field => (
+                          <div key={field.label} className="border-b border-white/10 pb-3">
+                            <p className="text-gray-400 text-sm uppercase tracking-wider">{field.label}</p>
+                            <p className="text-white mt-1 text-lg">{field.value || 'N/A'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Parent/Contact Tab */}
+                    {activeTab === 'parent' && (
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                            Parent/Guardian Information
+                          </h3>
+                          {[
+                            { label: 'Full Name', value: selectedRegistration.form_data?.parentFullName },
+                            { label: 'Email', value: selectedRegistration.form_data?.parentEmail },
+                            { label: 'Phone', value: selectedRegistration.form_data?.parentPhone },
+                            { label: 'City', value: selectedRegistration.form_data?.parentCity },
+                            { label: 'Postal Code', value: selectedRegistration.form_data?.parentPostalCode },
+                            { label: 'Language', value: selectedRegistration.form_data?.communicationLanguage }
+                          ].map(field => (
+                            <div key={field.label} className="border-b border-white/10 pb-3 mb-4">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">{field.label}</p>
+                              <p className="text-white mt-1 text-lg">{field.value || 'N/A'}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div>
+                          <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                            Emergency Contact
+                          </h3>
+                          {[
+                            { label: 'Name', value: selectedRegistration.form_data?.emergencyContactName },
+                            { label: 'Phone', value: selectedRegistration.form_data?.emergencyContactPhone },
+                            { label: 'Relationship', value: selectedRegistration.form_data?.emergencyRelationship }
+                          ].map(field => (
+                            <div key={field.label} className="border-b border-white/10 pb-3 mb-4">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">{field.label}</p>
+                              <p className="text-white mt-1 text-lg">{field.value || 'N/A'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Program Tab */}
+                    {activeTab === 'program' && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                          Program Details
+                        </h3>
+                        <div className="border-b border-white/10 pb-3">
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">Program Type</p>
+                          <p className="text-white mt-1 text-lg capitalize">
+                            {selectedRegistration.form_data?.programType || 'N/A'}
+                          </p>
+                        </div>
+
+                        {selectedRegistration.form_data?.programType === 'group' && (
+                          <>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Frequency</p>
+                              <p className="text-white mt-1 text-lg">
+                                {selectedRegistration.form_data?.groupFrequency || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Selected Day</p>
+                              <p className="text-white mt-1 text-lg capitalize">
+                                {selectedRegistration.form_data?.groupDay || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Sunday Practice</p>
+                              <p className="text-white mt-1 text-lg">
+                                {selectedRegistration.form_data?.sundayPractice ? 'Yes' : 'No'}
+                              </p>
+                            </div>
+                          </>
+                        )}
+
+                        {selectedRegistration.form_data?.programType === 'private' && (
+                          <>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Frequency</p>
+                              <p className="text-white mt-1 text-lg">
+                                {selectedRegistration.form_data?.privateFrequency || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Time Slot</p>
+                              <p className="text-white mt-1 text-lg">
+                                {selectedRegistration.form_data?.privateTimeSlot || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Selected Days</p>
+                              <p className="text-white mt-1 text-lg">
+                                {selectedRegistration.form_data?.privateSelectedDays?.join(', ') || 'N/A'}
+                              </p>
+                            </div>
+                          </>
+                        )}
+
+                        {selectedRegistration.form_data?.programType === 'semi-private' && (
+                          <>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Availability</p>
+                              <p className="text-white mt-1 text-lg">
+                                {selectedRegistration.form_data?.semiPrivateAvailability?.join(', ') || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Time Windows</p>
+                              <p className="text-white mt-1 text-lg">
+                                {selectedRegistration.form_data?.semiPrivateTimeWindows?.join(', ') || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="border-b border-white/10 pb-3">
+                              <p className="text-gray-400 text-sm uppercase tracking-wider">Matching Preference</p>
+                              <p className="text-white mt-1 text-lg capitalize">
+                                {selectedRegistration.form_data?.semiPrivateMatchingPreference || 'N/A'}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Health & Consent Tab */}
+                    {activeTab === 'health' && (
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                            Health Information
+                          </h3>
+                          <div className="border-b border-white/10 pb-3 mb-4">
+                            <p className="text-gray-400 text-sm uppercase tracking-wider">Has Allergies</p>
+                            <p className="text-white mt-1 text-lg">
+                              {selectedRegistration.form_data?.hasAllergies ? '⚠️ Yes' : '✅ No'}
+                            </p>
+                            {selectedRegistration.form_data?.hasAllergies && (
+                              <p className="text-gray-300 mt-2 bg-yellow-500/10 p-3 rounded border border-yellow-500/20">
+                                {selectedRegistration.form_data?.allergiesDetails || 'No details provided'}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="border-b border-white/10 pb-3 mb-4">
+                            <p className="text-gray-400 text-sm uppercase tracking-wider">Has Medical Conditions</p>
+                            <p className="text-white mt-1 text-lg">
+                              {selectedRegistration.form_data?.hasMedicalConditions ? '⚠️ Yes' : '✅ No'}
+                            </p>
+                            {selectedRegistration.form_data?.hasMedicalConditions && (
+                              <p className="text-gray-300 mt-2 bg-yellow-500/10 p-3 rounded border border-yellow-500/20">
+                                {selectedRegistration.form_data?.medicalConditionsDetails || 'No details provided'}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="border-b border-white/10 pb-3 mb-4">
+                            <p className="text-gray-400 text-sm uppercase tracking-wider">Carries Medication</p>
+                            <p className="text-white mt-1 text-lg">
+                              {selectedRegistration.form_data?.carriesMedication ? '⚠️ Yes' : '✅ No'}
+                            </p>
+                            {selectedRegistration.form_data?.carriesMedication && (
+                              <p className="text-gray-300 mt-2 bg-yellow-500/10 p-3 rounded border border-yellow-500/20">
+                                {selectedRegistration.form_data?.medicationDetails || 'No details provided'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                            Consents
+                          </h3>
+                          <div className="border-b border-white/10 pb-3 mb-4">
+                            <p className="text-gray-400 text-sm uppercase tracking-wider">Photo/Video Consent</p>
+                            <p className="text-white mt-1 text-lg">
+                              {selectedRegistration.form_data?.photoVideoConsent ? '✅ Granted' : '❌ Not Granted'}
+                            </p>
+                          </div>
+                          <div className="border-b border-white/10 pb-3 mb-4">
+                            <p className="text-gray-400 text-sm uppercase tracking-wider">Policy Acceptance</p>
+                            <p className="text-white mt-1 text-lg">
+                              {selectedRegistration.form_data?.policyAcceptance ? '✅ Accepted' : '❌ Not Accepted'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Tab */}
+                    {activeTab === 'payment' && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                          Payment Information
+                        </h3>
+                        <div className="border-b border-white/10 pb-3">
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">Payment Status</p>
+                          <span className={`inline-flex px-4 py-2 rounded-full text-sm font-bold mt-2 ${getStatusColor(selectedRegistration.payment_status)}`}>
+                            {selectedRegistration.payment_status?.toUpperCase() || 'PENDING'}
+                          </span>
+                        </div>
+
+                        <div className="border-b border-white/10 pb-3">
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">Registration ID</p>
+                          <p className="text-white mt-1 font-mono text-sm">{selectedRegistration.id}</p>
+                        </div>
+
+                        <div className="border-b border-white/10 pb-3">
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">Payment Method ID</p>
+                          <p className="text-white mt-1 font-mono text-sm">
+                            {selectedRegistration.payment_method_id || 'N/A'}
+                          </p>
+                        </div>
+
+                        <div className="border-b border-white/10 pb-3">
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">Stripe Customer ID</p>
+                          <p className="text-white mt-1 font-mono text-sm">
+                            {selectedRegistration.form_data?.stripe_customer_id || 'N/A'}
+                          </p>
+                        </div>
+
+                        <div className="border-b border-white/10 pb-3">
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">Stripe Subscription ID</p>
+                          <p className="text-white mt-1 font-mono text-sm">
+                            {selectedRegistration.form_data?.stripe_subscription_id || 'N/A'}
+                          </p>
+                        </div>
+
+                        <div className="border-b border-white/10 pb-3">
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">Created At</p>
+                          <p className="text-white mt-1">
+                            {new Date(selectedRegistration.created_at).toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div className="border-b border-white/10 pb-3">
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">Last Updated</p>
+                          <p className="text-white mt-1">
+                            {selectedRegistration.form_data?.updated_at
+                              ? new Date(selectedRegistration.form_data.updated_at).toLocaleString()
+                              : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="p-6 border-t border-white/10 bg-black/50">
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => window.open(`mailto:${selectedRegistration.form_data?.parentEmail}?subject=SniperZone Registration - ${selectedRegistration.form_data?.playerFullName}`)}
+                    className="flex-1 min-w-[150px] bg-[#9BD4FF] text-black font-bold py-3 px-4 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all flex items-center justify-center gap-2"
+                  >
+                    📧 Send Email
+                  </button>
+
+                  <button
+                    onClick={() => alert('Export to PDF feature coming soon!')}
+                    className="flex-1 min-w-[150px] bg-white/10 text-white font-bold py-3 px-4 rounded-lg hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    📄 Export PDF
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete this registration? This action cannot be undone.')) {
+                        handleDelete(selectedRegistration.id);
+                        setSelectedRegistration(null);
+                      }
+                    }}
+                    className="flex-1 min-w-[150px] bg-red-500/20 text-red-400 font-bold py-3 px-4 rounded-lg hover:bg-red-500/30 border border-red-500/50 transition-all flex items-center justify-center gap-2"
+                  >
+                    🗑️ Delete
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSelectedRegistration(null);
+                      setActiveTab('player');
+                    }}
+                    className="flex-1 min-w-[150px] bg-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600 transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}
