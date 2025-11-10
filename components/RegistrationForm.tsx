@@ -75,8 +75,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         groupFrequency: preSelectedProgram.programType === 'group' ? preSelectedProgram.frequency : '',
         privateFrequency: preSelectedProgram.programType === 'private' ? preSelectedProgram.frequency : '',
       }));
-      // Skip to step 2 if program is pre-selected
-      setCurrentStep(2);
+      // Program selection is now step 1, so stay on step 1 with pre-filled data
+      setCurrentStep(1);
     }
   }, [preSelectedProgram]);
 
@@ -90,6 +90,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
     const errors = t.errors; // Error messages in current language
 
     if (currentStep === 1) {
+      // Step 1: Program Selection validation
+      if (!formData.programType) newErrors.programType = errors.selectProgram;
+      if (formData.programType === 'group' && !formData.groupFrequency) newErrors.groupFrequency = errors.selectFrequency;
+      if (formData.programType === 'group' && formData.groupFrequency === '1x' && !formData.groupDay) newErrors.groupDay = errors.selectDay;
+    }
+    if (currentStep === 2) {
+      // Step 2: Player & Parent Info validation
       if (!formData.playerFullName) newErrors.playerFullName = errors.required;
       if (!formData.dateOfBirth) newErrors.dateOfBirth = errors.required;
       if (!formData.playerCategory) newErrors.playerCategory = errors.required;
@@ -109,11 +116,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       if (samePhone || sameName) {
         newErrors.emergencyContactName = errors.emergencyPhoneSame;
       }
-    }
-    if (currentStep === 2) {
-        if (!formData.programType) newErrors.programType = errors.selectProgram;
-        if (formData.programType === 'group' && !formData.groupFrequency) newErrors.groupFrequency = errors.selectFrequency;
-        if (formData.programType === 'group' && formData.groupFrequency === '1x' && !formData.groupDay) newErrors.groupDay = errors.selectDay;
     }
     if (currentStep === 3) {
         if (!formData.jerseySize) newErrors.jerseySize = errors.selectJerseySize;
@@ -350,8 +352,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                     }}
                     className="absolute top-8 left-8 right-8"
                 >
-                    {currentStep === 1 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} language={language} />}
-                    {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} language={language} />}
+                    {currentStep === 1 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} language={language} />}
+                    {currentStep === 2 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} language={language} />}
                     {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} language={language} />}
                     {currentStep === 4 && <FormStep4 data={formData} language={language} />}
                     {currentStep === 5 && (

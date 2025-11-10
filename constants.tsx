@@ -48,8 +48,8 @@ export const content = {
     form: {
       title: 'SniperZone Registration',
       steps: {
-        step1: 'Player & Parent Info',
-        step2: 'Program Selection',
+        step1: 'Program Selection',
+        step2: 'Player & Parent Info',
         step3: 'Health & Consents',
         step4: 'Review & Summary',
         step5: 'Payment',
@@ -266,8 +266,8 @@ export const content = {
     form: {
       title: 'Inscription SniperZone',
       steps: {
-        step1: 'Info Joueur & Parent',
-        step2: 'Sélection du Programme',
+        step1: 'Sélection du Programme',
+        step2: 'Info Joueur & Parent',
         step3: 'Santé & Consentements',
         step4: 'Révision & Sommaire',
         step5: 'Paiement',
