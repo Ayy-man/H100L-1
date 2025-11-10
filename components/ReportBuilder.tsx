@@ -106,7 +106,12 @@ const ReportBuilder: React.FC<ReportBuilderProps> = ({
   };
 
   const handleExport = async () => {
+    console.log('🚀 handleExport called');
+    console.log('📊 Report Type:', reportType);
+    console.log('📋 Export Format:', exportFormat);
+
     const data = getFilteredData();
+    console.log('📦 Filtered Data:', data.length, 'records', data);
 
     if (data.length === 0) {
       alert('No data to export with current filters');
@@ -116,8 +121,10 @@ const ReportBuilder: React.FC<ReportBuilderProps> = ({
     const fields = availableFields[reportType].filter(f =>
       selectedFields.includes(f.key)
     );
+    console.log('🔖 Selected Fields:', fields.length, 'fields', fields);
 
     const filename = reportName || `SniperZone_${reportType}_${new Date().toISOString().split('T')[0]}`;
+    console.log('📁 Filename:', filename);
 
     const exportOptions: ExportOptions = {
       filename,
@@ -126,22 +133,29 @@ const ReportBuilder: React.FC<ReportBuilderProps> = ({
       title: reportTemplates[reportType]?.name || reportType,
       dateRange: dateRange.start && dateRange.end ? dateRange : undefined
     };
+    console.log('⚙️ Export Options:', exportOptions);
 
     try {
+      console.log(`🎯 Executing ${exportFormat} export...`);
       switch (exportFormat) {
         case 'csv':
+          console.log('📄 Calling exportToCSV...');
           exportToCSV(exportOptions);
           break;
         case 'pdf':
+          console.log('📕 Calling exportToPDF...');
           exportToPDF({
             ...exportOptions,
             subtitle: `${data.length} records`
           });
           break;
         case 'excel':
+          console.log('📊 Calling exportToExcel...');
           exportToExcel(exportOptions);
+          console.log('✅ exportToExcel completed');
           break;
         case 'print':
+          console.log('🖨️ Calling openPrintView...');
           openPrintView({
             ...exportOptions,
             subtitle: `${data.length} records`
@@ -151,19 +165,27 @@ const ReportBuilder: React.FC<ReportBuilderProps> = ({
 
       // Log export to history
       await logExport(data.length);
+      console.log('✅ Export logged to history');
       alert(`Report exported successfully! (${data.length} records)`);
     } catch (err: any) {
+      console.error('❌ Export error:', err);
       alert(`Export failed: ${err.message}`);
     }
   };
 
   const handleExportAll = async () => {
+    console.log('🚀 handleExportAll called');
+    console.log('📊 Registrations:', registrations.length);
+    console.log('📊 Capacity Data:', capacityData.length);
+    console.log('📊 Semi-Private Groups:', semiPrivateGroups.length);
+
     const regData = registrations.map(reg => ({
       ...reg.form_data,
       created_at: reg.created_at,
       payment_status: reg.payment_status,
       id: reg.id
     }));
+    console.log('📦 Prepared regData:', regData.length, 'records');
 
     const sheets = [
       {
@@ -185,11 +207,16 @@ const ReportBuilder: React.FC<ReportBuilderProps> = ({
         data: semiPrivateGroups
       }
     ];
+    console.log('📋 Prepared sheets:', sheets.length, 'sheets');
+    console.log('📋 Sheet details:', sheets);
 
     try {
+      console.log('📊 Calling exportToExcel with multiple sheets...');
       exportToExcel(sheets);
+      console.log('✅ exportToExcel completed');
       alert('Complete export generated with multiple sheets!');
     } catch (err: any) {
+      console.error('❌ Export All error:', err);
       alert(`Export failed: ${err.message}`);
     }
   };

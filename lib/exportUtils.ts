@@ -60,59 +60,82 @@ export const exportToCSV = (options: ExportOptions) => {
 
 // Excel Export
 export const exportToExcel = (options: ExportOptions | ExportOptions[]) => {
-  const workbook = XLSX.utils.book_new();
+  try {
+    console.log('Starting Excel export...', options);
 
-  // Support single or multiple sheets
-  const sheets = Array.isArray(options) ? options : [options];
+    const workbook = XLSX.utils.book_new();
 
-  sheets.forEach((sheet, index) => {
-    const { fields, data, title } = sheet;
+    // Support single or multiple sheets
+    const sheets = Array.isArray(options) ? options : [options];
 
-    // Create worksheet data
-    const wsData: any[][] = [];
+    console.log(`Creating ${sheets.length} sheet(s)`);
 
-    // Add title if provided
-    if (title) {
-      wsData.push([title]);
-      wsData.push([]); // Empty row
-    }
+    sheets.forEach((sheet, index) => {
+      const { fields, data, title } = sheet;
 
-    // Add headers
-    wsData.push(fields.map(f => f.label));
+      console.log(`Sheet ${index + 1}: ${title || 'Untitled'}, ${data.length} rows, ${fields.length} fields`);
 
-    // Add data rows
-    data.forEach(item => {
-      const row = fields.map(field => {
-        let value = item[field.key];
-        if (field.format) {
-          value = field.format(value);
+      // Create worksheet data
+      const wsData: any[][] = [];
+
+      // Add title if provided
+      if (title) {
+        wsData.push([title]);
+        wsData.push([]); // Empty row
+      }
+
+      // Add headers
+      wsData.push(fields.map(f => f.label));
+
+      // Add data rows
+      data.forEach((item, rowIndex) => {
+        try {
+          const row = fields.map(field => {
+            let value = item[field.key];
+            if (field.format) {
+              value = field.format(value);
+            }
+            return value ?? '';
+          });
+          wsData.push(row);
+        } catch (rowError) {
+          console.error(`Error processing row ${rowIndex}:`, rowError, item);
         }
-        return value ?? '';
       });
-      wsData.push(row);
+
+      console.log(`Worksheet data prepared: ${wsData.length} rows total`);
+
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Auto-size columns
+      const colWidths = fields.map(field => ({
+        wch: Math.max(field.label.length, 15)
+      }));
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      const sheetName = title || `Sheet${index + 1}`;
+      const safeName = sheetName.slice(0, 31); // Max 31 chars
+      console.log(`Adding sheet: ${safeName}`);
+      XLSX.utils.book_append_sheet(workbook, ws, safeName);
     });
 
-    // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    // Generate filename
+    const filename = Array.isArray(options)
+      ? 'SniperZone_Export'
+      : options.filename;
 
-    // Auto-size columns
-    const colWidths = fields.map(field => ({
-      wch: Math.max(field.label.length, 15)
-    }));
-    ws['!cols'] = colWidths;
+    console.log(`Writing file: ${filename}.xlsx`);
 
-    // Add worksheet to workbook
-    const sheetName = title || `Sheet${index + 1}`;
-    XLSX.utils.book_append_sheet(workbook, ws, sheetName.slice(0, 31)); // Max 31 chars
-  });
+    // Write file
+    XLSX.writeFile(workbook, `${filename}.xlsx`);
 
-  // Generate filename
-  const filename = Array.isArray(options)
-    ? 'SniperZone_Export'
-    : options.filename;
-
-  // Write file
-  XLSX.writeFile(workbook, `${filename}.xlsx`);
+    console.log('Excel export completed successfully!');
+  } catch (error) {
+    console.error('Excel export failed:', error);
+    throw new Error(`Excel export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 // PDF Export
