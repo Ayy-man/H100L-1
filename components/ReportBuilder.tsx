@@ -81,6 +81,8 @@ const ReportBuilder: React.FC<ReportBuilderProps> = ({
           created_at: reg.created_at,
           payment_status: reg.payment_status,
           payment_method_id: reg.payment_method_id,
+          stripe_customer_id: reg.stripe_customer_id,
+          stripe_subscription_id: reg.stripe_subscription_id,
           id: reg.id
         }));
         break;
@@ -183,6 +185,9 @@ const ReportBuilder: React.FC<ReportBuilderProps> = ({
       ...reg.form_data,
       created_at: reg.created_at,
       payment_status: reg.payment_status,
+      payment_method_id: reg.payment_method_id,
+      stripe_customer_id: reg.stripe_customer_id,
+      stripe_subscription_id: reg.stripe_subscription_id,
       id: reg.id
     }));
     console.log('📦 Prepared regData:', regData.length, 'records');

@@ -13,6 +13,8 @@ interface Registration {
   form_data: any;
   payment_status: string;
   payment_method_id?: string;
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
 }
 
 interface StatsCardProps {
