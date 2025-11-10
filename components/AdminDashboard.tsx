@@ -4,11 +4,8 @@ import { supabase } from '../lib/supabase';
 interface Registration {
   id: string;
   created_at: string;
-  form_data: {
-    playerFullName: string;
-    programType: string;
-    parentEmail: string;
-  };
+  form_data: any; // Can be string or object from Supabase
+  payment_status: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -40,7 +37,16 @@ const AdminDashboard: React.FC = () => {
           if (error) {
             throw error;
           }
-          setRegistrations(data as Registration[]);
+
+          // Parse form_data if it's a string
+          const parsedData = data.map((reg: any) => ({
+            ...reg,
+            form_data: typeof reg.form_data === 'string'
+              ? JSON.parse(reg.form_data)
+              : reg.form_data
+          }));
+
+          setRegistrations(parsedData as Registration[]);
         } catch (err: any) {
           setError(err.message);
         } finally {
@@ -89,9 +95,13 @@ const AdminDashboard: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{reg.form_data?.playerFullName || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 capitalize">{reg.form_data?.programType || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{reg.form_data?.parentEmail || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-400">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-500/10 text-green-400">
-                          Confirmed
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          reg.payment_status === 'paid'
+                            ? 'bg-green-500/10 text-green-400'
+                            : 'bg-yellow-500/10 text-yellow-400'
+                        }`}>
+                          {reg.payment_status || 'Pending'}
                         </span>
                       </td>
                     </tr>
