@@ -114,7 +114,7 @@ const FormStep3: React.FC<FormStep3Props> = ({ data, errors, handleChange, langu
             handleChange={handleChange}
             error={errors.policyAcceptance}
             required
-            label={<span>{t.policyAcceptance} <a href="#" target="_blank" rel="noopener noreferrer" className="text-[#9BD4FF] hover:underline">{t.termsLink}</a>.</span>}
+            label={<span>{t.policyAcceptance} <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#9BD4FF] hover:underline">{t.termsLink}</a>.</span>}
         />
       </div>
     </div>

@@ -12,6 +12,7 @@ import Pricing from './components/Pricing';
 import Footer from './components/Footer';
 import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
+import Terms from './components/Terms';
 
 function App() {
   const [language, setLanguage] = useState<Language>(Language.FR);
@@ -35,10 +36,13 @@ function App() {
     setIsFormOpen(true);
   };
 
-  // Simple routing for the admin dashboard
+  // Simple routing for the admin dashboard and terms page
   const currentPath = window.location.pathname;
   if (currentPath === '/admin') {
     return <AdminDashboard />;
+  }
+  if (currentPath === '/terms') {
+    return <Terms language={language} onClose={() => window.history.back()} />;
   }
 
   return (
