@@ -165,16 +165,123 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
         {data.programType === 'private' && (
             <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
                 <h4 className="font-bold text-[#9BD4FF]">Private Training Details</h4>
-                {/* Add Private Fields */}
-                <p className="text-gray-400">Private training options coming soon.</p>
+
+                <FormSelect label="Session Frequency" name="privateFrequency" value={data.privateFrequency} handleChange={handleChange} error={errors.privateFrequency} required>
+                  <option value="">-- Select Frequency --</option>
+                  <option value="1x/week">1x / week</option>
+                  <option value="2x/week">2x / week</option>
+                  <option value="3x/week">3x / week</option>
+                </FormSelect>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Days <span className="text-red-500">*</span></label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                      <label
+                        key={day}
+                        className={`p-3 border rounded-lg cursor-pointer text-center text-sm ${
+                          (data.privateSelectedDays || []).includes(day)
+                            ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF]'
+                            : 'border-white/20 text-gray-300 hover:border-white/40'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={(data.privateSelectedDays || []).includes(day)}
+                          onChange={() => handleMultiSelectChange('privateSelectedDays', day)}
+                        />
+                        {day}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Select all days you're available for private sessions</p>
+                </div>
+
+                <FormSelect label="Preferred Time Slot" name="privateTimeSlot" value={data.privateTimeSlot} handleChange={handleChange}>
+                  <option value="">-- Select Time Slot --</option>
+                  <option value="Morning (6 AM - 12 PM)">Morning (6 AM - 12 PM)</option>
+                  <option value="Afternoon (12 PM - 5 PM)">Afternoon (12 PM - 5 PM)</option>
+                  <option value="Evening (5 PM - 9 PM)">Evening (5 PM - 9 PM)</option>
+                </FormSelect>
+
+                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
+                  <p className="text-sm text-gray-300">
+                    📞 Our team will contact you within 24 hours to schedule your private training sessions based on your preferences.
+                  </p>
+                </div>
             </motion.div>
         )}
 
         {data.programType === 'semi-private' && (
              <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
                 <h4 className="font-bold text-[#9BD4FF]">Semi-Private Training Details</h4>
-                {/* Add Semi-Private Fields */}
-                <p className="text-gray-400">Semi-Private training options coming soon.</p>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Available Days <span className="text-red-500">*</span></label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                      <label
+                        key={day}
+                        className={`p-3 border rounded-lg cursor-pointer text-center text-sm ${
+                          (data.semiPrivateAvailability || []).includes(day)
+                            ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF]'
+                            : 'border-white/20 text-gray-300 hover:border-white/40'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={(data.semiPrivateAvailability || []).includes(day)}
+                          onChange={() => handleMultiSelectChange('semiPrivateAvailability', day)}
+                        />
+                        {day}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Select all days you're available (we'll match you with players with similar availability)</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Time Windows <span className="text-red-500">*</span></label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {['Morning (6 AM - 12 PM)', 'Afternoon (12 PM - 5 PM)', 'Evening (5 PM - 9 PM)'].map(timeWindow => (
+                      <label
+                        key={timeWindow}
+                        className={`p-3 border rounded-lg cursor-pointer text-center text-sm ${
+                          (data.semiPrivateTimeWindows || []).includes(timeWindow)
+                            ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF]'
+                            : 'border-white/20 text-gray-300 hover:border-white/40'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={(data.semiPrivateTimeWindows || []).includes(timeWindow)}
+                          onChange={() => handleMultiSelectChange('semiPrivateTimeWindows', timeWindow)}
+                        />
+                        {timeWindow}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <FormSelect label="Matching Preference" name="semiPrivateMatchingPreference" value={data.semiPrivateMatchingPreference} handleChange={handleChange}>
+                  <option value="">-- Select Preference --</option>
+                  <option value="same-level">Same skill level</option>
+                  <option value="flexible">Flexible - any skill level</option>
+                  <option value="higher-level">Train with higher skill level</option>
+                </FormSelect>
+
+                <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-purple-300 mb-2">🤝 How Semi-Private Works</p>
+                  <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
+                    <li>We'll match you with 1-2 other players of similar age and skill level</li>
+                    <li>Our intelligent matching system finds the best compatibility based on your preferences</li>
+                    <li>More affordable than private training while maintaining personalized attention</li>
+                    <li>You'll be notified within 48 hours when a compatible group is formed</li>
+                  </ul>
+                </div>
             </motion.div>
         )}
 
