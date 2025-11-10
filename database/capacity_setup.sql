@@ -4,17 +4,19 @@
 -- Sets up time slots with capacity tracking and automatic registration counting
 
 -- ============================================
--- 1. ADD UNIQUE CONSTRAINT ON TIME_SLOT_NAME
+-- 1. CLEAN UP OLD/DUPLICATE DATA
+-- ============================================
+-- Remove any existing time slots to start fresh
+-- This prevents duplicate key errors
+TRUNCATE TABLE public.time_slots CASCADE;
+
+-- ============================================
+-- 2. ADD UNIQUE CONSTRAINT ON TIME_SLOT_NAME
 -- ============================================
 -- This allows ON CONFLICT to work properly
 -- Drop and recreate to ensure it exists
 ALTER TABLE public.time_slots DROP CONSTRAINT IF EXISTS time_slots_name_unique;
 ALTER TABLE public.time_slots ADD CONSTRAINT time_slots_name_unique UNIQUE (time_slot_name);
-
--- ============================================
--- 2. CLEAR EXISTING DATA (OPTIONAL - UNCOMMENT IF NEEDED)
--- ============================================
--- TRUNCATE TABLE public.time_slots CASCADE;
 
 -- ============================================
 -- 3. INSERT TIME SLOTS FOR TUESDAY & FRIDAY
@@ -39,7 +41,7 @@ VALUES
 ON CONFLICT (time_slot_name) DO NOTHING;
 
 -- ============================================
--- 4. CREATE FUNCTION TO CALCULATE CURRENT REGISTRATIONS
+-- 5. CREATE FUNCTION TO CALCULATE CURRENT REGISTRATIONS
 -- ============================================
 
 -- Drop existing function if it exists
@@ -92,7 +94,7 @@ $$;
 COMMENT ON FUNCTION public.calculate_slot_registrations() IS 'Calculates current registrations for each time slot and returns player details';
 
 -- ============================================
--- 5. CREATE FUNCTION TO UPDATE SLOT COUNTS
+-- 6. CREATE FUNCTION TO UPDATE SLOT COUNTS
 -- ============================================
 
 -- Drop existing function
@@ -135,7 +137,7 @@ $$;
 COMMENT ON FUNCTION public.update_time_slot_counts() IS 'Updates the current_registrations field for all active time slots';
 
 -- ============================================
--- 6. CREATE TRIGGER TO AUTO-UPDATE COUNTS
+-- 7. CREATE TRIGGER TO AUTO-UPDATE COUNTS
 -- ============================================
 
 -- Drop existing trigger and function
@@ -164,7 +166,7 @@ EXECUTE FUNCTION public.trigger_update_slot_counts();
 COMMENT ON TRIGGER trigger_update_slot_counts ON public.registrations IS 'Automatically updates time slot counts when registrations change';
 
 -- ============================================
--- 7. CREATE VIEW FOR CAPACITY OVERVIEW
+-- 8. CREATE VIEW FOR CAPACITY OVERVIEW
 -- ============================================
 
 DROP VIEW IF EXISTS public.capacity_overview;
@@ -203,14 +205,14 @@ COMMENT ON VIEW public.capacity_overview IS 'Provides an overview of capacity st
 GRANT SELECT ON public.capacity_overview TO anon, authenticated;
 
 -- ============================================
--- 8. INITIAL COUNT UPDATE
+-- 9. INITIAL COUNT UPDATE
 -- ============================================
 
 -- Run the update function to set initial counts
 SELECT public.update_time_slot_counts();
 
 -- ============================================
--- 9. VERIFICATION QUERIES
+-- 10. VERIFICATION QUERIES
 -- ============================================
 
 -- Check time slots
@@ -241,7 +243,7 @@ FROM information_schema.triggers
 WHERE trigger_name = 'trigger_update_slot_counts';
 
 -- ============================================
--- 10. MANUAL UPDATE COMMAND (if needed)
+-- 11. MANUAL UPDATE COMMAND (if needed)
 -- ============================================
 
 -- Run this manually if you need to recalculate all slot counts:
