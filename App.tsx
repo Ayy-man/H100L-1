@@ -63,6 +63,7 @@ function App() {
             <RegistrationForm
               onClose={closeForm}
               preSelectedProgram={selectedProgram}
+              language={language}
             />
           </Elements>
         )}

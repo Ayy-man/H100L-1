@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { FormData, ProgramType } from '../../types';
+import { FormData, ProgramType, Language } from '../../types';
+import { content } from '../../constants';
 import FormSelect from './FormSelect';
 import FormCheckbox from './FormCheckbox';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +12,7 @@ interface FormStep2Props {
   errors: Partial<Record<keyof FormData, string>>;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleMultiSelectChange: (name: keyof FormData, option: string) => void;
+  language: Language;
 }
 
 const slideDown = {
@@ -19,7 +21,9 @@ const slideDown = {
     exit: { opacity: 0, height: 0, transition: { duration: 0.2 } },
 };
 
-const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handleMultiSelectChange }) => {
+const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handleMultiSelectChange, language }) => {
+  const t = content[language].form.step2;
+
   // Get the auto-assigned time slot for Group Training based on player category
   const assignedTimeSlot = data.programType === 'group' && data.playerCategory
     ? getGroupTimeSlot(data.playerCategory)
@@ -56,31 +60,31 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
 
   return (
     <div className="space-y-6">
-      <h3 className="text-xl font-bold text-white uppercase tracking-wider border-b border-white/10 pb-2">Program Selection</h3>
-      <FormSelect label="Select Program Type" name="programType" value={data.programType} handleChange={handleChange} error={errors.programType} required>
-        <option value="">-- Choose a Program --</option>
-        <option value="group">Group Training</option>
-        <option value="private">Private Training</option>
-        <option value="semi-private">Semi-Private Training</option>
+      <h3 className="text-xl font-bold text-white uppercase tracking-wider border-b border-white/10 pb-2">{t.title}</h3>
+      <FormSelect label={t.programType.label} name="programType" value={data.programType} handleChange={handleChange} error={errors.programType} required>
+        <option value="">{t.programType.placeholder}</option>
+        <option value="group">{t.group}</option>
+        <option value="private">{t.private}</option>
+        <option value="semi-private">{t.semiPrivate}</option>
       </FormSelect>
       
       <AnimatePresence>
         {data.programType === 'group' && (
           <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
-            <h4 className="font-bold text-[#9BD4FF]">Group Training Details</h4>
+            <h4 className="font-bold text-[#9BD4FF]">{t.groupDetails}</h4>
 
             {/* Display auto-assigned time slot with capacity */}
             {assignedTimeSlot && (
               <div className="bg-[#9BD4FF]/10 p-4 rounded-lg border border-[#9BD4FF]/20">
-                <p className="text-sm font-medium text-gray-300 mb-1">Assigned Time Slot:</p>
+                <p className="text-sm font-medium text-gray-300 mb-1">{t.assignedTimeSlot}</p>
                 <p className="text-lg font-bold text-[#9BD4FF]">{assignedTimeSlot}</p>
-                <p className="text-xs text-gray-400 mt-1">Based on your player category ({data.playerCategory})</p>
+                <p className="text-xs text-gray-400 mt-1">{t.basedOnCategory} ({data.playerCategory})</p>
 
                 {/* Capacity indicator */}
                 {data.groupFrequency && (
                   <div className="mt-3 pt-3 border-t border-white/10">
                     {isCheckingCapacity ? (
-                      <p className="text-sm text-gray-400">Checking availability...</p>
+                      <p className="text-sm text-gray-400">{t.checkingAvailability}</p>
                     ) : (
                       <>
                         {capacityInfo.isFull ? (
@@ -88,21 +92,21 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                             </svg>
-                            <span className="font-medium">This time slot is FULL ({capacityInfo.currentCapacity}/{capacityInfo.maxCapacity})</span>
+                            <span className="font-medium">{t.slotFull} ({capacityInfo.currentCapacity}/{capacityInfo.maxCapacity})</span>
                           </div>
                         ) : capacityInfo.available <= 2 ? (
                           <div className="flex items-center gap-2 text-yellow-400">
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                             </svg>
-                            <span className="font-medium">Only {capacityInfo.available} spot{capacityInfo.available !== 1 ? 's' : ''} remaining! ({capacityInfo.currentCapacity}/{capacityInfo.maxCapacity})</span>
+                            <span className="font-medium">{t.onlySpots} {capacityInfo.available} {t.spotsRemaining} ({capacityInfo.currentCapacity}/{capacityInfo.maxCapacity})</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 text-green-400">
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
-                            <span className="font-medium">{capacityInfo.available} spot{capacityInfo.available !== 1 ? 's' : ''} available ({capacityInfo.currentCapacity}/{capacityInfo.maxCapacity})</span>
+                            <span className="font-medium">{capacityInfo.available} {t.spotsAvailable} ({capacityInfo.currentCapacity}/{capacityInfo.maxCapacity})</span>
                           </div>
                         )}
                       </>
@@ -115,26 +119,26 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
             {/* Warning if slot is full */}
             {capacityInfo.isFull && data.groupFrequency && (
               <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-lg">
-                <p className="text-red-400 font-medium">⚠️ Registration Unavailable</p>
+                <p className="text-red-400 font-medium">⚠️ {t.registrationUnavailable}</p>
                 <p className="text-sm text-gray-300 mt-1">
-                  This time slot is currently at full capacity. Please contact us at info@sniperzone.com to join the waitlist.
+                  {t.capacityMessage}
                 </p>
               </div>
             )}
 
-            <FormSelect label="Frequency" name="groupFrequency" value={data.groupFrequency} handleChange={handleChange} error={errors.groupFrequency} required>
-                <option value="">-- Select Frequency --</option>
+            <FormSelect label={t.frequency.label} name="groupFrequency" value={data.groupFrequency} handleChange={handleChange} error={errors.groupFrequency} required>
+                <option value="">{t.frequency.placeholder}</option>
                 <option value="1x">1x / week</option>
                 <option value="2x">2x / week</option>
             </FormSelect>
             {data.groupFrequency === '1x' && (
                 <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Select Day <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t.selectDay} <span className="text-red-500">*</span></label>
                     <div className="flex gap-4">
                         {['tuesday', 'friday'].map(day => (
                             <label key={day} className={`flex-1 p-4 border-2 rounded-lg cursor-pointer text-center ${data.groupDay === day ? 'border-[#9BD4FF] bg-[#9BD4FF]/10' : 'border-white/20'}`}>
                                 <input type="radio" name="groupDay" value={day} checked={data.groupDay === day} onChange={handleChange} className="sr-only" />
-                                <span className="capitalize">{day}</span>
+                                <span className="capitalize">{day === 'tuesday' ? t.tuesday : t.friday}</span>
                             </label>
                         ))}
                     </div>
@@ -143,20 +147,20 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
             )}
              {data.groupFrequency === '2x' && (
                 <div className="text-sm text-gray-300 p-4 bg-white/10 rounded-lg">
-                    Sessions are automatically scheduled for **Tuesday & Friday**.
+                    {t.autoScheduled}
                 </div>
             )}
 
             {/* Sunday Practice Participation */}
             <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-lg">
               <FormCheckbox
-                label="I agree to participate in Sunday practices (once per month, 11:00 AM - 12:30 PM)"
+                label={t.sundayPracticeLabel}
                 name="sundayPractice"
                 checked={data.sundayPractice}
                 handleChange={handleChange}
               />
               <p className="text-xs text-gray-400 mt-2 ml-6">
-                Note: Sunday practices are mandatory for Group Training participants and occur once monthly on real ice.
+                {t.sundayPracticeNote}
               </p>
             </div>
           </motion.div>
@@ -164,17 +168,17 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
 
         {data.programType === 'private' && (
             <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
-                <h4 className="font-bold text-[#9BD4FF]">Private Training Details</h4>
+                <h4 className="font-bold text-[#9BD4FF]">{t.privateDetails}</h4>
 
-                <FormSelect label="Session Frequency" name="privateFrequency" value={data.privateFrequency} handleChange={handleChange} error={errors.privateFrequency} required>
-                  <option value="">-- Select Frequency --</option>
+                <FormSelect label={t.sessionFrequency} name="privateFrequency" value={data.privateFrequency} handleChange={handleChange} error={errors.privateFrequency} required>
+                  <option value="">{t.frequency.placeholder}</option>
                   <option value="1x/week">1x / week</option>
                   <option value="2x/week">2x / week</option>
                   <option value="3x/week">3x / week</option>
                 </FormSelect>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Days <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">{t.preferredDays} <span className="text-red-500">*</span></label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
                       <label
@@ -195,19 +199,19 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                       </label>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">Select all days you're available for private sessions</p>
+                  <p className="text-xs text-gray-400 mt-2">{t.selectAllDays}</p>
                 </div>
 
-                <FormSelect label="Preferred Time Slot" name="privateTimeSlot" value={data.privateTimeSlot} handleChange={handleChange}>
-                  <option value="">-- Select Time Slot --</option>
-                  <option value="Morning (6 AM - 12 PM)">Morning (6 AM - 12 PM)</option>
-                  <option value="Afternoon (12 PM - 5 PM)">Afternoon (12 PM - 5 PM)</option>
-                  <option value="Evening (5 PM - 9 PM)">Evening (5 PM - 9 PM)</option>
+                <FormSelect label={t.preferredTime} name="privateTimeSlot" value={data.privateTimeSlot} handleChange={handleChange}>
+                  <option value="">{t.timeSlotPlaceholder}</option>
+                  <option value="Morning (6 AM - 12 PM)">{t.morningSlot}</option>
+                  <option value="Afternoon (12 PM - 5 PM)">{t.afternoonSlot}</option>
+                  <option value="Evening (5 PM - 9 PM)">{t.eveningSlot}</option>
                 </FormSelect>
 
                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-300">
-                    📞 Our team will contact you within 24 hours to schedule your private training sessions based on your preferences.
+                    {t.contactMessage}
                   </p>
                 </div>
             </motion.div>
@@ -215,10 +219,10 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
 
         {data.programType === 'semi-private' && (
              <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
-                <h4 className="font-bold text-[#9BD4FF]">Semi-Private Training Details</h4>
+                <h4 className="font-bold text-[#9BD4FF]">{t.semiPrivateDetails}</h4>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Available Days <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">{t.availableDays} <span className="text-red-500">*</span></label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
                       <label
@@ -239,17 +243,21 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                       </label>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">Select all days you're available (we'll match you with players with similar availability)</p>
+                  <p className="text-xs text-gray-400 mt-2">{t.selectAllAvailable}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Time Windows <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">{t.timeWindows} <span className="text-red-500">*</span></label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    {['Morning (6 AM - 12 PM)', 'Afternoon (12 PM - 5 PM)', 'Evening (5 PM - 9 PM)'].map(timeWindow => (
+                    {[
+                      { value: 'Morning (6 AM - 12 PM)', label: t.morningSlot },
+                      { value: 'Afternoon (12 PM - 5 PM)', label: t.afternoonSlot },
+                      { value: 'Evening (5 PM - 9 PM)', label: t.eveningSlot }
+                    ].map(timeWindow => (
                       <label
-                        key={timeWindow}
+                        key={timeWindow.value}
                         className={`p-3 border rounded-lg cursor-pointer text-center text-sm ${
-                          (data.semiPrivateTimeWindows || []).includes(timeWindow)
+                          (data.semiPrivateTimeWindows || []).includes(timeWindow.value)
                             ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF]'
                             : 'border-white/20 text-gray-300 hover:border-white/40'
                         }`}
@@ -257,29 +265,29 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                         <input
                           type="checkbox"
                           className="sr-only"
-                          checked={(data.semiPrivateTimeWindows || []).includes(timeWindow)}
-                          onChange={() => handleMultiSelectChange('semiPrivateTimeWindows', timeWindow)}
+                          checked={(data.semiPrivateTimeWindows || []).includes(timeWindow.value)}
+                          onChange={() => handleMultiSelectChange('semiPrivateTimeWindows', timeWindow.value)}
                         />
-                        {timeWindow}
+                        {timeWindow.label}
                       </label>
                     ))}
                   </div>
                 </div>
 
-                <FormSelect label="Matching Preference" name="semiPrivateMatchingPreference" value={data.semiPrivateMatchingPreference} handleChange={handleChange}>
-                  <option value="">-- Select Preference --</option>
-                  <option value="same-level">Same skill level</option>
-                  <option value="flexible">Flexible - any skill level</option>
-                  <option value="higher-level">Train with higher skill level</option>
+                <FormSelect label={t.matchingPreference.label} name="semiPrivateMatchingPreference" value={data.semiPrivateMatchingPreference} handleChange={handleChange}>
+                  <option value="">{t.matchingPreferencePlaceholder}</option>
+                  <option value="same-level">{t.sameLevel}</option>
+                  <option value="flexible">{t.flexible}</option>
+                  <option value="higher-level">{t.higherLevel}</option>
                 </FormSelect>
 
                 <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-purple-300 mb-2">🤝 How Semi-Private Works</p>
+                  <p className="text-sm font-medium text-purple-300 mb-2">{t.howSemiPrivateWorks}</p>
                   <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">
-                    <li>We'll match you with 1-2 other players of similar age and skill level</li>
-                    <li>Our intelligent matching system finds the best compatibility based on your preferences</li>
-                    <li>More affordable than private training while maintaining personalized attention</li>
-                    <li>You'll be notified within 48 hours when a compatible group is formed</li>
+                    <li>{t.semiPrivatePoint1}</li>
+                    <li>{t.semiPrivatePoint2}</li>
+                    <li>{t.semiPrivatePoint3}</li>
+                    <li>{t.semiPrivatePoint4}</li>
                   </ul>
                 </div>
             </motion.div>

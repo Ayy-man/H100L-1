@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FormData, ProgramType } from '../types';
+import { FormData, ProgramType, Language } from '../types';
 import { supabase } from '../lib/supabase';
+import { content } from '../constants';
 import { uploadMedicalReport, uploadMedicationActionPlan } from '../lib/fileUpload';
 import ProgressIndicator from './form/ProgressIndicator';
 import FormStep1 from './form/FormStep1';
@@ -16,6 +17,7 @@ interface RegistrationFormProps {
     programType: ProgramType | '';
     frequency: '1x' | '2x' | '';
   };
+  language: Language;
 }
 
 const initialFormData: FormData = {
@@ -31,15 +33,7 @@ const initialFormData: FormData = {
   medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
 };
 
-const formSteps = [
-  { id: 1, title: 'Player & Parent Info' },
-  { id: 2, title: 'Program Selection' },
-  { id: 3, title: 'Health & Consents' },
-  { id: 4, title: 'Review & Confirm' },
-  { id: 5, title: 'Payment' }
-];
-
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram }) => {
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram, language }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -47,6 +41,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
+
+  // Get translations for current language
+  const t = content[language].form;
+
+  // Define form steps with bilingual titles
+  const formSteps = [
+    { id: 1, title: t.steps.step1 },
+    { id: 2, title: t.steps.step2 },
+    { id: 3, title: t.steps.step3 },
+    { id: 4, title: t.steps.step4 },
+    { id: 5, title: t.steps.step5 }
+  ];
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -81,53 +87,55 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
   
   const validateStep = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
+    const errors = t.errors; // Error messages in current language
+
     if (currentStep === 1) {
-      if (!formData.playerFullName) newErrors.playerFullName = 'Player name is required.';
-      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required.';
-      if (!formData.playerCategory) newErrors.playerCategory = 'Player category is required.';
-      if (!formData.parentFullName) newErrors.parentFullName = 'Parent/guardian name is required.';
-      if (!formData.parentEmail || !/\S+@\S+\.\S+/.test(formData.parentEmail)) newErrors.parentEmail = 'A valid email is required.';
-      if (!formData.parentPhone || !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.parentPhone)) newErrors.parentPhone = 'A valid phone number is required.';
-      if (!formData.parentCity) newErrors.parentCity = 'City is required.';
-      if (!formData.parentPostalCode) newErrors.parentPostalCode = 'Postal code is required.';
-      if (!formData.communicationLanguage) newErrors.communicationLanguage = 'Preferred communication language is required.';
-      if (!formData.emergencyContactName) newErrors.emergencyContactName = 'Emergency contact name is required.';
-      if (!formData.emergencyContactPhone) newErrors.emergencyContactPhone = 'Emergency contact phone is required.';
+      if (!formData.playerFullName) newErrors.playerFullName = errors.required;
+      if (!formData.dateOfBirth) newErrors.dateOfBirth = errors.required;
+      if (!formData.playerCategory) newErrors.playerCategory = errors.required;
+      if (!formData.parentFullName) newErrors.parentFullName = errors.required;
+      if (!formData.parentEmail || !/\S+@\S+\.\S+/.test(formData.parentEmail)) newErrors.parentEmail = errors.invalidEmail;
+      if (!formData.parentPhone || !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.parentPhone)) newErrors.parentPhone = errors.invalidPhone;
+      if (!formData.parentCity) newErrors.parentCity = errors.required;
+      if (!formData.parentPostalCode) newErrors.parentPostalCode = errors.required;
+      if (!formData.communicationLanguage) newErrors.communicationLanguage = errors.required;
+      if (!formData.emergencyContactName) newErrors.emergencyContactName = errors.required;
+      if (!formData.emergencyContactPhone) newErrors.emergencyContactPhone = errors.required;
 
       // Check both phone AND name to ensure emergency contact is a different person
       const samePhone = formData.emergencyContactPhone === formData.parentPhone;
       const sameName = formData.emergencyContactName.toLowerCase().trim() === formData.parentFullName.toLowerCase().trim();
 
       if (samePhone || sameName) {
-        newErrors.emergencyContactName = 'Emergency contact must be a different person than parent/guardian';
+        newErrors.emergencyContactName = errors.emergencyPhoneSame;
       }
     }
     if (currentStep === 2) {
-        if (!formData.programType) newErrors.programType = 'Please select a program type.';
-        if (formData.programType === 'group' && !formData.groupFrequency) newErrors.groupFrequency = 'Please select a frequency.';
-        if (formData.programType === 'group' && formData.groupFrequency === '1x' && !formData.groupDay) newErrors.groupDay = 'Please select a day.';
+        if (!formData.programType) newErrors.programType = errors.selectProgram;
+        if (formData.programType === 'group' && !formData.groupFrequency) newErrors.groupFrequency = errors.selectFrequency;
+        if (formData.programType === 'group' && formData.groupFrequency === '1x' && !formData.groupDay) newErrors.groupDay = errors.selectDay;
     }
     if (currentStep === 3) {
-        if (!formData.jerseySize) newErrors.jerseySize = 'Please select a jersey size.';
-        if (!formData.primaryObjective) newErrors.primaryObjective = 'Please select a primary objective.';
-        if (!formData.policyAcceptance) newErrors.policyAcceptance = 'You must accept the policies to continue.';
-        if (!formData.photoVideoConsent) newErrors.photoVideoConsent = 'You must provide consent to continue.';
+        if (!formData.jerseySize) newErrors.jerseySize = errors.selectJerseySize;
+        if (!formData.primaryObjective) newErrors.primaryObjective = errors.required;
+        if (!formData.policyAcceptance) newErrors.policyAcceptance = errors.acceptPolicies;
+        if (!formData.photoVideoConsent) newErrors.photoVideoConsent = errors.provideConsent;
 
         // Medication validation
         if (formData.carriesMedication) {
-          if (!formData.medicationDetails) newErrors.medicationDetails = 'Please provide medication details.';
-          if (!formData.medicationActionPlan) newErrors.medicationActionPlan = 'Please upload an action plan for medication.';
+          if (!formData.medicationDetails) newErrors.medicationDetails = errors.required;
+          if (!formData.medicationActionPlan) newErrors.medicationActionPlan = errors.required;
           if (formData.medicationActionPlan && formData.medicationActionPlan.size > 5 * 1024 * 1024) {
-            newErrors.medicationActionPlan = "File size cannot exceed 5MB.";
+            newErrors.medicationActionPlan = errors.fileSizeExceeded;
           }
           if (formData.medicationActionPlan && formData.medicationActionPlan.type !== 'application/pdf') {
-            newErrors.medicationActionPlan = "Only PDF files are allowed.";
+            newErrors.medicationActionPlan = errors.invalidFileType;
           }
         }
 
         // Medical report validation (optional)
-        if(formData.medicalReport && formData.medicalReport.size > 5 * 1024 * 1024) newErrors.medicalReport = "File size cannot exceed 5MB.";
-        if(formData.medicalReport && formData.medicalReport.type !== 'application/pdf') newErrors.medicalReport = "Only PDF files are allowed.";
+        if(formData.medicalReport && formData.medicalReport.size > 5 * 1024 * 1024) newErrors.medicalReport = errors.fileSizeExceeded;
+        if(formData.medicalReport && formData.medicalReport.type !== 'application/pdf') newErrors.medicalReport = errors.invalidFileType;
     }
 
     setErrors(newErrors);
@@ -184,7 +192,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
 
   const handlePaymentError = (error: string) => {
     setPaymentError(error);
-    alert(`Payment failed: ${error}`);
+    alert(t.paymentError.replace('{error}', error));
   };
 
   const handleSubmit = async (paymentMethod?: string) => {
@@ -249,7 +257,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
           console.error('Payment error:', paymentError);
           // Even if payment fails, registration is created
           // User will need to complete payment separately
-          alert(`Registration created but payment failed: ${paymentError.message}. Please contact support to complete payment.`);
+          alert(t.paymentFailedButRegistered.replace('{error}', paymentError.message));
         }
       }
 
@@ -283,13 +291,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         }
       }
 
-      alert('Registration Submitted Successfully!');
+      alert(t.success);
       localStorage.removeItem('registrationFormData');
       onClose();
 
     } catch (error: any) {
       console.error('Supabase submission error:', error);
-      alert(`Submission failed: ${error.message}`);
+      alert(t.submissionError.replace('{error}', error.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -323,7 +331,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       >
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
         <div className="p-8 border-b border-white/10">
-            <h2 className="text-2xl uppercase font-bold tracking-wider text-center">SniperZone Registration</h2>
+            <h2 className="text-2xl uppercase font-bold tracking-wider text-center">{t.title}</h2>
             <ProgressIndicator currentStep={currentStep} steps={formSteps} />
         </div>
 
@@ -342,10 +350,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                     }}
                     className="absolute top-8 left-8 right-8"
                 >
-                    {currentStep === 1 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} />}
-                    {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} />}
-                    {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} />}
-                    {currentStep === 4 && <FormStep4 data={formData} />}
+                    {currentStep === 1 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} language={language} />}
+                    {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} language={language} />}
+                    {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} language={language} />}
+                    {currentStep === 4 && <FormStep4 data={formData} language={language} />}
                     {currentStep === 5 && (
                       <PaymentForm
                         formData={formData}
@@ -364,18 +372,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                   disabled={currentStep === 1}
                   className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                  Back
+                  {t.buttons.back}
               </button>
               {currentStep < 4 ? (
                   <button onClick={nextStep} className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition">
-                      Next
+                      {t.buttons.next}
                   </button>
               ) : currentStep === 4 ? (
                   <button
                     onClick={nextStep}
                     className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition"
                   >
-                      Proceed to Payment
+                      {t.buttons.proceedToPayment}
                   </button>
               ) : null}
           </div>
@@ -386,7 +394,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                   onClick={prevStep}
                   className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition"
               >
-                  Back
+                  {t.buttons.back}
               </button>
               {paymentError && (
                 <p className="text-red-400 text-sm">{paymentError}</p>
