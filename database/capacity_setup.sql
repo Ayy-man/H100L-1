@@ -7,8 +7,9 @@
 -- 1. ADD UNIQUE CONSTRAINT ON TIME_SLOT_NAME
 -- ============================================
 -- This allows ON CONFLICT to work properly
-ALTER TABLE public.time_slots
-ADD CONSTRAINT time_slots_name_unique UNIQUE (time_slot_name);
+-- Drop and recreate to ensure it exists
+ALTER TABLE public.time_slots DROP CONSTRAINT IF EXISTS time_slots_name_unique;
+ALTER TABLE public.time_slots ADD CONSTRAINT time_slots_name_unique UNIQUE (time_slot_name);
 
 -- ============================================
 -- 2. CLEAR EXISTING DATA (OPTIONAL - UNCOMMENT IF NEEDED)
