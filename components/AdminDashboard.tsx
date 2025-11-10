@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 
 interface Registration {
   id: string;
@@ -38,6 +42,51 @@ interface SlotRegistration {
   created_at: string;
 }
 
+interface DailyRegistration {
+  date: string;
+  count: number;
+  paid_count: number;
+  pending_count: number;
+}
+
+interface ProgramDistribution {
+  program_type: string;
+  count: number;
+  percentage: number;
+}
+
+interface RevenueByProgram {
+  program_type: string;
+  registrations: number;
+  paid_registrations: number;
+  estimated_monthly_revenue: number;
+}
+
+interface AgeCategoryDistribution {
+  category: string;
+  count: number;
+  percentage: number;
+}
+
+interface CapacityUtilization {
+  time_slot_name: string;
+  day_of_week: string;
+  capacity: number;
+  current_registrations: number;
+  utilization_rate: number;
+  available_spots: number;
+}
+
+interface AnalyticsSummary {
+  total_registrations: number;
+  paid_registrations: number;
+  total_mrr: number;
+  avg_registration_value: number;
+  fill_rate_percentage: number;
+  this_week_registrations: number;
+  last_week_registrations: number;
+}
+
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, color }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -61,6 +110,9 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Dashboard tab state
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics'>('overview');
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [programFilter, setProgramFilter] = useState<string>('all');
@@ -77,6 +129,14 @@ const AdminDashboard: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<CapacitySlot | null>(null);
   const [slotPlayers, setSlotPlayers] = useState<SlotRegistration[]>([]);
   const [loadingSlotDetails, setLoadingSlotDetails] = useState(false);
+
+  // Analytics data
+  const [dailyRegistrations, setDailyRegistrations] = useState<DailyRegistration[]>([]);
+  const [programDistribution, setProgramDistribution] = useState<ProgramDistribution[]>([]);
+  const [revenueByProgram, setRevenueByProgram] = useState<RevenueByProgram[]>([]);
+  const [ageDistribution, setAgeDistribution] = useState<AgeCategoryDistribution[]>([]);
+  const [capacityUtilization, setCapacityUtilization] = useState<CapacityUtilization[]>([]);
+  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary | null>(null);
 
   useEffect(() => {
     const password = prompt('Enter admin password:');
@@ -105,6 +165,13 @@ const AdminDashboard: React.FC = () => {
       };
     }
   }, [isAuthenticated]);
+
+  // Fetch analytics data when switching to analytics tab
+  useEffect(() => {
+    if (isAuthenticated && dashboardTab === 'analytics') {
+      fetchAnalyticsData();
+    }
+  }, [isAuthenticated, dashboardTab]);
 
   const fetchData = async () => {
     try {
@@ -142,6 +209,36 @@ const AdminDashboard: React.FC = () => {
 
     if (!capacityError && capacityData) {
       setCapacitySlots(capacityData);
+    }
+  };
+
+  const fetchAnalyticsData = async () => {
+    try {
+      // Fetch all analytics views in parallel
+      const [
+        dailyRegsRes,
+        programDistRes,
+        revenueRes,
+        ageDistRes,
+        capacityUtilRes,
+        summaryRes
+      ] = await Promise.all([
+        supabase.from('daily_registration_counts').select('*'),
+        supabase.from('program_distribution').select('*'),
+        supabase.from('revenue_by_program').select('*'),
+        supabase.from('age_category_distribution').select('*'),
+        supabase.from('capacity_utilization').select('*'),
+        supabase.from('analytics_summary').select('*').single()
+      ]);
+
+      if (dailyRegsRes.data) setDailyRegistrations(dailyRegsRes.data);
+      if (programDistRes.data) setProgramDistribution(programDistRes.data);
+      if (revenueRes.data) setRevenueByProgram(revenueRes.data);
+      if (ageDistRes.data) setAgeDistribution(ageDistRes.data);
+      if (capacityUtilRes.data) setCapacityUtilization(capacityUtilRes.data);
+      if (summaryRes.data) setAnalyticsSummary(summaryRes.data);
+    } catch (err: any) {
+      console.error('Error fetching analytics:', err);
     }
   };
 
@@ -388,14 +485,41 @@ const AdminDashboard: React.FC = () => {
     <div className="bg-gray-900 min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl md:text-5xl uppercase font-black tracking-wider text-white mb-2">
             Admin Dashboard
           </h1>
           <p className="text-gray-400">Manage SniperZone registrations and track performance</p>
         </div>
 
-        {/* Stats Cards */}
+        {/* Dashboard Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-white/10">
+          <button
+            onClick={() => setDashboardTab('overview')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'overview'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            📊 Overview
+          </button>
+          <button
+            onClick={() => setDashboardTab('analytics')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'analytics'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            📈 Analytics
+          </button>
+        </div>
+
+        {/* OVERVIEW TAB */}
+        {dashboardTab === 'overview' && (
+          <>
+            {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatsCard
             title="Total Registrations"
@@ -681,6 +805,204 @@ const AdminDashboard: React.FC = () => {
             </div>
           )}
         </div>
+          </>
+        )}
+
+        {/* ANALYTICS TAB */}
+        {dashboardTab === 'analytics' && (
+          <div className="space-y-8">
+            {/* Key Metrics Cards */}
+            {analyticsSummary && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsCard
+                  title="Total MRR"
+                  value={`$${analyticsSummary.total_mrr.toLocaleString()}`}
+                  icon="💰"
+                  color="text-green-400"
+                />
+                <StatsCard
+                  title="Avg Registration Value"
+                  value={`$${Math.round(analyticsSummary.avg_registration_value)}`}
+                  icon="📊"
+                  color="text-[#9BD4FF]"
+                />
+                <StatsCard
+                  title="Fill Rate"
+                  value={`${analyticsSummary.fill_rate_percentage}%`}
+                  icon="📈"
+                  color="text-yellow-400"
+                />
+                <StatsCard
+                  title="Week-over-Week Growth"
+                  value={`${analyticsSummary.this_week_registrations > analyticsSummary.last_week_registrations ? '+' : ''}${analyticsSummary.this_week_registrations - analyticsSummary.last_week_registrations}`}
+                  icon={analyticsSummary.this_week_registrations >= analyticsSummary.last_week_registrations ? '📈' : '📉'}
+                  color={analyticsSummary.this_week_registrations >= analyticsSummary.last_week_registrations ? 'text-green-400' : 'text-red-400'}
+                />
+              </div>
+            )}
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Registration Trends - Line Chart */}
+              <div className="bg-black border border-white/10 rounded-lg p-6">
+                <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                  📈 Registration Trends (30 Days)
+                </h3>
+                {dailyRegistrations.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={dailyRegistrations.reverse()}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#9BD4FF"
+                        tick={{ fill: '#9BD4FF' }}
+                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      />
+                      <YAxis stroke="#9BD4FF" tick={{ fill: '#9BD4FF' }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #9BD4FF', borderRadius: '8px' }}
+                        labelStyle={{ color: '#9BD4FF' }}
+                      />
+                      <Legend wrapperStyle={{ color: '#9BD4FF' }} />
+                      <Line type="monotone" dataKey="count" stroke="#9BD4FF" strokeWidth={2} name="Total" />
+                      <Line type="monotone" dataKey="paid_count" stroke="#22c55e" strokeWidth={2} name="Paid" />
+                      <Line type="monotone" dataKey="pending_count" stroke="#eab308" strokeWidth={2} name="Pending" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-center py-12">No data available</p>
+                )}
+              </div>
+
+              {/* Program Distribution - Pie Chart */}
+              <div className="bg-black border border-white/10 rounded-lg p-6">
+                <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                  🥧 Program Distribution
+                </h3>
+                {programDistribution.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={programDistribution}
+                        dataKey="count"
+                        nameKey="program_type"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        label={(entry) => `${entry.program_type}: ${entry.percentage}%`}
+                      >
+                        {programDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#9BD4FF', '#22c55e', '#eab308', '#ef4444'][index % 4]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #9BD4FF', borderRadius: '8px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-center py-12">No data available</p>
+                )}
+              </div>
+
+              {/* Revenue by Program - Bar Chart */}
+              <div className="bg-black border border-white/10 rounded-lg p-6">
+                <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                  💵 Revenue by Program
+                </h3>
+                {revenueByProgram.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={revenueByProgram}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                      <XAxis
+                        dataKey="program_type"
+                        stroke="#9BD4FF"
+                        tick={{ fill: '#9BD4FF' }}
+                      />
+                      <YAxis stroke="#9BD4FF" tick={{ fill: '#9BD4FF' }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #9BD4FF', borderRadius: '8px' }}
+                        labelStyle={{ color: '#9BD4FF' }}
+                      />
+                      <Legend wrapperStyle={{ color: '#9BD4FF' }} />
+                      <Bar dataKey="estimated_monthly_revenue" fill="#22c55e" name="Est. Monthly Revenue ($)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-center py-12">No data available</p>
+                )}
+              </div>
+
+              {/* Age Category Distribution - Pie Chart */}
+              <div className="bg-black border border-white/10 rounded-lg p-6">
+                <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                  👶 Age Category Distribution
+                </h3>
+                {ageDistribution.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={ageDistribution}
+                        dataKey="count"
+                        nameKey="category"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        label={(entry) => `${entry.category}: ${entry.percentage}%`}
+                      >
+                        {ageDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#9BD4FF', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#ec4899'][index % 6]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #9BD4FF', borderRadius: '8px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-center py-12">No data available</p>
+                )}
+              </div>
+            </div>
+
+            {/* Capacity Heat Map */}
+            <div className="bg-black border border-white/10 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                🔥 Capacity Heat Map
+              </h3>
+              {capacityUtilization.length > 0 ? (
+                <div className="space-y-4">
+                  {capacityUtilization.map((slot, idx) => (
+                    <div key={idx} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white font-medium">{slot.time_slot_name}</span>
+                        <span className="text-gray-400 text-sm">
+                          {slot.current_registrations}/{slot.capacity} ({slot.utilization_rate}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${slot.utilization_rate}%` }}
+                          transition={{ duration: 0.5 }}
+                          className={`h-4 rounded-full ${
+                            slot.utilization_rate >= 100 ? 'bg-red-500' :
+                            slot.utilization_rate >= 75 ? 'bg-yellow-500' :
+                            slot.utilization_rate >= 50 ? 'bg-[#9BD4FF]' :
+                            'bg-green-400'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">No capacity data available</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Slot Details Modal */}
