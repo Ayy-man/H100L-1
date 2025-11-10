@@ -5,6 +5,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
+import ReportBuilder from './ReportBuilder';
 
 interface Registration {
   id: string;
@@ -154,7 +155,7 @@ const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Dashboard tab state
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching'>('overview');
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports'>('overview');
 
   // Mobile responsiveness
   const [isMobile, setIsMobile] = useState(false);
@@ -773,6 +774,16 @@ const AdminDashboard: React.FC = () => {
             }`}
           >
             🤝 Matching
+          </button>
+          <button
+            onClick={() => setDashboardTab('reports')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'reports'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            📄 Reports
           </button>
         </div>
 
@@ -1510,6 +1521,15 @@ const AdminDashboard: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* REPORTS TAB */}
+        {dashboardTab === 'reports' && (
+          <ReportBuilder
+            registrations={registrations}
+            capacityData={capacitySlots}
+            semiPrivateGroups={semiPrivateGroups}
+          />
+        )}
       </div>
 
       {/* Slot Details Modal */}
@@ -1984,39 +2004,50 @@ const AdminDashboard: React.FC = () => {
 
       {/* Mobile Bottom Navigation Bar */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 px-2 py-3 flex justify-around items-center z-40">
+        <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 px-1 py-3 flex justify-around items-center z-40">
           <button
             onClick={() => setDashboardTab('overview')}
-            className={`flex flex-col items-center justify-center min-w-[70px] min-h-[48px] py-2 px-2 rounded-lg transition-all ${
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
               dashboardTab === 'overview'
                 ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
                 : 'text-gray-400'
             }`}
           >
-            <span className="text-xl mb-1">📊</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Overview</span>
+            <span className="text-lg mb-1">📊</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">Overview</span>
           </button>
           <button
             onClick={() => setDashboardTab('analytics')}
-            className={`flex flex-col items-center justify-center min-w-[70px] min-h-[48px] py-2 px-2 rounded-lg transition-all ${
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
               dashboardTab === 'analytics'
                 ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
                 : 'text-gray-400'
             }`}
           >
-            <span className="text-xl mb-1">📈</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Analytics</span>
+            <span className="text-lg mb-1">📈</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">Analytics</span>
           </button>
           <button
             onClick={() => setDashboardTab('matching')}
-            className={`flex flex-col items-center justify-center min-w-[70px] min-h-[48px] py-2 px-2 rounded-lg transition-all ${
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
               dashboardTab === 'matching'
                 ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
                 : 'text-gray-400'
             }`}
           >
-            <span className="text-xl mb-1">🤝</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Matching</span>
+            <span className="text-lg mb-1">🤝</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">Match</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('reports')}
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
+              dashboardTab === 'reports'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-lg mb-1">📄</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">Reports</span>
           </button>
         </div>
       )}
