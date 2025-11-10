@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import DocumentsViewer from './DocumentsViewer';
+import PlayerDocumentsSection from './PlayerDocumentsSection';
+import DocumentStatusBadge from './DocumentStatusBadge';
 import { MedicalFiles } from '../types';
 
 interface Registration {
@@ -98,6 +100,7 @@ const AdminDashboard: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Player Name</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Program Type</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Parent Email</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Documents</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
@@ -116,6 +119,13 @@ const AdminDashboard: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{reg.form_data?.playerFullName || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 capitalize">{reg.form_data?.programType || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{reg.form_data?.parentEmail || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <DocumentStatusBadge
+                          medicalFiles={reg.form_data?.medicalFiles}
+                          hasMedicalConditions={reg.form_data?.hasMedicalConditions}
+                          compact={true}
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-green-400">
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-500/10 text-green-400">
                           Confirmed
@@ -125,7 +135,7 @@ const AdminDashboard: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No registrations found.</td>
+                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No registrations found.</td>
                   </tr>
                 )}
               </tbody>
@@ -178,6 +188,14 @@ const AdminDashboard: React.FC = () => {
               <div className="p-6 overflow-y-auto flex-grow">
                 {activeTab === 'details' && (
                   <div className="space-y-6">
+                    {/* Player Documents Section - Collapsible with Quick Actions */}
+                    <PlayerDocumentsSection
+                      medicalFiles={selectedRegistration.form_data.medicalFiles}
+                      hasMedicalConditions={selectedRegistration.form_data.hasMedicalConditions}
+                      parentEmail={selectedRegistration.form_data.parentEmail}
+                      playerName={selectedRegistration.form_data.playerFullName}
+                    />
+
                     {/* Player Information */}
                     <div className="bg-white/5 p-4 rounded-lg">
                       <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Player Information</h3>
