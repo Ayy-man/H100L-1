@@ -111,7 +111,7 @@ const FormStep3: React.FC<FormStep3Props> = ({ data, errors, handleChange }) => 
             handleChange={handleChange}
             error={errors.policyAcceptance}
             required
-            label={<span>I have read and agree to the <a href="#" className="text-[#9BD4FF] hover:underline">Terms of Service and Waiver</a>.</span>}
+            label={<span>I have read and agree to the <a href="#" target="_blank" rel="noopener noreferrer" className="text-[#9BD4FF] hover:underline">Terms of Service and Waiver</a>.</span>}
         />
       </div>
     </div>
