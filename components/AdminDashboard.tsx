@@ -87,6 +87,49 @@ interface AnalyticsSummary {
   last_week_registrations: number;
 }
 
+interface UnmatchedSemiPrivate {
+  id: string;
+  created_at: string;
+  payment_status: string;
+  player_name: string;
+  player_category: string;
+  parent_email: string;
+  parent_phone: string;
+  availability: string[];
+  time_windows: string[];
+  matching_preference: string;
+  skill_level: string;
+  date_of_birth: string;
+}
+
+interface SemiPrivateGroup {
+  group_id: string;
+  group_name: string;
+  status: string;
+  created_at: string;
+  confirmed_at: string | null;
+  scheduled_day: string | null;
+  scheduled_time: string | null;
+  coach_assigned: string | null;
+  notes: string | null;
+  member_count: number;
+  members: Array<{
+    registration_id: string;
+    player_name: string;
+    player_category: string;
+    parent_email: string;
+    skill_level: string;
+    joined_at: string;
+  }>;
+}
+
+interface CompatibilityScore {
+  player1Id: string;
+  player2Id: string;
+  score: number;
+  reasons: string[];
+}
+
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, color }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -111,7 +154,7 @@ const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Dashboard tab state
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics'>('overview');
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching'>('overview');
 
   // Mobile responsiveness
   const [isMobile, setIsMobile] = useState(false);
@@ -141,6 +184,13 @@ const AdminDashboard: React.FC = () => {
   const [ageDistribution, setAgeDistribution] = useState<AgeCategoryDistribution[]>([]);
   const [capacityUtilization, setCapacityUtilization] = useState<CapacityUtilization[]>([]);
   const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary | null>(null);
+
+  // Semi-private matching data
+  const [unmatchedPlayers, setUnmatchedPlayers] = useState<UnmatchedSemiPrivate[]>([]);
+  const [semiPrivateGroups, setSemiPrivateGroups] = useState<SemiPrivateGroup[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [compatibilityScores, setCompatibilityScores] = useState<CompatibilityScore[]>([]);
+  const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
 
   useEffect(() => {
     const password = prompt('Enter admin password:');
@@ -186,6 +236,13 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated && dashboardTab === 'analytics') {
       fetchAnalyticsData();
+    }
+  }, [isAuthenticated, dashboardTab]);
+
+  // Fetch matching data when switching to matching tab
+  useEffect(() => {
+    if (isAuthenticated && dashboardTab === 'matching') {
+      fetchMatchingData();
     }
   }, [isAuthenticated, dashboardTab]);
 
@@ -255,6 +312,123 @@ const AdminDashboard: React.FC = () => {
       if (summaryRes.data) setAnalyticsSummary(summaryRes.data);
     } catch (err: any) {
       console.error('Error fetching analytics:', err);
+    }
+  };
+
+  const fetchMatchingData = async () => {
+    try {
+      const [unmatchedRes, groupsRes] = await Promise.all([
+        supabase.from('unmatched_semi_private').select('*'),
+        supabase.from('semi_private_groups_detail').select('*')
+      ]);
+
+      if (unmatchedRes.data) {
+        // Parse JSON strings back to arrays
+        const parsedData = unmatchedRes.data.map((player: any) => ({
+          ...player,
+          availability: typeof player.availability === 'string' ? JSON.parse(player.availability) : player.availability,
+          time_windows: typeof player.time_windows === 'string' ? JSON.parse(player.time_windows) : player.time_windows
+        }));
+        setUnmatchedPlayers(parsedData);
+
+        // Calculate compatibility scores
+        calculateCompatibility(parsedData);
+      }
+
+      if (groupsRes.data) setSemiPrivateGroups(groupsRes.data);
+    } catch (err: any) {
+      console.error('Error fetching matching data:', err);
+    }
+  };
+
+  // Calculate compatibility scores between players
+  const calculateCompatibility = (players: UnmatchedSemiPrivate[]) => {
+    const scores: CompatibilityScore[] = [];
+
+    for (let i = 0; i < players.length; i++) {
+      for (let j = i + 1; j < players.length; j++) {
+        const player1 = players[i];
+        const player2 = players[j];
+        let score = 0;
+        const reasons: string[] = [];
+
+        // Same age category (30 points)
+        if (player1.player_category === player2.player_category) {
+          score += 30;
+          reasons.push(`Same category (${player1.player_category})`);
+        }
+
+        // Overlapping availability (40 points max)
+        const availability1 = player1.availability || [];
+        const availability2 = player2.availability || [];
+        const commonDays = availability1.filter(day => availability2.includes(day));
+        if (commonDays.length > 0) {
+          const availabilityScore = Math.min(40, commonDays.length * 13);
+          score += availabilityScore;
+          reasons.push(`${commonDays.length} matching day(s): ${commonDays.join(', ')}`);
+        }
+
+        // Overlapping time windows (20 points max)
+        const timeWindows1 = player1.time_windows || [];
+        const timeWindows2 = player2.time_windows || [];
+        const commonTimes = timeWindows1.filter(time => timeWindows2.includes(time));
+        if (commonTimes.length > 0) {
+          const timeScore = Math.min(20, commonTimes.length * 10);
+          score += timeScore;
+          reasons.push(`${commonTimes.length} matching time window(s)`);
+        }
+
+        // Matching preferences (10 points)
+        if (player1.matching_preference === player2.matching_preference) {
+          score += 10;
+          reasons.push(`Same preference (${player1.matching_preference})`);
+        }
+
+        // Only store if there's some compatibility
+        if (score > 0) {
+          scores.push({
+            player1Id: player1.id,
+            player2Id: player2.id,
+            score,
+            reasons
+          });
+        }
+      }
+    }
+
+    // Sort by score descending
+    scores.sort((a, b) => b.score - a.score);
+    setCompatibilityScores(scores);
+  };
+
+  const getCompatibilityColor = (score: number) => {
+    if (score >= 70) return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' };
+    if (score >= 50) return { bg: 'bg-[#9BD4FF]/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50' };
+    if (score >= 30) return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/50' };
+    return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' };
+  };
+
+  const createSemiPrivateGroup = async (playerIds: string[]) => {
+    if (playerIds.length < 2 || playerIds.length > 3) {
+      alert('Semi-private groups must have 2-3 players');
+      return;
+    }
+
+    try {
+      const groupName = `Group ${new Date().toISOString().slice(0, 10)}`;
+
+      const { data, error } = await supabase.rpc('create_semi_private_group', {
+        p_group_name: groupName,
+        p_registration_ids: playerIds
+      });
+
+      if (error) throw error;
+
+      alert('Group created successfully!');
+      setSelectedPlayers([]);
+      fetchMatchingData();
+    } catch (err: any) {
+      alert(`Error creating group: ${err.message}`);
     }
   };
 
@@ -589,6 +763,16 @@ const AdminDashboard: React.FC = () => {
             }`}
           >
             📈 Analytics
+          </button>
+          <button
+            onClick={() => setDashboardTab('matching')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'matching'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            🤝 Matching
           </button>
         </div>
 
@@ -1117,6 +1301,215 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* MATCHING TAB */}
+        {dashboardTab === 'matching' && (
+          <div className="space-y-8">
+            {/* Header with Create Group Button */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
+                  🤝 Semi-Private Matching
+                </h2>
+                <p className="text-gray-400 mt-1">
+                  {unmatchedPlayers.length} unmatched player(s) • {semiPrivateGroups.length} group(s)
+                </p>
+              </div>
+              {selectedPlayers.length >= 2 && (
+                <button
+                  onClick={() => createSemiPrivateGroup(selectedPlayers)}
+                  className="bg-[#9BD4FF] text-black font-bold py-3 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all"
+                >
+                  Create Group ({selectedPlayers.length} players)
+                </button>
+              )}
+            </div>
+
+            {/* Unmatched Players Section */}
+            <div className="bg-black border border-white/10 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                Unmatched Players
+              </h3>
+
+              {unmatchedPlayers.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 text-lg">🎉 All semi-private players are matched!</p>
+                  <p className="text-gray-600 text-sm mt-2">New registrations will appear here</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {unmatchedPlayers.map((player) => {
+                    const isSelected = selectedPlayers.includes(player.id);
+                    const bestMatches = compatibilityScores
+                      .filter(s => s.player1Id === player.id || s.player2Id === player.id)
+                      .slice(0, 3);
+
+                    return (
+                      <motion.div
+                        key={player.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={`relative bg-gray-900 border rounded-lg p-4 cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-[#9BD4FF] shadow-[0_0_15px_rgba(155,212,255,0.3)]'
+                            : 'border-white/10 hover:border-[#9BD4FF]/50'
+                        }`}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedPlayers(prev => prev.filter(id => id !== player.id));
+                          } else {
+                            if (selectedPlayers.length < 3) {
+                              setSelectedPlayers(prev => [...prev, player.id]);
+                            } else {
+                              alert('Maximum 3 players per group');
+                            }
+                          }
+                        }}
+                      >
+                        {/* Selection Checkbox */}
+                        <div className="absolute top-4 right-4">
+                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                            isSelected
+                              ? 'bg-[#9BD4FF] border-[#9BD4FF]'
+                              : 'border-gray-500'
+                          }`}>
+                            {isSelected && <span className="text-black text-xs">✓</span>}
+                          </div>
+                        </div>
+
+                        {/* Player Info */}
+                        <h4 className="text-white font-bold text-lg mb-1 pr-8">{player.player_name}</h4>
+                        <p className="text-gray-400 text-sm mb-3">{player.player_category}</p>
+
+                        {/* Availability */}
+                        <div className="mb-3">
+                          <p className="text-gray-500 text-xs uppercase mb-1">Availability</p>
+                          <div className="flex flex-wrap gap-1">
+                            {(player.availability || []).map((day, idx) => (
+                              <span key={idx} className="bg-[#9BD4FF]/20 text-[#9BD4FF] text-xs px-2 py-1 rounded">
+                                {day}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Time Windows */}
+                        <div className="mb-3">
+                          <p className="text-gray-500 text-xs uppercase mb-1">Time Windows</p>
+                          <div className="flex flex-wrap gap-1">
+                            {(player.time_windows || []).map((time, idx) => (
+                              <span key={idx} className="bg-white/10 text-gray-300 text-xs px-2 py-1 rounded">
+                                {time}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Best Matches */}
+                        {bestMatches.length > 0 && (
+                          <div className="pt-3 border-t border-white/10">
+                            <p className="text-gray-500 text-xs uppercase mb-2">Best Matches</p>
+                            {bestMatches.slice(0, 2).map((match) => {
+                              const otherPlayerId = match.player1Id === player.id ? match.player2Id : match.player1Id;
+                              const otherPlayer = unmatchedPlayers.find(p => p.id === otherPlayerId);
+                              const colors = getCompatibilityColor(match.score);
+
+                              return (
+                                <div
+                                  key={match.player1Id + match.player2Id}
+                                  className={`mb-2 p-2 rounded border ${colors.border} ${colors.bg}`}
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <p className={`text-sm font-bold ${colors.text}`}>
+                                      {otherPlayer?.player_name}
+                                    </p>
+                                    <span className={`text-xs font-bold ${colors.text}`}>
+                                      {match.score}%
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {match.reasons.slice(0, 2).join(' • ')}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Contact Info */}
+                        <div className="pt-3 border-t border-white/10 text-xs text-gray-500">
+                          <p>{player.parent_email}</p>
+                          <p>Registered: {new Date(player.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Existing Groups Section */}
+            {semiPrivateGroups.length > 0 && (
+              <div className="bg-black border border-white/10 rounded-lg p-6">
+                <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
+                  Existing Groups
+                </h3>
+
+                <div className="space-y-4">
+                  {semiPrivateGroups.map((group) => {
+                    const statusColors = {
+                      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+                      confirmed: 'bg-green-500/20 text-green-400 border-green-500/50',
+                      active: 'bg-[#9BD4FF]/20 text-[#9BD4FF] border-[#9BD4FF]/50',
+                      completed: 'bg-gray-500/20 text-gray-400 border-gray-500/50'
+                    };
+
+                    return (
+                      <motion.div
+                        key={group.group_id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gray-900 border border-white/10 rounded-lg p-4"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h4 className="text-white font-bold text-lg">{group.group_name}</h4>
+                            <p className="text-gray-400 text-sm">
+                              {group.member_count} member(s) • Created {new Date(group.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 text-xs font-bold rounded-full border ${statusColors[group.status as keyof typeof statusColors]}`}>
+                            {group.status.toUpperCase()}
+                          </span>
+                        </div>
+
+                        {/* Members */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                          {group.members.map((member) => (
+                            <div key={member.registration_id} className="bg-black border border-white/10 rounded p-3">
+                              <p className="text-white font-bold">{member.player_name}</p>
+                              <p className="text-gray-400 text-sm">{member.player_category}</p>
+                              <p className="text-gray-500 text-xs mt-1">{member.parent_email}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Scheduling Info */}
+                        {(group.scheduled_day || group.scheduled_time) && (
+                          <div className="pt-3 border-t border-white/10">
+                            <p className="text-gray-400 text-sm">
+                              📅 {group.scheduled_day} at {group.scheduled_time}
+                            </p>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Slot Details Modal */}
@@ -1591,28 +1984,39 @@ const AdminDashboard: React.FC = () => {
 
       {/* Mobile Bottom Navigation Bar */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 px-6 py-3 flex justify-around items-center z-40">
+        <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 px-2 py-3 flex justify-around items-center z-40">
           <button
             onClick={() => setDashboardTab('overview')}
-            className={`flex flex-col items-center justify-center min-w-[80px] min-h-[48px] py-2 px-3 rounded-lg transition-all ${
+            className={`flex flex-col items-center justify-center min-w-[70px] min-h-[48px] py-2 px-2 rounded-lg transition-all ${
               dashboardTab === 'overview'
                 ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
                 : 'text-gray-400'
             }`}
           >
-            <span className="text-2xl mb-1">📊</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Overview</span>
+            <span className="text-xl mb-1">📊</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Overview</span>
           </button>
           <button
             onClick={() => setDashboardTab('analytics')}
-            className={`flex flex-col items-center justify-center min-w-[80px] min-h-[48px] py-2 px-3 rounded-lg transition-all ${
+            className={`flex flex-col items-center justify-center min-w-[70px] min-h-[48px] py-2 px-2 rounded-lg transition-all ${
               dashboardTab === 'analytics'
                 ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
                 : 'text-gray-400'
             }`}
           >
-            <span className="text-2xl mb-1">📈</span>
-            <span className="text-xs font-bold uppercase tracking-wider">Analytics</span>
+            <span className="text-xl mb-1">📈</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Analytics</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('matching')}
+            className={`flex flex-col items-center justify-center min-w-[70px] min-h-[48px] py-2 px-2 rounded-lg transition-all ${
+              dashboardTab === 'matching'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-xl mb-1">🤝</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Matching</span>
           </button>
         </div>
       )}
