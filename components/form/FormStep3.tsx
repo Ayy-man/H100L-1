@@ -46,11 +46,45 @@ const FormStep3: React.FC<FormStep3Props> = ({ data, errors, handleChange }) => 
       {data.hasMedicalConditions && (
           <FormInput label="Please provide details" name="medicalConditionsDetails" type="textarea" value={data.medicalConditionsDetails} handleChange={handleChange} />
       )}
-       
-       <div>
-         <label className="block text-sm font-medium text-gray-300 mb-2">Upload Medical Report (Optional, PDF only, max 5MB)</label>
-         <input type="file" name="medicalReport" onChange={handleChange} accept=".pdf" className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#9BD4FF]/10 file:text-[#9BD4FF] hover:file:bg-[#9BD4FF]/20"/>
-         {errors.medicalReport && <p className="mt-2 text-sm text-red-500">{errors.medicalReport}</p>}
+
+       <div className="space-y-4">
+         <div>
+           <label className="block text-sm font-medium text-gray-300 mb-2">
+             Upload Action Plan (Optional, PDF only, max 5MB)
+           </label>
+           <input
+             type="file"
+             name="actionPlan"
+             onChange={handleChange}
+             accept=".pdf"
+             className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#9BD4FF]/10 file:text-[#9BD4FF] hover:file:bg-[#9BD4FF]/20"
+           />
+           {data.actionPlan && (
+             <p className="mt-2 text-sm text-green-400">
+               Selected: {data.actionPlan.name} ({(data.actionPlan.size / 1024).toFixed(2)} KB)
+             </p>
+           )}
+           {errors.actionPlan && <p className="mt-2 text-sm text-red-500">{errors.actionPlan}</p>}
+         </div>
+
+         <div>
+           <label className="block text-sm font-medium text-gray-300 mb-2">
+             Upload Medical Report (Optional, PDF only, max 5MB)
+           </label>
+           <input
+             type="file"
+             name="medicalReport"
+             onChange={handleChange}
+             accept=".pdf"
+             className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#9BD4FF]/10 file:text-[#9BD4FF] hover:file:bg-[#9BD4FF]/20"
+           />
+           {data.medicalReport && (
+             <p className="mt-2 text-sm text-green-400">
+               Selected: {data.medicalReport.name} ({(data.medicalReport.size / 1024).toFixed(2)} KB)
+             </p>
+           )}
+           {errors.medicalReport && <p className="mt-2 text-sm text-red-500">{errors.medicalReport}</p>}
+         </div>
        </div>
 
 

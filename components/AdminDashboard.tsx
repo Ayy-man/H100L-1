@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import DocumentsViewer from './DocumentsViewer';
+import { MedicalFiles } from '../types';
 
 interface Registration {
   id: string;
@@ -8,6 +10,22 @@ interface Registration {
     playerFullName: string;
     programType: string;
     parentEmail: string;
+    parentPhone?: string;
+    dateOfBirth?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    emergencyRelationship?: string;
+    groupFrequency?: string;
+    groupDay?: string;
+    jerseySize?: string;
+    position?: string;
+    dominantHand?: string;
+    currentLevel?: string;
+    hasAllergies?: boolean;
+    allergiesDetails?: string;
+    hasMedicalConditions?: boolean;
+    medicalConditionsDetails?: string;
+    medicalFiles?: MedicalFiles;
   };
 }
 
@@ -16,6 +34,8 @@ const AdminDashboard: React.FC = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
+  const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
 
   useEffect(() => {
     const password = prompt('Enter admin password:');
@@ -84,7 +104,14 @@ const AdminDashboard: React.FC = () => {
               <tbody className="divide-y divide-white/10">
                 {registrations.length > 0 ? (
                   registrations.map((reg) => (
-                    <tr key={reg.id}>
+                    <tr
+                      key={reg.id}
+                      onClick={() => {
+                        setSelectedRegistration(reg);
+                        setActiveTab('details');
+                      }}
+                      className="hover:bg-white/5 cursor-pointer transition-colors"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{new Date(reg.created_at).toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{reg.form_data?.playerFullName || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 capitalize">{reg.form_data?.programType || 'N/A'}</td>
@@ -103,6 +130,172 @@ const AdminDashboard: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Registration Details Modal */}
+        {selectedRegistration && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="relative bg-black border border-white/10 rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+              {/* Modal Header */}
+              <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                <h2 className="text-2xl uppercase font-bold tracking-wider text-white">
+                  Registration Details
+                </h2>
+                <button
+                  onClick={() => setSelectedRegistration(null)}
+                  className="text-gray-400 hover:text-white text-3xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex border-b border-white/10 px-6">
+                <button
+                  onClick={() => setActiveTab('details')}
+                  className={`px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                    activeTab === 'details'
+                      ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Details
+                </button>
+                <button
+                  onClick={() => setActiveTab('documents')}
+                  className={`px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                    activeTab === 'documents'
+                      ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Documents
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto flex-grow">
+                {activeTab === 'details' && (
+                  <div className="space-y-6">
+                    {/* Player Information */}
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Player Information</h3>
+                      <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <dt className="text-sm text-gray-400">Player Name</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.playerFullName || 'N/A'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Date of Birth</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.dateOfBirth || 'N/A'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Position</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.position || 'N/A'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Dominant Hand</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.dominantHand || 'N/A'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Current Level</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.currentLevel || 'N/A'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Jersey Size</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.jerseySize || 'N/A'}</dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    {/* Parent Information */}
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Parent Information</h3>
+                      <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <dt className="text-sm text-gray-400">Email</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.parentEmail || 'N/A'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Phone</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.parentPhone || 'N/A'}</dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    {/* Emergency Contact */}
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Emergency Contact</h3>
+                      <dl className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <dt className="text-sm text-gray-400">Name</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.emergencyContactName || 'N/A'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Phone</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.emergencyContactPhone || 'N/A'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Relationship</dt>
+                          <dd className="text-white font-semibold">{selectedRegistration.form_data.emergencyRelationship || 'N/A'}</dd>
+                        </div>
+                      </dl>
+                    </div>
+
+                    {/* Program Details */}
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Program Details</h3>
+                      <dl className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <dt className="text-sm text-gray-400">Program Type</dt>
+                          <dd className="text-white font-semibold capitalize">{selectedRegistration.form_data.programType || 'N/A'}</dd>
+                        </div>
+                        {selectedRegistration.form_data.groupFrequency && (
+                          <div>
+                            <dt className="text-sm text-gray-400">Frequency</dt>
+                            <dd className="text-white font-semibold">{selectedRegistration.form_data.groupFrequency}</dd>
+                          </div>
+                        )}
+                        {selectedRegistration.form_data.groupDay && (
+                          <div>
+                            <dt className="text-sm text-gray-400">Day(s)</dt>
+                            <dd className="text-white font-semibold capitalize">{selectedRegistration.form_data.groupDay}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
+
+                    {/* Health Information */}
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Health Information</h3>
+                      <dl className="space-y-3">
+                        <div>
+                          <dt className="text-sm text-gray-400">Allergies</dt>
+                          <dd className="text-white font-semibold">
+                            {selectedRegistration.form_data.hasAllergies
+                              ? selectedRegistration.form_data.allergiesDetails || 'Yes (no details provided)'
+                              : 'None'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-400">Medical Conditions</dt>
+                          <dd className="text-white font-semibold">
+                            {selectedRegistration.form_data.hasMedicalConditions
+                              ? selectedRegistration.form_data.medicalConditionsDetails || 'Yes (no details provided)'
+                              : 'None'}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'documents' && (
+                  <DocumentsViewer medicalFiles={selectedRegistration.form_data.medicalFiles} />
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

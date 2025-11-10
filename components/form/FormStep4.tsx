@@ -33,7 +33,8 @@ const FormStep4: React.FC<FormStep4Props> = ({ data }) => {
                 </>
             )}
             <SummaryItem label="Jersey Size" value={data.jerseySize} />
-            <SummaryItem label="Medical Report" value={data.medicalReport?.name} />
+            <SummaryItem label="Action Plan" value={data.actionPlan?.name || 'Not provided'} />
+            <SummaryItem label="Medical Report" value={data.medicalReport?.name || 'Not provided'} />
             <SummaryItem label="Consents" value="Photo/Video & Policies Agreed" />
         </dl>
       </div>

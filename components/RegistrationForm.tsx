@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FormData } from '../types';
 import { supabase } from '../lib/supabase';
+import { uploadMedicalFiles, validateFile } from '../lib/storageService';
 import ProgressIndicator from './form/ProgressIndicator';
 import FormStep1 from './form/FormStep1';
 import FormStep2 from './form/FormStep2';
@@ -20,7 +21,7 @@ const initialFormData: FormData = {
   semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
   dominantHand: '', currentLevel: '', jerseySize: '', hasAllergies: false,
   allergiesDetails: '', hasMedicalConditions: false, medicalConditionsDetails: '',
-  medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
+  actionPlan: null, medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
 };
 
 const formSteps = [
@@ -43,6 +44,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
     if (savedData) {
       const parsedData = JSON.parse(savedData);
       // Don't restore file objects
+      parsedData.actionPlan = null;
       parsedData.medicalReport = null;
       setFormData(parsedData);
     }
@@ -73,8 +75,22 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
         if (!formData.jerseySize) newErrors.jerseySize = 'Please select a jersey size.';
         if (!formData.policyAcceptance) newErrors.policyAcceptance = 'You must accept the policies to continue.';
         if (!formData.photoVideoConsent) newErrors.photoVideoConsent = 'You must provide consent to continue.';
-        if(formData.medicalReport && formData.medicalReport.size > 5 * 1024 * 1024) newErrors.medicalReport = "File size cannot exceed 5MB.";
-        if(formData.medicalReport && formData.medicalReport.type !== 'application/pdf') newErrors.medicalReport = "Only PDF files are allowed.";
+
+        // Validate action plan if provided
+        if (formData.actionPlan) {
+          const actionPlanValidation = validateFile(formData.actionPlan);
+          if (!actionPlanValidation.valid) {
+            newErrors.actionPlan = actionPlanValidation.error;
+          }
+        }
+
+        // Validate medical report if provided
+        if (formData.medicalReport) {
+          const medicalReportValidation = validateFile(formData.medicalReport);
+          if (!medicalReportValidation.valid) {
+            newErrors.medicalReport = medicalReportValidation.error;
+          }
+        }
     }
 
     setErrors(newErrors);
@@ -123,11 +139,38 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Create a copy of the data and remove the File object before insertion
-    const dataToSubmit = { ...formData };
-    delete (dataToSubmit as Partial<FormData>).medicalReport; // Can't insert File object as JSON
 
     try {
+      // Generate a temporary registration ID for organizing files
+      const tempRegistrationId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+      // Upload files to Supabase Storage if any are provided
+      let uploadedFiles = {};
+      if (formData.actionPlan || formData.medicalReport) {
+        try {
+          uploadedFiles = await uploadMedicalFiles(
+            {
+              actionPlan: formData.actionPlan,
+              medicalReport: formData.medicalReport,
+            },
+            tempRegistrationId
+          );
+        } catch (uploadError: any) {
+          throw new Error(`File upload failed: ${uploadError.message}`);
+        }
+      }
+
+      // Create a copy of the data and remove File objects before insertion
+      const dataToSubmit = { ...formData };
+      delete (dataToSubmit as Partial<FormData>).actionPlan;
+      delete (dataToSubmit as Partial<FormData>).medicalReport;
+
+      // Add uploaded file URLs to the data
+      if (Object.keys(uploadedFiles).length > 0) {
+        dataToSubmit.medicalFiles = uploadedFiles;
+      }
+
+      // Insert registration into database
       const { error } = await supabase
         .from('registrations')
         .insert({ form_data: dataToSubmit });
@@ -135,14 +178,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
       if (error) {
         throw error;
       }
-      
+
       alert('Registration Submitted Successfully!');
       localStorage.removeItem('registrationFormData');
       onClose();
 
     } catch (error: any) {
-      console.error('Supabase submission error:', error);
-      alert(`Submission failed: ${error.message}`);
+      console.error('Submission error:', error);
+      alert(`Submission failed: ${error.message || 'Unknown error occurred'}`);
     } finally {
       setIsSubmitting(false);
     }

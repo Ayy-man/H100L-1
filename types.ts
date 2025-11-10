@@ -8,6 +8,18 @@ export type BookingFrequency = '1x' | '2x';
 export type BookingDay = 'tuesday' | 'friday';
 export type ProgramType = 'group' | 'private' | 'semi-private';
 
+export interface MedicalFile {
+  url: string;
+  filename: string;
+  size: number;
+  uploadedAt: string;
+}
+
+export interface MedicalFiles {
+  actionPlan?: MedicalFile;
+  medicalReport?: MedicalFile;
+}
+
 export interface BookingRequest {
   category: PlayerCategory;
   frequency: BookingFrequency;
@@ -61,7 +73,9 @@ export interface FormData {
   allergiesDetails: string;
   hasMedicalConditions: boolean;
   medicalConditionsDetails: string;
+  actionPlan: File | null;
   medicalReport: File | null;
+  medicalFiles?: MedicalFiles; // Stored URLs after upload
   photoVideoConsent: boolean;
   policyAcceptance: boolean;
 }
