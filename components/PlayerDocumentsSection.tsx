@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MedicalFiles } from '../types';
+import { MedicalFiles, Language } from '../types';
 import { getSignedUrl } from '../lib/storageService';
 import DocumentStatusBadge from './DocumentStatusBadge';
 
@@ -8,19 +8,37 @@ interface PlayerDocumentsSectionProps {
   hasMedicalConditions?: boolean;
   parentEmail: string;
   playerName: string;
+  language?: Language;
 }
 
 const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
   medicalFiles,
   hasMedicalConditions,
   parentEmail,
-  playerName
+  playerName,
+  language = Language.FR
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const hasAnyDocuments = medicalFiles?.actionPlan || medicalFiles?.medicalReport;
+  const isFrench = language === Language.FR;
+
+  // Translations
+  const text = {
+    title: isFrench ? 'Documents du joueur' : 'Player Documents',
+    actionPlan: isFrench ? 'Plan d\'action' : 'Action Plan',
+    medicalReport: isFrench ? 'Rapport médical' : 'Medical Report',
+    view: isFrench ? 'Voir' : 'View',
+    download: isFrench ? 'Télécharger' : 'Download',
+    loading: isFrench ? 'Chargement...' : 'Loading...',
+    noDocuments: isFrench ? 'Aucun document téléchargé' : 'No Documents Uploaded',
+    noDocumentsDesc: isFrench ? 'Ce joueur n\'a pas encore téléchargé de documents médicaux.' : 'This player hasn\'t uploaded any medical documents yet.',
+    requestDocs: isFrench ? 'Demander des documents' : 'Request Documents',
+    print: isFrench ? 'Imprimer les documents' : 'Print Documents',
+    markReviewed: isFrench ? 'Marquer comme vérifié' : 'Mark as Reviewed',
+  };
 
   const handleView = async (file: { url: string; filename: string }, fileType: string) => {
     setIsLoading(fileType);
@@ -58,13 +76,29 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
   };
 
   const handleRequestDocuments = () => {
-    const subject = encodeURIComponent(`Document Request for ${playerName}`);
+    const isFrench = language === Language.FR;
+
+    const subject = isFrench
+      ? encodeURIComponent(`Demande de documents pour ${playerName}`)
+      : encodeURIComponent(`Document Request for ${playerName}`);
+
+    const greeting = isFrench ? 'Cher parent/tuteur,' : 'Dear Parent/Guardian,';
+    const intro = isFrench
+      ? `Nous remarquons qu'il nous manque certains documents médicaux pour ${playerName}. Veuillez télécharger les documents requis dès que possible.`
+      : `We notice that we are missing some medical documents for ${playerName}. Please upload the required documents at your earliest convenience.`;
+
+    const requiredLabel = isFrench ? 'Documents requis :' : 'Required:';
+    const actionPlanLabel = isFrench ? '- Plan d\'action médical' : '- Medical Action Plan';
+    const medicalReportLabel = isFrench ? '- Rapport médical' : '- Medical Report';
+
+    const closing = isFrench ? 'Merci,\nÉquipe SniperZone' : 'Thank you,\nSniperZone Team';
+
     const body = encodeURIComponent(
-      `Dear Parent/Guardian,\n\nWe notice that we are missing some medical documents for ${playerName}. ` +
-      `Please upload the required documents at your earliest convenience.\n\n` +
-      `Required:\n${!medicalFiles?.actionPlan ? '- Medical Action Plan\n' : ''}${!medicalFiles?.medicalReport ? '- Medical Report\n' : ''}\n` +
-      `Thank you,\nSniperZone Team`
+      `${greeting}\n\n${intro}\n\n` +
+      `${requiredLabel}\n${!medicalFiles?.actionPlan ? `${actionPlanLabel}\n` : ''}${!medicalFiles?.medicalReport ? `${medicalReportLabel}\n` : ''}\n` +
+      `${closing}`
     );
+
     window.location.href = `mailto:${parentEmail}?subject=${subject}&body=${body}`;
   };
 
@@ -100,7 +134,7 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
           >
             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
           </svg>
-          Player Documents
+          {text.title}
         </button>
         <DocumentStatusBadge
           medicalFiles={medicalFiles}
@@ -138,7 +172,7 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold text-sm truncate">Action Plan</p>
+                      <p className="text-white font-semibold text-sm truncate">{text.actionPlan}</p>
                       <p className="text-gray-400 text-xs truncate">{medicalFiles.actionPlan.filename}</p>
                       <p className="text-gray-500 text-xs">
                         {formatFileSize(medicalFiles.actionPlan.size)} • {formatDate(medicalFiles.actionPlan.uploadedAt)}
@@ -151,14 +185,14 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
                       disabled={isLoading === 'actionPlan'}
                       className="px-3 py-1.5 bg-[#9BD4FF]/10 text-[#9BD4FF] rounded text-xs font-semibold hover:bg-[#9BD4FF]/20 transition disabled:opacity-50"
                     >
-                      {isLoading === 'actionPlan' ? 'Loading...' : 'View'}
+                      {isLoading === 'actionPlan' ? text.loading : text.view}
                     </button>
                     <button
                       onClick={() => handleDownload(medicalFiles.actionPlan!, 'actionPlan')}
                       disabled={isLoading === 'actionPlan'}
                       className="px-3 py-1.5 bg-white/5 text-white rounded text-xs font-semibold hover:bg-white/10 transition disabled:opacity-50"
                     >
-                      Download
+                      {text.download}
                     </button>
                   </div>
                 </div>
@@ -174,7 +208,7 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold text-sm truncate">Medical Report</p>
+                      <p className="text-white font-semibold text-sm truncate">{text.medicalReport}</p>
                       <p className="text-gray-400 text-xs truncate">{medicalFiles.medicalReport.filename}</p>
                       <p className="text-gray-500 text-xs">
                         {formatFileSize(medicalFiles.medicalReport.size)} • {formatDate(medicalFiles.medicalReport.uploadedAt)}
@@ -187,14 +221,14 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
                       disabled={isLoading === 'medicalReport'}
                       className="px-3 py-1.5 bg-[#9BD4FF]/10 text-[#9BD4FF] rounded text-xs font-semibold hover:bg-[#9BD4FF]/20 transition disabled:opacity-50"
                     >
-                      {isLoading === 'medicalReport' ? 'Loading...' : 'View'}
+                      {isLoading === 'medicalReport' ? text.loading : text.view}
                     </button>
                     <button
                       onClick={() => handleDownload(medicalFiles.medicalReport!, 'medicalReport')}
                       disabled={isLoading === 'medicalReport'}
                       className="px-3 py-1.5 bg-white/5 text-white rounded text-xs font-semibold hover:bg-white/10 transition disabled:opacity-50"
                     >
-                      Download
+                      {text.download}
                     </button>
                   </div>
                 </div>
@@ -205,8 +239,8 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
               <svg className="w-12 h-12 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <p className="text-sm font-semibold mb-1">No Documents Uploaded</p>
-              <p className="text-xs">This player hasn't uploaded any medical documents yet.</p>
+              <p className="text-sm font-semibold mb-1">{text.noDocuments}</p>
+              <p className="text-xs">{text.noDocumentsDesc}</p>
             </div>
           )}
 
@@ -219,7 +253,7 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              Request Documents
+              {text.requestDocs}
             </button>
 
             {hasAnyDocuments && (
@@ -231,7 +265,7 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                   </svg>
-                  Print Documents
+                  {text.print}
                 </button>
 
                 <button
@@ -240,7 +274,7 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Mark as Reviewed
+                  {text.markReviewed}
                 </button>
               </>
             )}

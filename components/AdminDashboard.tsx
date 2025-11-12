@@ -10,7 +10,7 @@ import DocumentsViewer from './DocumentsViewer';
 import PlayerDocumentsSection from './PlayerDocumentsSection';
 import DocumentStatusBadge from './DocumentStatusBadge';
 import ScheduleEditModal from './ScheduleEditModal';
-import { MedicalFiles, WeekDay } from '../types';
+import { MedicalFiles, WeekDay, Language } from '../types';
 
 interface Registration {
   id: string;
@@ -178,6 +178,7 @@ const AdminDashboard: React.FC = () => {
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [activeTab, setActiveTab] = useState<string>('player');
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
+  const [language, setLanguage] = useState<Language>(Language.FR);
 
   // Selected slot for viewing registered players
   const [selectedSlot, setSelectedSlot] = useState<CapacitySlot | null>(null);
@@ -779,11 +780,37 @@ const AdminDashboard: React.FC = () => {
     <div className="bg-gray-900 min-h-screen pb-20 md:pb-8">
       <div className="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="mb-4 md:mb-6">
-          <h1 className="text-2xl md:text-3xl lg:text-5xl uppercase font-black tracking-wider text-white mb-1 md:mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-gray-400 text-sm md:text-base">Manage SniperZone registrations and track performance</p>
+        <div className="mb-4 md:mb-6 flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl md:text-3xl lg:text-5xl uppercase font-black tracking-wider text-white mb-1 md:mb-2">
+              Admin Dashboard
+            </h1>
+            <p className="text-gray-400 text-sm md:text-base">Manage SniperZone registrations and track performance</p>
+          </div>
+
+          {/* Language Toggle */}
+          <div className="flex gap-2 bg-white/5 rounded-lg p-1">
+            <button
+              onClick={() => setLanguage(Language.FR)}
+              className={`px-3 py-2 rounded-md text-sm font-bold transition-all ${
+                language === Language.FR
+                  ? 'bg-[#9BD4FF] text-black'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              FR
+            </button>
+            <button
+              onClick={() => setLanguage(Language.EN)}
+              className={`px-3 py-2 rounded-md text-sm font-bold transition-all ${
+                language === Language.EN
+                  ? 'bg-[#9BD4FF] text-black'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              EN
+            </button>
+          </div>
         </div>
 
         {/* Desktop/Tablet Tabs - Hidden on Mobile */}
@@ -2003,6 +2030,7 @@ const AdminDashboard: React.FC = () => {
                           hasMedicalConditions={selectedRegistration.form_data?.hasMedicalConditions}
                           parentEmail={selectedRegistration.form_data?.parentEmail}
                           playerName={selectedRegistration.form_data?.playerFullName}
+                          language={language}
                         />
                         <DocumentsViewer medicalFiles={selectedRegistration.form_data?.medicalFiles} />
                       </div>
