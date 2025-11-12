@@ -29,7 +29,22 @@ const FormStep4: React.FC<FormStep4Props> = ({ data }) => {
             {data.programType === 'group' && (
                 <>
                     <SummaryItem label="Group Frequency" value={data.groupFrequency} />
-                    <SummaryItem label="Group Day(s)" value={data.groupFrequency === '2x' ? 'Tuesday & Friday' : <span className="capitalize">{data.groupDay}</span>} />
+                    <SummaryItem
+                      label="Training Days"
+                      value={
+                        data.groupSelectedDays.length > 0
+                          ? data.groupSelectedDays.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(', ')
+                          : 'Not selected'
+                      }
+                    />
+                    <SummaryItem
+                      label="Monthly Sessions"
+                      value={
+                        data.groupMonthlyDates && data.groupMonthlyDates.length > 0
+                          ? `${data.groupMonthlyDates.length} sessions scheduled this month`
+                          : 'No sessions scheduled'
+                      }
+                    />
                 </>
             )}
             <SummaryItem label="Jersey Size" value={data.jerseySize} />

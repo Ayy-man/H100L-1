@@ -18,7 +18,9 @@ interface Registration {
     emergencyContactPhone?: string;
     emergencyRelationship?: string;
     groupFrequency?: string;
-    groupDay?: string;
+    groupDay?: string; // Legacy
+    groupSelectedDays?: string[]; // New: Selected days of the week
+    groupMonthlyDates?: string[]; // New: Generated monthly dates
     jerseySize?: string;
     position?: string;
     dominantHand?: string;
@@ -264,7 +266,7 @@ const AdminDashboard: React.FC = () => {
                     {/* Program Details */}
                     <div className="bg-white/5 p-4 rounded-lg">
                       <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">Program Details</h3>
-                      <dl className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <dl className="space-y-3">
                         <div>
                           <dt className="text-sm text-gray-400">Program Type</dt>
                           <dd className="text-white font-semibold capitalize">{selectedRegistration.form_data.programType || 'N/A'}</dd>
@@ -272,12 +274,51 @@ const AdminDashboard: React.FC = () => {
                         {selectedRegistration.form_data.groupFrequency && (
                           <div>
                             <dt className="text-sm text-gray-400">Frequency</dt>
-                            <dd className="text-white font-semibold">{selectedRegistration.form_data.groupFrequency}</dd>
+                            <dd className="text-white font-semibold">{selectedRegistration.form_data.groupFrequency} per week</dd>
                           </div>
                         )}
-                        {selectedRegistration.form_data.groupDay && (
+                        {selectedRegistration.form_data.groupSelectedDays && selectedRegistration.form_data.groupSelectedDays.length > 0 && (
                           <div>
-                            <dt className="text-sm text-gray-400">Day(s)</dt>
+                            <dt className="text-sm text-gray-400">Training Days</dt>
+                            <dd className="text-white font-semibold">
+                              {selectedRegistration.form_data.groupSelectedDays.map(day =>
+                                day.charAt(0).toUpperCase() + day.slice(1)
+                              ).join(', ')}
+                            </dd>
+                          </div>
+                        )}
+                        {selectedRegistration.form_data.groupMonthlyDates && selectedRegistration.form_data.groupMonthlyDates.length > 0 && (
+                          <div>
+                            <dt className="text-sm text-gray-400 mb-2">Monthly Schedule</dt>
+                            <dd className="text-white">
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                {selectedRegistration.form_data.groupMonthlyDates.slice(0, 12).map((date) => {
+                                  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric'
+                                  });
+                                  return (
+                                    <span key={date} className="px-2 py-1 bg-[#9BD4FF]/10 text-[#9BD4FF] rounded text-xs text-center">
+                                      {formattedDate}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              {selectedRegistration.form_data.groupMonthlyDates.length > 12 && (
+                                <p className="text-xs text-gray-400 mt-2">
+                                  +{selectedRegistration.form_data.groupMonthlyDates.length - 12} more sessions
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-400 mt-2">
+                                Total: {selectedRegistration.form_data.groupMonthlyDates.length} sessions this month
+                              </p>
+                            </dd>
+                          </div>
+                        )}
+                        {/* Legacy support for old registrations */}
+                        {selectedRegistration.form_data.groupDay && !selectedRegistration.form_data.groupSelectedDays && (
+                          <div>
+                            <dt className="text-sm text-gray-400">Day (Legacy)</dt>
                             <dd className="text-white font-semibold capitalize">{selectedRegistration.form_data.groupDay}</dd>
                           </div>
                         )}

@@ -5,7 +5,8 @@ export enum Language {
 
 export type PlayerCategory = 'M9' | 'M11' | 'M13' | 'M13 Elite' | 'M15' | 'M15 Elite' | 'M18' | 'Junior' | 'Unknown';
 export type BookingFrequency = '1x' | '2x';
-export type BookingDay = 'tuesday' | 'friday';
+export type BookingDay = 'tuesday' | 'friday'; // Legacy - keeping for backward compatibility
+export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type ProgramType = 'group' | 'private' | 'semi-private';
 
 export interface MedicalFile {
@@ -49,10 +50,12 @@ export interface FormData {
 
   // Step 2
   programType: ProgramType | '';
-  
-  // Group Details
+
+  // Group Details - New 7-day schedule with monthly booking
   groupFrequency: '1x' | '2x' | '';
-  groupDay: 'tuesday' | 'friday' | '';
+  groupDay: 'tuesday' | 'friday' | ''; // Legacy field - kept for backward compatibility
+  groupSelectedDays: WeekDay[]; // New: Selected days of the week for recurring training
+  groupMonthlyDates: string[]; // New: Generated dates for the current month (ISO format: YYYY-MM-DD)
 
   // Private Details
   privateFrequency: '1x' | '2x' | 'one-time' | '';

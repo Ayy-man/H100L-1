@@ -16,8 +16,8 @@ interface RegistrationFormProps {
 const initialFormData: FormData = {
   playerFullName: '', dateOfBirth: '', parentEmail: '', parentPhone: '',
   emergencyContactName: '', emergencyContactPhone: '', emergencyRelationship: '',
-  programType: '', groupFrequency: '', groupDay: '', privateFrequency: '',
-  privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
+  programType: '', groupFrequency: '', groupDay: '', groupSelectedDays: [], groupMonthlyDates: [],
+  privateFrequency: '', privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
   semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
   dominantHand: '', currentLevel: '', jerseySize: '', hasAllergies: false,
   allergiesDetails: '', hasMedicalConditions: false, medicalConditionsDetails: '',
@@ -68,8 +68,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
     }
     if (currentStep === 2) {
         if (!formData.programType) newErrors.programType = 'Please select a program type.';
-        if (formData.programType === 'group' && !formData.groupFrequency) newErrors.groupFrequency = 'Please select a frequency.';
-        if (formData.programType === 'group' && formData.groupFrequency === '1x' && !formData.groupDay) newErrors.groupDay = 'Please select a day.';
+        if (formData.programType === 'group') {
+          if (!formData.groupFrequency) newErrors.groupFrequency = 'Please select a frequency.';
+
+          // Validate day selection based on frequency
+          if (formData.groupFrequency === '1x' && formData.groupSelectedDays.length !== 1) {
+            newErrors.groupDay = 'Please select exactly 1 day per week.';
+          }
+          if (formData.groupFrequency === '2x' && formData.groupSelectedDays.length !== 2) {
+            newErrors.groupDay = 'Please select exactly 2 days per week.';
+          }
+        }
     }
     if (currentStep === 3) {
         if (!formData.jerseySize) newErrors.jerseySize = 'Please select a jersey size.';
@@ -129,6 +138,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
 
   const handleMultiSelectChange = (name: keyof FormData, option: string) => {
     setFormData(prev => {
+        // Special case for groupMonthlyDates - it's passed as a JSON string
+        if (name === 'groupMonthlyDates') {
+          try {
+            const dates = JSON.parse(option);
+            return { ...prev, [name]: dates };
+          } catch (e) {
+            console.error('Failed to parse monthly dates:', e);
+            return prev;
+          }
+        }
+
+        // Normal multi-select toggle behavior
         const existing = (prev[name] as string[]) || [];
         const newValues = existing.includes(option)
             ? existing.filter(item => item !== option)
