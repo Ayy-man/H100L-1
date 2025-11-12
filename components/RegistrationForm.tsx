@@ -19,7 +19,9 @@ interface RegistrationFormProps {
 }
 
 const initialFormData: FormData = {
-  playerFullName: '', dateOfBirth: '', parentEmail: '', parentPhone: '',
+  playerFullName: '', dateOfBirth: '', playerCategory: '',
+  parentFullName: '', parentEmail: '', parentPhone: '', parentCity: '', parentPostalCode: '',
+  communicationLanguage: '',
   emergencyContactName: '', emergencyContactPhone: '', emergencyRelationship: '',
   programType: '', groupFrequency: '', groupDay: '', groupSelectedDays: [], groupMonthlyDates: [],
   privateFrequency: '', privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
@@ -76,10 +78,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
     if (currentStep === 1) {
       if (!formData.playerFullName) newErrors.playerFullName = 'Player name is required.';
       if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required.';
+      if (!formData.playerCategory) newErrors.playerCategory = 'Player category is required.';
+      if (!formData.parentFullName) newErrors.parentFullName = 'Parent name is required.';
       if (!formData.parentEmail || !/\S+@\S+\.\S+/.test(formData.parentEmail)) newErrors.parentEmail = 'A valid email is required.';
       if (!formData.parentPhone || !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.parentPhone)) newErrors.parentPhone = 'A valid phone number is required.';
+      if (!formData.parentCity) newErrors.parentCity = 'City is required.';
+      if (!formData.parentPostalCode) newErrors.parentPostalCode = 'Postal code is required.';
+      if (!formData.communicationLanguage) newErrors.communicationLanguage = 'Communication language is required.';
       if (!formData.emergencyContactName) newErrors.emergencyContactName = 'Emergency contact name is required.';
       if (!formData.emergencyContactPhone) newErrors.emergencyContactPhone = 'Emergency contact phone is required.';
+      if (!formData.emergencyRelationship) newErrors.emergencyRelationship = 'Emergency contact relationship is required.';
       if (formData.parentPhone === formData.emergencyContactPhone) newErrors.emergencyContactPhone = 'Emergency phone must be different from parent phone.';
     }
     if (currentStep === 2) {
@@ -275,7 +283,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                     }}
                     className="absolute top-8 left-8 right-8"
                 >
-                    {currentStep === 1 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} />}
+                    {currentStep === 1 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} language={language || Language.FR} />}
                     {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} />}
                     {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} />}
                     {currentStep === 4 && <FormStep4 data={formData} />}
