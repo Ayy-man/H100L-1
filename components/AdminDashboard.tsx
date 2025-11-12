@@ -2164,17 +2164,25 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* Schedule Edit Modal */}
-      {selectedRegistration && selectedRegistration.form_data?.programType === 'group' && (
-        <ScheduleEditModal
-          isOpen={isEditingSchedule}
-          onClose={() => setIsEditingSchedule(false)}
-          registrationId={selectedRegistration.id}
-          playerName={selectedRegistration.form_data?.playerFullName || 'Unknown Player'}
-          currentDays={selectedRegistration.form_data?.groupSelectedDays || []}
-          frequency={selectedRegistration.form_data?.groupFrequency || '1x'}
-          onSave={handleScheduleUpdate}
-        />
-      )}
+      {selectedRegistration && selectedRegistration.form_data?.programType === 'group' && (() => {
+        // Convert legacy groupDay to new groupSelectedDays format
+        let currentDays = selectedRegistration.form_data?.groupSelectedDays || [];
+        if (currentDays.length === 0 && selectedRegistration.form_data?.groupDay) {
+          currentDays = [selectedRegistration.form_data.groupDay as WeekDay];
+        }
+
+        return (
+          <ScheduleEditModal
+            isOpen={isEditingSchedule}
+            onClose={() => setIsEditingSchedule(false)}
+            registrationId={selectedRegistration.id}
+            playerName={selectedRegistration.form_data?.playerFullName || 'Unknown Player'}
+            currentDays={currentDays}
+            frequency={selectedRegistration.form_data?.groupFrequency || '1x'}
+            onSave={handleScheduleUpdate}
+          />
+        );
+      })()}
     </div>
   );
 };
