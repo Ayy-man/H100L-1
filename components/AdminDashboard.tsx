@@ -9,7 +9,8 @@ import ReportBuilder from './ReportBuilder';
 import DocumentsViewer from './DocumentsViewer';
 import PlayerDocumentsSection from './PlayerDocumentsSection';
 import DocumentStatusBadge from './DocumentStatusBadge';
-import { MedicalFiles } from '../types';
+import ScheduleEditModal from './ScheduleEditModal';
+import { MedicalFiles, WeekDay } from '../types';
 
 interface Registration {
   id: string;
@@ -176,6 +177,7 @@ const AdminDashboard: React.FC = () => {
   // Selected registration for detail view
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [activeTab, setActiveTab] = useState<string>('player');
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
 
   // Selected slot for viewing registered players
   const [selectedSlot, setSelectedSlot] = useState<CapacitySlot | null>(null);
@@ -563,6 +565,43 @@ const AdminDashboard: React.FC = () => {
       fetchCapacityData();
     } catch (err: any) {
       alert(`Error deleting registration: ${err.message}`);
+    }
+  };
+
+  const handleScheduleUpdate = async (newDays: WeekDay[], newMonthlyDates: string[]) => {
+    if (!selectedRegistration) return;
+
+    try {
+      const updatedFormData = {
+        ...selectedRegistration.form_data,
+        groupSelectedDays: newDays,
+        groupMonthlyDates: newMonthlyDates,
+      };
+
+      const { error } = await supabase
+        .from('registrations')
+        .update({ form_data: updatedFormData })
+        .eq('id', selectedRegistration.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setSelectedRegistration({
+        ...selectedRegistration,
+        form_data: updatedFormData,
+      });
+
+      setRegistrations(prev =>
+        prev.map(reg =>
+          reg.id === selectedRegistration.id
+            ? { ...reg, form_data: updatedFormData }
+            : reg
+        )
+      );
+
+      alert('Schedule updated successfully!');
+    } catch (err: any) {
+      throw new Error(err.message);
     }
   };
 
@@ -1819,6 +1858,19 @@ const AdminDashboard: React.FC = () => {
                                     </p>
                                   </div>
                                 )}
+
+                                {/* Edit Schedule Button */}
+                                <div className="pt-4">
+                                  <button
+                                    onClick={() => setIsEditingSchedule(true)}
+                                    className="w-full bg-[#9BD4FF]/10 border border-[#9BD4FF]/30 text-[#9BD4FF] font-bold py-3 px-4 rounded-lg hover:bg-[#9BD4FF]/20 transition-all flex items-center justify-center gap-2"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit Training Schedule
+                                  </button>
+                                </div>
                               </>
                             ) : (
                               <div className="border-b border-white/10 pb-3">
@@ -2109,6 +2161,19 @@ const AdminDashboard: React.FC = () => {
             <span className="text-[9px] font-bold uppercase tracking-wider">Reports</span>
           </button>
         </div>
+      )}
+
+      {/* Schedule Edit Modal */}
+      {selectedRegistration && selectedRegistration.form_data?.programType === 'group' && (
+        <ScheduleEditModal
+          isOpen={isEditingSchedule}
+          onClose={() => setIsEditingSchedule(false)}
+          registrationId={selectedRegistration.id}
+          playerName={selectedRegistration.form_data?.playerFullName || 'Unknown Player'}
+          currentDays={selectedRegistration.form_data?.groupSelectedDays || []}
+          frequency={selectedRegistration.form_data?.groupFrequency || '1x'}
+          onSave={handleScheduleUpdate}
+        />
       )}
     </div>
   );
