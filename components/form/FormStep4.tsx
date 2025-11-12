@@ -1,10 +1,8 @@
 import React from 'react';
-import { FormData, Language } from '../../types';
-import { content } from '../../constants';
+import { FormData } from '../../types';
 
 interface FormStep4Props {
   data: FormData;
-  language: Language;
 }
 
 const SummaryItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -14,31 +12,45 @@ const SummaryItem: React.FC<{ label: string; value: React.ReactNode }> = ({ labe
     </div>
 );
 
-const FormStep4: React.FC<FormStep4Props> = ({ data, language }) => {
-  const t = content[language].form.step4;
-
+const FormStep4: React.FC<FormStep4Props> = ({ data }) => {
   return (
     <div className="space-y-6">
-      <h3 className="text-xl font-bold text-white uppercase tracking-wider border-b border-white/10 pb-2">{t.reviewTitle}</h3>
-      <p className="text-gray-300">{t.subtitle}</p>
+      <h3 className="text-xl font-bold text-white uppercase tracking-wider border-b border-white/10 pb-2">Review Your Information</h3>
+      <p className="text-gray-300">Please review all the information carefully before submitting your registration.</p>
 
       <div className="bg-white/5 p-6 rounded-lg">
         <dl className="divide-y divide-white/10">
-            <SummaryItem label={t.labels.playerName} value={data.playerFullName} />
-            <SummaryItem label={t.labels.dateOfBirth} value={data.dateOfBirth} />
-            <SummaryItem label={t.labels.parentEmail} value={data.parentEmail} />
-            <SummaryItem label={t.labels.parentPhone} value={data.parentPhone} />
-            <SummaryItem label={t.labels.emergencyContact} value={`${data.emergencyContactName} (${data.emergencyContactPhone})`} />
-            <SummaryItem label={t.labels.programType} value={<span className="capitalize">{data.programType}</span>} />
+            <SummaryItem label="Player Name" value={data.playerFullName} />
+            <SummaryItem label="Date of Birth" value={data.dateOfBirth} />
+            <SummaryItem label="Parent Email" value={data.parentEmail} />
+            <SummaryItem label="Parent Phone" value={data.parentPhone} />
+            <SummaryItem label="Emergency Contact" value={`${data.emergencyContactName} (${data.emergencyContactPhone})`} />
+            <SummaryItem label="Program Type" value={<span className="capitalize">{data.programType}</span>} />
             {data.programType === 'group' && (
                 <>
-                    <SummaryItem label={t.labels.groupFrequency} value={data.groupFrequency} />
-                    <SummaryItem label={t.labels.groupDays} value={data.groupFrequency === '2x' ? t.labels.tuesdayFriday : <span className="capitalize">{data.groupDay}</span>} />
+                    <SummaryItem label="Group Frequency" value={data.groupFrequency} />
+                    <SummaryItem
+                      label="Training Days"
+                      value={
+                        data.groupSelectedDays.length > 0
+                          ? data.groupSelectedDays.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(', ')
+                          : 'Not selected'
+                      }
+                    />
+                    <SummaryItem
+                      label="Monthly Sessions"
+                      value={
+                        data.groupMonthlyDates && data.groupMonthlyDates.length > 0
+                          ? `${data.groupMonthlyDates.length} sessions scheduled this month`
+                          : 'No sessions scheduled'
+                      }
+                    />
                 </>
             )}
-            <SummaryItem label={t.labels.jerseySize} value={data.jerseySize} />
-            <SummaryItem label={t.labels.medicalReport} value={data.medicalReport?.name} />
-            <SummaryItem label={t.labels.consents} value={t.labels.consentsAgreed} />
+            <SummaryItem label="Jersey Size" value={data.jerseySize} />
+            <SummaryItem label="Action Plan" value={data.actionPlan?.name || 'Not provided'} />
+            <SummaryItem label="Medical Report" value={data.medicalReport?.name || 'Not provided'} />
+            <SummaryItem label="Consents" value="Photo/Video & Policies Agreed" />
         </dl>
       </div>
     </div>

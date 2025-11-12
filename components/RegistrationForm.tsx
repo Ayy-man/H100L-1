@@ -1,58 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FormData, ProgramType, Language } from '../types';
+import { FormData } from '../types';
 import { supabase } from '../lib/supabase';
-import { content } from '../constants';
-import { uploadMedicalReport, uploadMedicationActionPlan } from '../lib/fileUpload';
+import { uploadMedicalFiles, validateFile } from '../lib/storageService';
 import ProgressIndicator from './form/ProgressIndicator';
 import FormStep1 from './form/FormStep1';
 import FormStep2 from './form/FormStep2';
 import FormStep3 from './form/FormStep3';
 import FormStep4 from './form/FormStep4';
-import PaymentForm from './PaymentForm';
 
 interface RegistrationFormProps {
   onClose: () => void;
-  preSelectedProgram?: {
-    programType: ProgramType | '';
-    frequency: '1x' | '2x' | '';
-  };
-  language: Language;
 }
 
 const initialFormData: FormData = {
-  playerFullName: '', dateOfBirth: '', playerCategory: '', parentFullName: '', parentEmail: '',
-  parentPhone: '', parentCity: '', parentPostalCode: '', communicationLanguage: '',
+  playerFullName: '', dateOfBirth: '', parentEmail: '', parentPhone: '',
   emergencyContactName: '', emergencyContactPhone: '', emergencyRelationship: '',
-  programType: '', groupFrequency: '', groupDay: '', sundayPractice: false, privateFrequency: '',
-  privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
+  programType: '', groupFrequency: '', groupDay: '', groupSelectedDays: [], groupMonthlyDates: [],
+  privateFrequency: '', privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
   semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
-  dominantHand: '', currentLevel: '', jerseySize: '', primaryObjective: '', hasAllergies: false,
+  dominantHand: '', currentLevel: '', jerseySize: '', hasAllergies: false,
   allergiesDetails: '', hasMedicalConditions: false, medicalConditionsDetails: '',
-  carriesMedication: false, medicationDetails: '', medicationActionPlan: null,
-  medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
+  actionPlan: null, medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
 };
 
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram, language }) => {
+const formSteps = [
+  { id: 1, title: 'Player & Parent Info' },
+  { id: 2, title: 'Program Selection' },
+  { id: 3, title: 'Health & Consents' },
+  { id: 4, title: 'Review & Confirm' }
+];
+
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
-
-  // Get translations for current language
-  const t = content[language].form;
-
-  // Define form steps with bilingual titles
-  const formSteps = [
-    { id: 1, title: t.steps.step1 },
-    { id: 2, title: t.steps.step2 },
-    { id: 3, title: t.steps.step3 },
-    { id: 4, title: t.steps.step4 },
-    { id: 5, title: t.steps.step5 }
-  ];
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -60,25 +44,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
     if (savedData) {
       const parsedData = JSON.parse(savedData);
       // Don't restore file objects
+      parsedData.actionPlan = null;
       parsedData.medicalReport = null;
-      parsedData.medicationActionPlan = null;
       setFormData(parsedData);
     }
   }, []);
-
-  // Pre-fill program selection when coming from program cards
-  useEffect(() => {
-    if (preSelectedProgram && preSelectedProgram.programType) {
-      setFormData(prev => ({
-        ...prev,
-        programType: preSelectedProgram.programType,
-        groupFrequency: preSelectedProgram.programType === 'group' ? preSelectedProgram.frequency : '',
-        privateFrequency: preSelectedProgram.programType === 'private' ? preSelectedProgram.frequency : '',
-      }));
-      // Program selection is now step 1, so stay on step 1 with pre-filled data
-      setCurrentStep(1);
-    }
-  }, [preSelectedProgram]);
 
   // Save to localStorage on change
   useEffect(() => {
@@ -87,57 +57,49 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
   
   const validateStep = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
-    const errors = t.errors; // Error messages in current language
-
     if (currentStep === 1) {
-      // Step 1: Program Selection validation
-      if (!formData.programType) newErrors.programType = errors.selectProgram;
-      if (formData.programType === 'group' && !formData.groupFrequency) newErrors.groupFrequency = errors.selectFrequency;
-      if (formData.programType === 'group' && formData.groupFrequency === '1x' && !formData.groupDay) newErrors.groupDay = errors.selectDay;
+      if (!formData.playerFullName) newErrors.playerFullName = 'Player name is required.';
+      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required.';
+      if (!formData.parentEmail || !/\S+@\S+\.\S+/.test(formData.parentEmail)) newErrors.parentEmail = 'A valid email is required.';
+      if (!formData.parentPhone || !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.parentPhone)) newErrors.parentPhone = 'A valid phone number is required.';
+      if (!formData.emergencyContactName) newErrors.emergencyContactName = 'Emergency contact name is required.';
+      if (!formData.emergencyContactPhone) newErrors.emergencyContactPhone = 'Emergency contact phone is required.';
+      if (formData.parentPhone === formData.emergencyContactPhone) newErrors.emergencyContactPhone = 'Emergency phone must be different from parent phone.';
     }
     if (currentStep === 2) {
-      // Step 2: Player & Parent Info validation
-      if (!formData.playerFullName) newErrors.playerFullName = errors.required;
-      if (!formData.dateOfBirth) newErrors.dateOfBirth = errors.required;
-      if (!formData.playerCategory) newErrors.playerCategory = errors.required;
-      if (!formData.parentFullName) newErrors.parentFullName = errors.required;
-      if (!formData.parentEmail || !/\S+@\S+\.\S+/.test(formData.parentEmail)) newErrors.parentEmail = errors.invalidEmail;
-      if (!formData.parentPhone || !/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(formData.parentPhone)) newErrors.parentPhone = errors.invalidPhone;
-      if (!formData.parentCity) newErrors.parentCity = errors.required;
-      if (!formData.parentPostalCode) newErrors.parentPostalCode = errors.required;
-      if (!formData.communicationLanguage) newErrors.communicationLanguage = errors.required;
-      if (!formData.emergencyContactName) newErrors.emergencyContactName = errors.required;
-      if (!formData.emergencyContactPhone) newErrors.emergencyContactPhone = errors.required;
+        if (!formData.programType) newErrors.programType = 'Please select a program type.';
+        if (formData.programType === 'group') {
+          if (!formData.groupFrequency) newErrors.groupFrequency = 'Please select a frequency.';
 
-      // Check both phone AND name to ensure emergency contact is a different person
-      const samePhone = formData.emergencyContactPhone === formData.parentPhone;
-      const sameName = formData.emergencyContactName.toLowerCase().trim() === formData.parentFullName.toLowerCase().trim();
-
-      if (samePhone || sameName) {
-        newErrors.emergencyContactName = errors.emergencyPhoneSame;
-      }
+          // Validate day selection based on frequency
+          if (formData.groupFrequency === '1x' && formData.groupSelectedDays.length !== 1) {
+            newErrors.groupDay = 'Please select exactly 1 day per week.';
+          }
+          if (formData.groupFrequency === '2x' && formData.groupSelectedDays.length !== 2) {
+            newErrors.groupDay = 'Please select exactly 2 days per week.';
+          }
+        }
     }
     if (currentStep === 3) {
-        if (!formData.jerseySize) newErrors.jerseySize = errors.selectJerseySize;
-        if (!formData.primaryObjective) newErrors.primaryObjective = errors.required;
-        if (!formData.policyAcceptance) newErrors.policyAcceptance = errors.acceptPolicies;
-        if (!formData.photoVideoConsent) newErrors.photoVideoConsent = errors.provideConsent;
+        if (!formData.jerseySize) newErrors.jerseySize = 'Please select a jersey size.';
+        if (!formData.policyAcceptance) newErrors.policyAcceptance = 'You must accept the policies to continue.';
+        if (!formData.photoVideoConsent) newErrors.photoVideoConsent = 'You must provide consent to continue.';
 
-        // Medication validation
-        if (formData.carriesMedication) {
-          if (!formData.medicationDetails) newErrors.medicationDetails = errors.required;
-          if (!formData.medicationActionPlan) newErrors.medicationActionPlan = errors.required;
-          if (formData.medicationActionPlan && formData.medicationActionPlan.size > 5 * 1024 * 1024) {
-            newErrors.medicationActionPlan = errors.fileSizeExceeded;
-          }
-          if (formData.medicationActionPlan && formData.medicationActionPlan.type !== 'application/pdf') {
-            newErrors.medicationActionPlan = errors.invalidFileType;
+        // Validate action plan if provided
+        if (formData.actionPlan) {
+          const actionPlanValidation = validateFile(formData.actionPlan);
+          if (!actionPlanValidation.valid) {
+            newErrors.actionPlan = actionPlanValidation.error;
           }
         }
 
-        // Medical report validation (optional)
-        if(formData.medicalReport && formData.medicalReport.size > 5 * 1024 * 1024) newErrors.medicalReport = errors.fileSizeExceeded;
-        if(formData.medicalReport && formData.medicalReport.type !== 'application/pdf') newErrors.medicalReport = errors.invalidFileType;
+        // Validate medical report if provided
+        if (formData.medicalReport) {
+          const medicalReportValidation = validateFile(formData.medicalReport);
+          if (!medicalReportValidation.valid) {
+            newErrors.medicalReport = medicalReportValidation.error;
+          }
+        }
     }
 
     setErrors(newErrors);
@@ -176,6 +138,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
 
   const handleMultiSelectChange = (name: keyof FormData, option: string) => {
     setFormData(prev => {
+        // Special case for groupMonthlyDates - it's passed as a JSON string
+        if (name === 'groupMonthlyDates') {
+          try {
+            const dates = JSON.parse(option);
+            return { ...prev, [name]: dates };
+          } catch (e) {
+            console.error('Failed to parse monthly dates:', e);
+            return prev;
+          }
+        }
+
+        // Normal multi-select toggle behavior
         const existing = (prev[name] as string[]) || [];
         const newValues = existing.includes(option)
             ? existing.filter(item => item !== option)
@@ -184,122 +158,55 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
     });
   };
 
-  const handlePaymentSuccess = async (paymentMethod: string) => {
-    setPaymentMethodId(paymentMethod);
-    setPaymentError(null);
-
-    // Proceed to submit the registration with payment info
-    await handleSubmit(paymentMethod);
-  };
-
-  const handlePaymentError = (error: string) => {
-    setPaymentError(error);
-    alert(t.paymentError.replace('{error}', error));
-  };
-
-  const handleSubmit = async (paymentMethod?: string) => {
+  const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Create a copy of the data and remove File objects before insertion
-    const dataToSubmit = { ...formData };
-    delete (dataToSubmit as Partial<FormData>).medicalReport; // Can't insert File object as JSON
-    delete (dataToSubmit as Partial<FormData>).medicationActionPlan; // Can't insert File object as JSON
 
     try {
-      // Step 1: Insert registration data first (without payment info)
-      const { data: registrationData, error: insertError } = await supabase
-        .from('registrations')
-        .insert({
-          form_data: dataToSubmit,
-          payment_status: 'pending',
-        })
-        .select()
-        .single();
+      // Generate a temporary registration ID for organizing files
+      const tempRegistrationId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-      if (insertError) {
-        throw insertError;
-      }
-
-      const registrationId = registrationData.id;
-
-      // Step 2: Process payment if payment method provided
-      if (paymentMethod) {
+      // Upload files to Supabase Storage if any are provided
+      let uploadedFiles = {};
+      if (formData.actionPlan || formData.medicalReport) {
         try {
-          // Determine program type and frequency
-          let programType = formData.programType as 'group' | 'private' | 'semi-private';
-          let frequency: '1x' | '2x' | 'one-time' = '1x';
-
-          if (programType === 'group') {
-            frequency = formData.groupFrequency as '1x' | '2x';
-          } else if (programType === 'private') {
-            frequency = formData.privateFrequency as '1x' | '2x' | 'one-time';
-          }
-
-          const response = await fetch('/api/create-subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentMethodId: paymentMethod,
-              registrationId: registrationId,
-              customerEmail: formData.parentEmail,
-              customerName: formData.playerFullName,
-              programType: programType,
-              frequency: frequency,
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to create subscription');
-          }
-
-          const subscriptionData = await response.json();
-          console.log('Payment successful:', subscriptionData);
-
-        } catch (paymentError: any) {
-          console.error('Payment error:', paymentError);
-          // Even if payment fails, registration is created
-          // User will need to complete payment separately
-          alert(t.paymentFailedButRegistered.replace('{error}', paymentError.message));
+          uploadedFiles = await uploadMedicalFiles(
+            {
+              actionPlan: formData.actionPlan,
+              medicalReport: formData.medicalReport,
+            },
+            tempRegistrationId
+          );
+        } catch (uploadError: any) {
+          throw new Error(`File upload failed: ${uploadError.message}`);
         }
       }
 
-      // Step 3: Upload files to Supabase Storage (if any)
-      const fileUploads: { [key: string]: string | null } = {};
+      // Create a copy of the data and remove File objects before insertion
+      const dataToSubmit = { ...formData };
+      delete (dataToSubmit as Partial<FormData>).actionPlan;
+      delete (dataToSubmit as Partial<FormData>).medicalReport;
 
-      if (formData.medicalReport) {
-        const medicalReportPath = await uploadMedicalReport(formData.medicalReport, registrationId);
-        if (medicalReportPath) {
-          fileUploads.medical_report_path = medicalReportPath;
-        }
+      // Add uploaded file URLs to the data
+      if (Object.keys(uploadedFiles).length > 0) {
+        dataToSubmit.medicalFiles = uploadedFiles;
       }
 
-      if (formData.medicationActionPlan) {
-        const actionPlanPath = await uploadMedicationActionPlan(formData.medicationActionPlan, registrationId);
-        if (actionPlanPath) {
-          fileUploads.medication_action_plan_path = actionPlanPath;
-        }
+      // Insert registration into database
+      const { error } = await supabase
+        .from('registrations')
+        .insert({ form_data: dataToSubmit });
+
+      if (error) {
+        throw error;
       }
 
-      // Step 4: Update registration with file paths (if any were uploaded)
-      if (Object.keys(fileUploads).length > 0) {
-        const { error: updateError } = await supabase
-          .from('registrations')
-          .update(fileUploads)
-          .eq('id', registrationId);
-
-        if (updateError) {
-          console.error('Error updating file paths:', updateError);
-          // Don't fail the whole registration if file path update fails
-        }
-      }
-
-      alert(t.success);
+      alert('Registration Submitted Successfully!');
       localStorage.removeItem('registrationFormData');
       onClose();
 
     } catch (error: any) {
-      console.error('Supabase submission error:', error);
-      alert(t.submissionError.replace('{error}', error.message));
+      console.error('Submission error:', error);
+      alert(`Submission failed: ${error.message || 'Unknown error occurred'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -333,7 +240,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       >
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
         <div className="p-8 border-b border-white/10">
-            <h2 className="text-2xl uppercase font-bold tracking-wider text-center">{t.title}</h2>
+            <h2 className="text-2xl uppercase font-bold tracking-wider text-center">SniperZone Registration</h2>
             <ProgressIndicator currentStep={currentStep} steps={formSteps} />
         </div>
 
@@ -352,57 +259,36 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                     }}
                     className="absolute top-8 left-8 right-8"
                 >
-                    {currentStep === 1 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} language={language} />}
-                    {currentStep === 2 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} language={language} />}
-                    {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} language={language} />}
-                    {currentStep === 4 && <FormStep4 data={formData} language={language} />}
-                    {currentStep === 5 && (
-                      <PaymentForm
-                        formData={formData}
-                        onPaymentSuccess={handlePaymentSuccess}
-                        onPaymentError={handlePaymentError}
-                      />
-                    )}
+                    {currentStep === 1 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} />}
+                    {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} />}
+                    {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} />}
+                    {currentStep === 4 && <FormStep4 data={formData} />}
                 </motion.div>
             </AnimatePresence>
         </div>
         
-        {currentStep !== 5 && (
-          <div className="p-8 border-t border-white/10 mt-auto flex justify-between items-center">
-              <button
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                  {t.buttons.back}
-              </button>
-              {currentStep < 4 ? (
-                  <button onClick={nextStep} className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition">
-                      {t.buttons.next}
-                  </button>
-              ) : currentStep === 4 ? (
-                  <button
-                    onClick={nextStep}
-                    className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition"
-                  >
-                      {t.buttons.proceedToPayment}
-                  </button>
-              ) : null}
-          </div>
-        )}
-        {currentStep === 5 && (
-          <div className="p-8 border-t border-white/10 mt-auto flex justify-between items-center">
-              <button
-                  onClick={prevStep}
-                  className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition"
-              >
-                  {t.buttons.back}
-              </button>
-              {paymentError && (
-                <p className="text-red-400 text-sm">{paymentError}</p>
-              )}
-          </div>
-        )}
+        <div className="p-8 border-t border-white/10 mt-auto flex justify-between items-center">
+            <button 
+                onClick={prevStep} 
+                disabled={currentStep === 1}
+                className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                Back
+            </button>
+            {currentStep < formSteps.length ? (
+                <button onClick={nextStep} className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition">
+                    Next
+                </button>
+            ) : (
+                <button 
+                  onClick={handleSubmit} 
+                  disabled={isSubmitting}
+                  className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isSubmitting ? 'Submitting...' : 'Submit Registration'}
+                </button>
+            )}
+        </div>
       </motion.div>
     </div>
   );
