@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FormData } from '../types';
+import { FormData, Language, ProgramType } from '../types';
 import { supabase } from '../lib/supabase';
 import { uploadMedicalFiles, validateFile } from '../lib/storageService';
 import ProgressIndicator from './form/ProgressIndicator';
@@ -11,6 +11,11 @@ import FormStep4 from './form/FormStep4';
 
 interface RegistrationFormProps {
   onClose: () => void;
+  preSelectedProgram?: {
+    programType: ProgramType | '';
+    frequency: '1x' | '2x' | '';
+  };
+  language?: Language;
 }
 
 const initialFormData: FormData = {
@@ -31,7 +36,7 @@ const formSteps = [
   { id: 4, title: 'Review & Confirm' }
 ];
 
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram, language }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -49,6 +54,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose }) => {
       setFormData(parsedData);
     }
   }, []);
+
+  // Apply pre-selected program if provided
+  useEffect(() => {
+    if (preSelectedProgram && preSelectedProgram.programType) {
+      setFormData(prev => ({
+        ...prev,
+        programType: preSelectedProgram.programType,
+        groupFrequency: preSelectedProgram.programType === 'group' ? preSelectedProgram.frequency : '',
+      }));
+    }
+  }, [preSelectedProgram]);
 
   // Save to localStorage on change
   useEffect(() => {
