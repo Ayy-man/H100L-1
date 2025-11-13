@@ -180,6 +180,99 @@ const AdminDashboard: React.FC = () => {
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
   const [language, setLanguage] = useState<Language>(Language.FR);
 
+  // Translations
+  const isFrench = language === Language.FR;
+  const t = {
+    // Header
+    title: isFrench ? 'Tableau de bord administrateur' : 'Admin Dashboard',
+    subtitle: isFrench ? 'Gérer les inscriptions SniperZone et suivre les performances' : 'Manage SniperZone registrations and track performance',
+
+    // Tabs
+    overview: isFrench ? 'Aperçu' : 'Overview',
+    analytics: isFrench ? 'Analytique' : 'Analytics',
+    matching: isFrench ? 'Jumelage' : 'Matching',
+    reports: isFrench ? 'Rapports' : 'Reports',
+
+    // Stats
+    totalRegistrations: isFrench ? 'Total des inscriptions' : 'Total Registrations',
+    paid: isFrench ? 'Payé' : 'Paid',
+    pending: isFrench ? 'En attente' : 'Pending',
+    todayRegistrations: isFrench ? 'Inscriptions aujourd\'hui' : 'Today\'s Registrations',
+
+    // Capacity
+    capacityOverview: isFrench ? 'Aperçu de la capacité' : 'Capacity Overview',
+    refresh: isFrench ? 'Actualiser' : 'Refresh',
+    tuesdaySessions: isFrench ? 'Séances du mardi' : '{t.tuesdaySessions}',
+    fridaySessions: isFrench ? 'Séances du vendredi' : '{t.fridaySessions}',
+    clickToView: isFrench ? 'Cliquez pour voir les inscriptions' : '{t.clickToView}',
+
+    // {t.filters}
+    filters: isFrench ? 'Filtres' : '{t.filters}',
+    searchPlaceholder: isFrench ? 'Rechercher par nom ou courriel...' : 'Search by name or email...',
+    allPrograms: isFrench ? 'Tous les programmes' : '{t.allPrograms}',
+    allPaymentStatus: isFrench ? 'Tous les statuts de paiement' : '{t.allPaymentStatus}',
+    allCategories: isFrench ? 'Toutes les catégories' : '{t.allCategories}',
+    showing: isFrench ? 'Affichage' : '{t.showing}',
+    of: isFrench ? 'de' : 'of',
+    registrations: isFrench ? 'inscriptions' : 'registrations',
+
+    // Table headers
+    date: isFrench ? 'Date' : 'Date',
+    player: isFrench ? 'Joueur' : 'Player',
+    category: isFrench ? 'Catégorie' : 'Category',
+    program: isFrench ? 'Programme' : 'Program',
+    frequency: isFrench ? 'Fréquence' : 'Frequency',
+    parentEmail: isFrench ? 'Courriel parent' : 'Parent Email',
+    documents: isFrench ? 'Documents' : 'Documents',
+    status: isFrench ? 'Statut' : 'Status',
+    actions: isFrench ? 'Actions' : 'Actions',
+
+    // Program types
+    group: isFrench ? 'Groupe' : 'Group',
+    private: isFrench ? 'Privé' : 'Private',
+    semiPrivate: isFrench ? 'Semi-privé' : 'Semi-Private',
+
+    // Payment status
+    paidStatus: isFrench ? 'Payé' : 'Paid',
+    pendingStatus: isFrench ? 'En attente' : 'Pending',
+    failedStatus: isFrench ? 'Échoué' : 'Failed',
+
+    // Actions
+    viewDetails: isFrench ? 'Voir les détails' : 'View Details',
+    delete: isFrench ? 'Supprimer' : 'Delete',
+    previous: isFrench ? 'Précédent' : 'Previous',
+    next: isFrench ? 'Suivant' : 'Next',
+    close: isFrench ? 'Fermer' : 'Close',
+
+    // Modal tabs
+    playerInfo: isFrench ? 'Info joueur' : 'Player Info',
+    parentContact: isFrench ? 'Parent/Contact' : 'Parent/Contact',
+    programTab: isFrench ? 'Programme' : 'Program',
+    healthConsent: isFrench ? 'Santé & Consentement' : 'Health & Consent',
+    documentsTab: isFrench ? 'Documents' : 'Documents',
+    payment: isFrench ? 'Paiement' : 'Payment',
+
+    // Registration details
+    registrationDetails: isFrench ? 'Détails de l\'inscription' : 'Registration Details',
+    sendEmail: isFrench ? 'Envoyer un courriel' : 'Send Email',
+    exportPDF: isFrench ? 'Exporter en PDF' : 'Export PDF',
+    deleteRegistration: isFrench ? 'Supprimer' : 'Delete',
+
+    // Program details
+    programDetails: isFrench ? 'Détails du programme' : 'Program Details',
+    programType: isFrench ? 'Type de programme' : 'Program Type',
+    frequencyLabel: isFrench ? 'Fréquence' : 'Frequency',
+    trainingDays: isFrench ? 'Jours d\'entraînement' : 'Training Days',
+    monthlySchedule: isFrench ? 'Horaire mensuel' : 'Monthly Schedule',
+    sessions: isFrench ? 'séances' : 'sessions',
+    sessionsThisMonth: isFrench ? 'séances ce mois-ci' : 'sessions this month',
+    editSchedule: isFrench ? 'Modifier l\'horaire d\'entraînement' : 'Edit Training Schedule',
+    selectedDayLegacy: isFrench ? 'Jour sélectionné (ancien)' : 'Selected Day (Legacy)',
+
+    // Confirmation
+    confirmDelete: isFrench ? 'Êtes-vous sûr de vouloir supprimer cette inscription? Cette action ne peut pas être annulée.' : 'Are you sure you want to delete this registration? This action cannot be undone.',
+  };
+
   // Selected slot for viewing registered players
   const [selectedSlot, setSelectedSlot] = useState<CapacitySlot | null>(null);
   const [slotPlayers, setSlotPlayers] = useState<SlotRegistration[]>([]);
@@ -751,7 +844,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Click hint */}
         <p className="text-gray-500 text-xs mt-2 text-center">
-          Click to view registrations
+          {t.clickToView}
         </p>
       </motion.div>
     );
@@ -783,9 +876,9 @@ const AdminDashboard: React.FC = () => {
         <div className="mb-4 md:mb-6 flex justify-between items-start">
           <div>
             <h1 className="text-2xl md:text-3xl lg:text-5xl uppercase font-black tracking-wider text-white mb-1 md:mb-2">
-              Admin Dashboard
+              {t.title}
             </h1>
-            <p className="text-gray-400 text-sm md:text-base">Manage SniperZone registrations and track performance</p>
+            <p className="text-gray-400 text-sm md:text-base">{t.subtitle}</p>
           </div>
 
           {/* Language Toggle */}
@@ -823,7 +916,7 @@ const AdminDashboard: React.FC = () => {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            📊 Overview
+            📊 {t.overview}
           </button>
           <button
             onClick={() => setDashboardTab('analytics')}
@@ -833,7 +926,7 @@ const AdminDashboard: React.FC = () => {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            📈 Analytics
+            📈 {t.analytics}
           </button>
           <button
             onClick={() => setDashboardTab('matching')}
@@ -843,7 +936,7 @@ const AdminDashboard: React.FC = () => {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            🤝 Matching
+            🤝 {t.matching}
           </button>
           <button
             onClick={() => setDashboardTab('reports')}
@@ -853,7 +946,7 @@ const AdminDashboard: React.FC = () => {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            📄 Reports
+            📄 {t.reports}
           </button>
         </div>
 
@@ -863,25 +956,25 @@ const AdminDashboard: React.FC = () => {
             {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatsCard
-            title="Total Registrations"
+            title={t.totalRegistrations}
             value={stats.total}
             icon="📊"
             color="text-[#9BD4FF]"
           />
           <StatsCard
-            title="Paid"
+            title={t.paid}
             value={stats.paid}
             icon="✅"
             color="text-green-400"
           />
           <StatsCard
-            title="Pending"
+            title={t.pending}
             value={stats.pending}
             icon="⏳"
             color="text-yellow-400"
           />
           <StatsCard
-            title="Today's Registrations"
+            title={t.todayRegistrations}
             value={stats.todayCount}
             icon="🆕"
             color="text-[#9BD4FF]"
@@ -893,7 +986,7 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-black border border-white/10 rounded-lg p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
-                🏒 Capacity Overview
+                🏒 {t.capacityOverview}
               </h2>
               <button
                 onClick={() => fetchCapacityData()}
@@ -906,7 +999,7 @@ const AdminDashboard: React.FC = () => {
             {/* Tuesday Slots */}
             <div className="mb-8">
               <h3 className="text-xl font-bold text-[#9BD4FF] mb-4 uppercase tracking-wider">
-                Tuesday Sessions
+                {t.tuesdaySessions}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {slotsByDay.tuesday.map(slot => (
@@ -918,7 +1011,7 @@ const AdminDashboard: React.FC = () => {
             {/* Friday Slots */}
             <div>
               <h3 className="text-xl font-bold text-[#9BD4FF] mb-4 uppercase tracking-wider">
-                Friday Sessions
+                {t.fridaySessions}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {slotsByDay.friday.map(slot => (
@@ -929,14 +1022,14 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Filters */}
+        {/* {t.filters} */}
         <div className="bg-black border border-white/10 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-white mb-4 uppercase tracking-wider">Filters</h2>
+          <h2 className="text-xl font-bold text-white mb-4 uppercase tracking-wider">{t.filters}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
             <input
               type="text"
-              placeholder="Search by name or email..."
+              placeholder=t.searchPlaceholder
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
@@ -948,7 +1041,7 @@ const AdminDashboard: React.FC = () => {
               onChange={(e) => setProgramFilter(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             >
-              <option value="all">All Programs</option>
+              <option value="all">{t.allPrograms}</option>
               <option value="group">Group Training</option>
               <option value="private">Private Training</option>
               <option value="semi-private">Semi-Private</option>
@@ -960,7 +1053,7 @@ const AdminDashboard: React.FC = () => {
               onChange={(e) => setPaymentFilter(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             >
-              <option value="all">All Payment Status</option>
+              <option value="all">{t.allPaymentStatus}</option>
               <option value="paid">Paid</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
@@ -972,14 +1065,14 @@ const AdminDashboard: React.FC = () => {
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             >
-              <option value="all">All Categories</option>
+              <option value="all">{t.allCategories}</option>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
 
-          {/* Active Filters Summary */}
+          {/* Active {t.filters} Summary */}
           {(searchTerm || programFilter !== 'all' || paymentFilter !== 'all' || categoryFilter !== 'all') && (
             <div className="mt-4 flex items-center gap-2 flex-wrap">
               <span className="text-gray-400 text-sm">Active filters:</span>
@@ -1021,7 +1114,7 @@ const AdminDashboard: React.FC = () => {
         {/* Results Count */}
         <div className="mb-4">
           <p className="text-gray-400">
-            Showing {paginatedRegistrations.length} of {filteredRegistrations.length} registrations
+            {t.showing} {paginatedRegistrations.length} {t.of} {filteredRegistrations.length} registrations
           </p>
         </div>
 
@@ -1052,15 +1145,15 @@ const AdminDashboard: React.FC = () => {
               <table className="min-w-full divide-y divide-white/10">
                 <thead className="bg-[#9BD4FF]/10">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Player</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Program</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Frequency</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Parent Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Documents</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.date}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.player}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.category}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.program}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.frequency}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.parentEmail}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.documents}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.status}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#9BD4FF] uppercase tracking-wider">{t.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
@@ -1252,8 +1345,8 @@ const AdminDashboard: React.FC = () => {
                       />
                       <Legend wrapperStyle={{ color: '#9BD4FF' }} />
                       <Line type="monotone" dataKey="count" stroke="#9BD4FF" strokeWidth={2} name="Total" />
-                      <Line type="monotone" dataKey="paid_count" stroke="#22c55e" strokeWidth={2} name="Paid" />
-                      <Line type="monotone" dataKey="pending_count" stroke="#eab308" strokeWidth={2} name="Pending" />
+                      <Line type="monotone" dataKey="paid_count" stroke="#22c55e" strokeWidth={2} name={t.paid} />
+                      <Line type="monotone" dataKey="pending_count" stroke="#eab308" strokeWidth={2} name={t.pending} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
@@ -1733,12 +1826,12 @@ const AdminDashboard: React.FC = () => {
               {/* Tabs */}
               <div className="flex border-b border-white/10 overflow-x-auto">
                 {[
-                  { id: 'player', label: '👤 Player Info', icon: '👤' },
-                  { id: 'parent', label: '👨‍👩‍👦 Parent/Contact', icon: '👨‍👩‍👦' },
-                  { id: 'program', label: '🏒 Program', icon: '🏒' },
-                  { id: 'health', label: '🏥 Health & Consent', icon: '🏥' },
-                  { id: 'documents', label: '📄 Documents', icon: '📄' },
-                  { id: 'payment', label: '💳 Payment', icon: '💳' }
+                  { id: 'player', label: `👤 ${t.playerInfo}`, icon: '👤' },
+                  { id: 'parent', label: `👨‍👩‍👦 ${t.parentContact}`, icon: '👨‍👩‍👦' },
+                  { id: 'program', label: `🏒 ${t.programTab}`, icon: '🏒' },
+                  { id: 'health', label: `🏥 ${t.healthConsent}`, icon: '🏥' },
+                  { id: 'documents', label: `📄 ${t.documentsTab}`, icon: '📄' },
+                  { id: 'payment', label: `💳 ${t.payment}`, icon: '💳' }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -1772,7 +1865,7 @@ const AdminDashboard: React.FC = () => {
                         </h3>
                         {[
                           { label: 'Full Name', value: selectedRegistration.form_data?.playerFullName },
-                          { label: 'Date of Birth', value: selectedRegistration.form_data?.dateOfBirth },
+                          { label: 'Date {t.of} Birth', value: selectedRegistration.form_data?.dateOfBirth },
                           { label: 'Category', value: selectedRegistration.form_data?.playerCategory },
                           { label: 'Position', value: selectedRegistration.form_data?.position },
                           { label: 'Dominant Hand', value: selectedRegistration.form_data?.dominantHand },
@@ -1832,10 +1925,10 @@ const AdminDashboard: React.FC = () => {
                     {activeTab === 'program' && (
                       <div className="space-y-4">
                         <h3 className="text-lg font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
-                          Program Details
+                          {t.programDetails}
                         </h3>
                         <div className="border-b border-white/10 pb-3">
-                          <p className="text-gray-400 text-sm uppercase tracking-wider">Program Type</p>
+                          <p className="text-gray-400 text-sm uppercase tracking-wider">{t.programType}</p>
                           <p className="text-white mt-1 text-lg capitalize">
                             {selectedRegistration.form_data?.programType || 'N/A'}
                           </p>
@@ -1904,7 +1997,7 @@ const AdminDashboard: React.FC = () => {
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
-                                Edit Training Schedule
+                                {t.editSchedule}
                               </button>
                             </div>
                           </>
