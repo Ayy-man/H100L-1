@@ -2124,6 +2124,34 @@ const AdminDashboard: React.FC = () => {
                           parentEmail={selectedRegistration.form_data?.parentEmail}
                           playerName={selectedRegistration.form_data?.playerFullName}
                           language={language}
+                          registrationId={selectedRegistration.id}
+                          onUploadComplete={async (newFiles) => {
+                            // Update the registration with new files
+                            const updatedFormData = {
+                              ...selectedRegistration.form_data,
+                              medicalFiles: {
+                                ...selectedRegistration.form_data?.medicalFiles,
+                                ...newFiles
+                              }
+                            };
+
+                            // Update in database
+                            const { error } = await supabase
+                              .from('registrations')
+                              .update({ form_data: updatedFormData })
+                              .eq('id', selectedRegistration.id);
+
+                            if (!error) {
+                              // Refresh local state
+                              setSelectedRegistration({
+                                ...selectedRegistration,
+                                form_data: updatedFormData
+                              });
+
+                              // Refresh registrations list
+                              fetchRegistrations();
+                            }
+                          }}
                         />
                         <DocumentsViewer medicalFiles={selectedRegistration.form_data?.medicalFiles} />
                       </div>

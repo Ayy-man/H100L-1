@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MedicalFiles, Language } from '../types';
-import { getSignedUrl } from '../lib/storageService';
+import { getSignedUrl, uploadMedicalFiles, validateFile } from '../lib/storageService';
 import DocumentStatusBadge from './DocumentStatusBadge';
 
 interface PlayerDocumentsSectionProps {
@@ -9,6 +9,8 @@ interface PlayerDocumentsSectionProps {
   parentEmail: string;
   playerName: string;
   language?: Language;
+  registrationId?: string;
+  onUploadComplete?: (newFiles: MedicalFiles) => void;
 }
 
 const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
@@ -16,11 +18,16 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
   hasMedicalConditions,
   parentEmail,
   playerName,
-  language = Language.FR
+  language = Language.FR,
+  registrationId,
+  onUploadComplete
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<{ actionPlan?: File; medicalReport?: File }>({});
+  const [isUploading, setIsUploading] = useState(false);
 
   const hasAnyDocuments = medicalFiles?.actionPlan || medicalFiles?.medicalReport;
   const isFrench = language === Language.FR;
@@ -36,8 +43,16 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
     noDocuments: isFrench ? 'Aucun document téléchargé' : 'No Documents Uploaded',
     noDocumentsDesc: isFrench ? 'Ce joueur n\'a pas encore téléchargé de documents médicaux.' : 'This player hasn\'t uploaded any medical documents yet.',
     requestDocs: isFrench ? 'Demander des documents' : 'Request Documents',
+    uploadDocs: isFrench ? 'Téléverser des documents' : 'Upload Documents',
     print: isFrench ? 'Imprimer les documents' : 'Print Documents',
     markReviewed: isFrench ? 'Marquer comme vérifié' : 'Mark as Reviewed',
+    uploadTitle: isFrench ? 'Téléverser des documents médicaux' : 'Upload Medical Documents',
+    selectFile: isFrench ? 'Sélectionner un fichier' : 'Select File',
+    uploading: isFrench ? 'Téléversement...' : 'Uploading...',
+    upload: isFrench ? 'Téléverser' : 'Upload',
+    cancel: isFrench ? 'Annuler' : 'Cancel',
+    uploadSuccess: isFrench ? 'Documents téléversés avec succès!' : 'Documents uploaded successfully!',
+    uploadError: isFrench ? 'Erreur lors du téléversement' : 'Upload failed',
   };
 
   const handleView = async (file: { url: string; filename: string }, fileType: string) => {
@@ -106,6 +121,48 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'actionPlan' | 'medicalReport') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid file');
+      return;
+    }
+
+    setUploadingFiles(prev => ({ ...prev, [fileType]: file }));
+    setError(null);
+  };
+
+  const handleUpload = async () => {
+    if (!registrationId || Object.keys(uploadingFiles).length === 0) {
+      setError(text.uploadError);
+      return;
+    }
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const uploadedFiles = await uploadMedicalFiles(uploadingFiles, registrationId);
+
+      // Notify parent component
+      if (onUploadComplete) {
+        onUploadComplete(uploadedFiles);
+      }
+
+      alert(text.uploadSuccess);
+      setIsUploadModalOpen(false);
+      setUploadingFiles({});
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setError(text.uploadError + ': ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const formatDate = (dateString: string): string => {
@@ -256,6 +313,17 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
               {text.requestDocs}
             </button>
 
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              disabled={!registrationId}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 text-purple-400 rounded-lg text-sm font-semibold hover:bg-purple-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              {text.uploadDocs}
+            </button>
+
             {hasAnyDocuments && (
               <>
                 <button
@@ -278,6 +346,78 @@ const PlayerDocumentsSection: React.FC<PlayerDocumentsSectionProps> = ({
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 border border-white/10 rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-white mb-4">{text.uploadTitle}</h3>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Action Plan Upload */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                {text.actionPlan}
+              </label>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={(e) => handleFileSelect(e, 'actionPlan')}
+                className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#9BD4FF]/10 file:text-[#9BD4FF] hover:file:bg-[#9BD4FF]/20 file:cursor-pointer"
+              />
+              {uploadingFiles.actionPlan && (
+                <p className="text-xs text-[#9BD4FF] mt-1">
+                  {uploadingFiles.actionPlan.name} ({formatFileSize(uploadingFiles.actionPlan.size)})
+                </p>
+              )}
+            </div>
+
+            {/* Medical Report Upload */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                {text.medicalReport}
+              </label>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={(e) => handleFileSelect(e, 'medicalReport')}
+                className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#9BD4FF]/10 file:text-[#9BD4FF] hover:file:bg-[#9BD4FF]/20 file:cursor-pointer"
+              />
+              {uploadingFiles.medicalReport && (
+                <p className="text-xs text-[#9BD4FF] mt-1">
+                  {uploadingFiles.medicalReport.name} ({formatFileSize(uploadingFiles.medicalReport.size)})
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setIsUploadModalOpen(false);
+                  setUploadingFiles({});
+                  setError(null);
+                }}
+                disabled={isUploading}
+                className="flex-1 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition disabled:opacity-50"
+              >
+                {text.cancel}
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={isUploading || Object.keys(uploadingFiles).length === 0}
+                className="flex-1 bg-[#9BD4FF] text-black font-bold py-2 px-4 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUploading ? text.uploading : text.upload}
+              </button>
+            </div>
           </div>
         </div>
       )}
