@@ -1029,7 +1029,7 @@ const AdminDashboard: React.FC = () => {
             {/* Search */}
             <input
               type="text"
-              placeholder=t.searchPlaceholder
+              placeholder={t.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
