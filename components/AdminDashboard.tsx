@@ -776,13 +776,13 @@ const AdminDashboard: React.FC = () => {
             onClick={() => setSelectedRegistration(registration)}
             className="flex-1 bg-[#9BD4FF] text-black font-bold py-2 px-4 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all text-sm"
           >
-            View Details
+            {t.viewDetails}
           </button>
           <button
             onClick={() => handleDelete(registration.id)}
             className="bg-red-500/20 text-red-400 font-bold py-2 px-4 rounded-lg hover:bg-red-500/30 border border-red-500/50 transition-all text-sm"
           >
-            Delete
+            {t.delete}
           </button>
         </div>
       </motion.div>
@@ -1790,7 +1790,7 @@ const AdminDashboard: React.FC = () => {
                 onClick={() => setSelectedSlot(null)}
                 className="mt-6 w-full bg-[#9BD4FF] text-black font-bold py-3 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all"
               >
-                Close
+                {t.close}
               </button>
             </motion.div>
           </div>
@@ -2236,26 +2236,26 @@ const AdminDashboard: React.FC = () => {
                     onClick={() => window.open(`mailto:${selectedRegistration.form_data?.parentEmail}?subject=SniperZone Registration - ${selectedRegistration.form_data?.playerFullName}`)}
                     className="flex-1 min-w-[150px] bg-[#9BD4FF] text-black font-bold py-3 px-4 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all flex items-center justify-center gap-2"
                   >
-                    📧 Send Email
+                    📧 {t.sendEmail}
                   </button>
 
                   <button
-                    onClick={() => alert('Export to PDF feature coming soon!')}
+                    onClick={() => alert(isFrench ? 'Fonctionnalité d\'export PDF à venir !' : 'Export to PDF feature coming soon!')}
                     className="flex-1 min-w-[150px] bg-white/10 text-white font-bold py-3 px-4 rounded-lg hover:bg-white/20 transition-all flex items-center justify-center gap-2"
                   >
-                    📄 Export PDF
+                    📄 {t.exportPDF}
                   </button>
 
                   <button
                     onClick={() => {
-                      if (confirm('Are you sure you want to delete this registration? This action cannot be undone.')) {
+                      if (confirm(t.confirmDelete)) {
                         handleDelete(selectedRegistration.id);
                         setSelectedRegistration(null);
                       }
                     }}
                     className="flex-1 min-w-[150px] bg-red-500/20 text-red-400 font-bold py-3 px-4 rounded-lg hover:bg-red-500/30 border border-red-500/50 transition-all flex items-center justify-center gap-2"
                   >
-                    🗑️ Delete
+                    🗑️ {t.deleteRegistration}
                   </button>
 
                   <button
@@ -2265,7 +2265,7 @@ const AdminDashboard: React.FC = () => {
                     }}
                     className="flex-1 min-w-[150px] bg-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-600 transition-all"
                   >
-                    Close
+                    {t.close}
                   </button>
                 </div>
               </div>
