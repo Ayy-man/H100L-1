@@ -642,23 +642,35 @@ const AdminDashboard: React.FC = () => {
   }, [capacitySlots]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this registration?')) return;
+    if (!confirm(t.confirmDelete)) return;
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('registrations')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      console.log('Delete response:', { data, error });
+
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+
+      // Check if anything was actually deleted
+      if (!data || data.length === 0) {
+        throw new Error('No rows were deleted. This might be a permissions issue.');
+      }
 
       setRegistrations(prev => prev.filter(r => r.id !== id));
-      alert('Registration deleted successfully');
+      alert(isFrench ? 'Inscription supprimée avec succès' : 'Registration deleted successfully');
 
       // Refresh capacity data
       fetchCapacityData();
     } catch (err: any) {
-      alert(`Error deleting registration: ${err.message}`);
+      console.error('Delete failed:', err);
+      alert(`${isFrench ? 'Erreur lors de la suppression' : 'Error deleting registration'}: ${err.message}`);
     }
   };
 
