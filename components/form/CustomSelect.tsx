@@ -22,11 +22,25 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   placeholder = '-- Select an option --'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Find the display label for the current value
   const selectedOption = options.find(opt => opt.value === value);
   const displayValue = selectedOption ? selectedOption.label : placeholder;
+
+  // Calculate dropdown position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  }, [isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -67,6 +81,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       <div className="relative" ref={containerRef}>
         {/* Custom Select Button */}
         <button
+          ref={buttonRef}
           type="button"
           id={name}
           onClick={() => setIsOpen(!isOpen)}
@@ -94,7 +109,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         {/* Custom Dropdown Menu */}
         {isOpen && (
           <div
-            className="absolute z-50 w-full mt-1 bg-[#1a1a1a] border-2 border-white/20 rounded-lg shadow-xl max-h-60 overflow-auto"
+            className="fixed z-[9999] bg-[#1a1a1a] border-2 border-white/20 rounded-lg shadow-xl max-h-60 overflow-auto"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              width: `${dropdownPosition.width}px`
+            }}
             role="listbox"
           >
             {options.map((option) => (
