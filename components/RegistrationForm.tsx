@@ -232,20 +232,48 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       delete (dataToSubmit as Partial<FormData>).actionPlan;
       delete (dataToSubmit as Partial<FormData>).medicalReport;
 
-      // Add uploaded file URLs and payment info to the data
+      // Add uploaded file URLs
       if (Object.keys(uploadedFiles).length > 0) {
         dataToSubmit.medicalFiles = uploadedFiles;
       }
-      dataToSubmit.paymentMethodId = paymentId;
-      dataToSubmit.paymentStatus = 'pending';
 
-      // Insert registration into database
-      const { error } = await supabase
+      // Step 1: Insert registration into database first to get ID
+      const { data: registrationData, error: insertError } = await supabase
         .from('registrations')
-        .insert({ form_data: dataToSubmit });
+        .insert({ form_data: dataToSubmit })
+        .select('id')
+        .single();
 
-      if (error) {
-        throw error;
+      if (insertError || !registrationData) {
+        throw insertError || new Error('Failed to create registration');
+      }
+
+      const registrationId = registrationData.id;
+
+      // Step 2: Create Stripe subscription via API
+      const subscriptionResponse = await fetch('/api/create-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentMethodId: paymentId,
+          registrationId: registrationId,
+          customerEmail: formData.parentEmail,
+          customerName: formData.parentFullName,
+          programType: formData.programType,
+          frequency: formData.programType === 'group'
+            ? formData.groupFrequency
+            : formData.programType === 'private'
+            ? formData.privateFrequency
+            : 'monthly',
+        }),
+      });
+
+      const subscriptionResult = await subscriptionResponse.json();
+
+      if (!subscriptionResponse.ok) {
+        throw new Error(subscriptionResult.error || 'Failed to create subscription');
       }
 
       alert('✅ Registration & Payment Submitted Successfully!\n\nYou will receive a confirmation email shortly.');

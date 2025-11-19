@@ -19,7 +19,7 @@ interface SubscriptionRequest {
   customerEmail: string;
   customerName: string;
   programType: 'group' | 'private' | 'semi-private';
-  frequency: '1x' | '2x' | 'one-time';
+  frequency: '1x' | '2x' | '1x/week' | '2x/week' | '3x/week' | 'monthly' | 'one-time';
 }
 
 export default async function handler(
@@ -134,15 +134,11 @@ export default async function handler(
         status: paymentIntent.status,
       });
     } else {
-      // Create recurring subscription
+      // Create recurring subscription and charge immediately
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{ price: priceId }],
-        payment_behavior: 'default_incomplete',
-        payment_settings: {
-          payment_method_types: ['card'],
-          save_default_payment_method: 'on_subscription',
-        },
+        default_payment_method: paymentMethodId,
         expand: ['latest_invoice.payment_intent'],
         metadata: {
           registrationId,
@@ -153,13 +149,22 @@ export default async function handler(
 
       subscriptionId = subscription.id;
 
+      // Get the payment status from the latest invoice
+      const invoice = subscription.latest_invoice as Stripe.Invoice;
+      const paymentIntent = invoice?.payment_intent as Stripe.PaymentIntent;
+      const paymentStatus = paymentIntent?.status === 'succeeded'
+        ? 'active'
+        : subscription.status === 'active'
+        ? 'active'
+        : 'pending';
+
       // Update Supabase with subscription info
       await supabase
         .from('registrations')
         .update({
           stripe_customer_id: customer.id,
           stripe_subscription_id: subscriptionId,
-          payment_status: subscription.status === 'active' ? 'active' : 'pending',
+          payment_status: paymentStatus,
           updated_at: new Date().toISOString(),
         })
         .eq('id', registrationId);
@@ -168,7 +173,7 @@ export default async function handler(
         success: true,
         customerId: customer.id,
         subscriptionId,
-        status: subscription.status,
+        status: paymentStatus,
       });
     }
   } catch (error: any) {
@@ -183,18 +188,26 @@ export default async function handler(
 
 // Helper function to get Stripe Price ID based on program
 function getPriceId(programType: string, frequency: string): string | null {
-  // TODO: Replace these with your actual Stripe Price IDs
-  // You need to create these in your Stripe Dashboard first
   const priceMap: Record<string, string> = {
-    'group-1x': process.env.STRIPE_PRICE_GROUP_1X || '',
-    'group-2x': process.env.STRIPE_PRICE_GROUP_2X || '',
-    'private-1x': process.env.STRIPE_PRICE_PRIVATE_1X || '',
-    'private-2x': process.env.STRIPE_PRICE_PRIVATE_2X || '',
-    'semi-private': process.env.STRIPE_PRICE_SEMI_PRIVATE || '',
+    'group-1x': process.env.VITE_STRIPE_PRICE_GROUP_1X || '',
+    'group-2x': process.env.VITE_STRIPE_PRICE_GROUP_2X || '',
+    'private-1x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_1X || '',
+    'private-2x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_2X || '',
+    'private-3x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_2X || '', // Using 2x price as placeholder
+    'semi-private-monthly': process.env.VITE_STRIPE_PRICE_SEMI_PRIVATE || '',
   };
 
-  const key = frequency === 'one-time' ? null : `${programType}-${frequency}`;
-  return key ? priceMap[key] : null;
+  if (frequency === 'one-time') {
+    return null;
+  }
+
+  // Handle semi-private which doesn't have frequency in the same way
+  if (programType === 'semi-private') {
+    return priceMap['semi-private-monthly'];
+  }
+
+  const key = `${programType}-${frequency}`;
+  return priceMap[key] || null;
 }
 
 // Helper function to get price amount for one-time payments
