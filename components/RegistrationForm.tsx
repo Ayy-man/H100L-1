@@ -8,6 +8,7 @@ import FormStep1 from './form/FormStep1';
 import FormStep2 from './form/FormStep2';
 import FormStep3 from './form/FormStep3';
 import FormStep4 from './form/FormStep4';
+import PaymentForm from './PaymentForm';
 
 interface RegistrationFormProps {
   onClose: () => void;
@@ -35,7 +36,8 @@ const formSteps = [
   { id: 1, title: 'Player & Parent Info' },
   { id: 2, title: 'Program Selection' },
   { id: 3, title: 'Health & Consents' },
-  { id: 4, title: 'Review & Confirm' }
+  { id: 4, title: 'Review & Confirm' },
+  { id: 5, title: 'Payment' }
 ];
 
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram, language }) => {
@@ -44,6 +46,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -182,10 +186,28 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
     });
   };
 
-  const handleSubmit = async () => {
+  const handlePaymentSuccess = (paymentMethod: string) => {
+    setPaymentMethodId(paymentMethod);
+    setPaymentError(null);
+    // Automatically submit the registration after successful payment
+    handleSubmit(paymentMethod);
+  };
+
+  const handlePaymentError = (error: string) => {
+    setPaymentError(error);
+    setPaymentMethodId(null);
+  };
+
+  const handleSubmit = async (paymentMethod?: string) => {
     setIsSubmitting(true);
 
     try {
+      const paymentId = paymentMethod || paymentMethodId;
+
+      if (!paymentId) {
+        throw new Error('Payment information is required.');
+      }
+
       // Generate a temporary registration ID for organizing files
       const tempRegistrationId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
@@ -210,10 +232,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       delete (dataToSubmit as Partial<FormData>).actionPlan;
       delete (dataToSubmit as Partial<FormData>).medicalReport;
 
-      // Add uploaded file URLs to the data
+      // Add uploaded file URLs and payment info to the data
       if (Object.keys(uploadedFiles).length > 0) {
         dataToSubmit.medicalFiles = uploadedFiles;
       }
+      dataToSubmit.paymentMethodId = paymentId;
+      dataToSubmit.paymentStatus = 'pending';
 
       // Insert registration into database
       const { error } = await supabase
@@ -224,13 +248,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         throw error;
       }
 
-      alert('Registration Submitted Successfully!');
+      alert('✅ Registration & Payment Submitted Successfully!\n\nYou will receive a confirmation email shortly.');
       localStorage.removeItem('registrationFormData');
       onClose();
 
     } catch (error: any) {
       console.error('Submission error:', error);
-      alert(`Submission failed: ${error.message || 'Unknown error occurred'}`);
+      alert(`Submission failed: ${error.message || 'Unknown error occurred'}\n\nPlease contact support if this persists.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -287,30 +311,50 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                     {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} />}
                     {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} />}
                     {currentStep === 4 && <FormStep4 data={formData} />}
+                    {currentStep === 5 && (
+                      <div className="space-y-6">
+                        <h3 className="text-xl font-bold text-white uppercase tracking-wider border-b border-white/10 pb-2">Payment</h3>
+                        {paymentError && (
+                          <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4">
+                            <p className="text-red-400 text-sm">
+                              ⚠️ Payment Error: {paymentError}
+                            </p>
+                          </div>
+                        )}
+                        <PaymentForm
+                          formData={formData}
+                          onPaymentSuccess={handlePaymentSuccess}
+                          onPaymentError={handlePaymentError}
+                        />
+                      </div>
+                    )}
                 </motion.div>
             </AnimatePresence>
         </div>
         
         <div className="p-8 border-t border-white/10 mt-auto flex justify-between items-center">
-            <button 
-                onClick={prevStep} 
-                disabled={currentStep === 1}
+            <button
+                onClick={prevStep}
+                disabled={currentStep === 1 || isSubmitting}
                 className="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 Back
             </button>
-            {currentStep < formSteps.length ? (
+            {currentStep < 4 ? (
                 <button onClick={nextStep} className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition">
                     Next
                 </button>
-            ) : (
-                <button 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting}
-                  className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            ) : currentStep === 4 ? (
+                <button
+                  onClick={nextStep}
+                  className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition"
                 >
-                    {isSubmitting ? 'Submitting...' : 'Submit Registration'}
+                    Proceed to Payment
                 </button>
+            ) : (
+                <div className="text-sm text-gray-400">
+                  {isSubmitting ? 'Processing payment and registration...' : 'Complete payment to finish registration'}
+                </div>
             )}
         </div>
       </motion.div>

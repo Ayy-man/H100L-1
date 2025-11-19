@@ -32,17 +32,31 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   // Calculate dropdown position when opening
   useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-        width: rect.width
-      });
+    const updatePosition = () => {
+      if (isOpen && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + 4,
+          left: rect.left,
+          width: rect.width
+        });
+      }
+    };
+
+    if (isOpen) {
+      updatePosition();
+      // Update position on scroll
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
     }
   }, [isOpen]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside or scrolling
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -50,9 +64,24 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       }
     };
 
+    const handleScroll = () => {
+      setIsOpen(false);
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      // Close dropdown when scrolling the parent container
+      const scrollableParent = containerRef.current?.closest('.overflow-y-auto');
+      if (scrollableParent) {
+        scrollableParent.addEventListener('scroll', handleScroll);
+      }
+
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        if (scrollableParent) {
+          scrollableParent.removeEventListener('scroll', handleScroll);
+        }
+      };
     }
   }, [isOpen]);
 
