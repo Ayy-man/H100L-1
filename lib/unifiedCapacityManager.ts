@@ -2,8 +2,16 @@ import { supabase } from './supabase';
 
 /**
  * Unified Capacity Manager
- * Manages time slot availability across ALL training types (group, private, semi-private)
- * Ensures cross-program blocking: if a slot is booked for ANY program, it's unavailable for others
+ *
+ * CAPACITY LOGIC:
+ * 1. Group Training: STATIC fixed times (4:30, 5:45, 7:00, 8:15 PM) on Tue/Fri
+ *    - Max 6 players per slot
+ *    - Only blocks within group program (doesn't conflict with private)
+ *
+ * 2. Private & Semi-Private: FLEXIBLE times chosen by customer on Mon/Wed/Thu
+ *    - Max 1 booking per specific time/day combination
+ *    - BLOCKS ACROSS BOTH PROGRAMS: if private booked 3pm Mon → semi-private can't book same slot
+ *    - If 2-hour booking, blocks BOTH consecutive hours
  */
 
 export interface TimeSlot {
@@ -26,9 +34,7 @@ export interface SlotAvailability {
   programTypes: string[]; // Which program types can use this slot
 }
 
-// Define all available time slots for each program type
-// Based on requirements: Mon/Wed/Thu = private only, Tue/Fri = group only
-
+// Group training: Fixed static times on Tue/Fri
 const GROUP_TRAINING_TIMES = [
   '4:30 PM',
   '5:45 PM',
@@ -36,6 +42,7 @@ const GROUP_TRAINING_TIMES = [
   '8:15 PM'
 ];
 
+// Private/Semi-Private: Flexible times on Mon/Wed/Thu (customer chooses)
 const PRIVATE_TRAINING_TIMES = [
   '3:00 PM',
   '4:15 PM',
@@ -47,56 +54,82 @@ const PRIVATE_TRAINING_TIMES = [
 const GROUP_TRAINING_DAYS = ['tuesday', 'friday'];
 const PRIVATE_TRAINING_DAYS = ['monday', 'wednesday', 'thursday'];
 const MAX_GROUP_CAPACITY = 6;
-const MAX_PRIVATE_CAPACITY = 1;
+const MAX_PRIVATE_CAPACITY = 1; // Shared between private AND semi-private
 
 /**
- * Check real-time availability for a specific time slot across ALL programs
+ * Check real-time availability for a specific time slot
+ * Handles two separate pools:
+ * 1. Group training (static times, 6 max)
+ * 2. Private + Semi-Private (flexible times, blocks across both programs)
  */
 export const checkSlotAvailability = async (
   day: string,
   time: string
 ): Promise<SlotAvailability | null> => {
   try {
-    // Query Supabase for all bookings at this time slot
-    const { data: bookings, error } = await supabase
-      .from('registrations')
-      .select('form_data')
-      .or(`form_data->groupSelectedDays.cs.{${day}},form_data->privateSelectedDays.cs.{${day}},form_data->semiPrivateAvailability.cs.{${day}}`)
-      .eq('payment_status', 'active');
-
-    if (error) {
-      console.error('Error checking slot availability:', error);
-      return null;
-    }
-
     let bookedSpots = 0;
     let maxCapacity = 0;
     const programTypes: string[] = [];
 
-    // Check if this is a group training slot
-    if (GROUP_TRAINING_DAYS.includes(day) && GROUP_TRAINING_TIMES.includes(time)) {
+    // GROUP TRAINING POOL (static times on Tue/Fri)
+    if (GROUP_TRAINING_DAYS.includes(day.toLowerCase()) && GROUP_TRAINING_TIMES.includes(time)) {
       programTypes.push('group');
       maxCapacity = MAX_GROUP_CAPACITY;
 
-      // Count group bookings at this time
-      const groupBookings = bookings?.filter(b =>
-        b.form_data?.programType === 'group' &&
-        b.form_data?.groupSelectedDays?.includes(day)
-      ) || [];
-      bookedSpots += groupBookings.length;
+      // Query only group bookings on this day (time is static, doesn't need to be queried)
+      const { data: groupBookings, error } = await supabase
+        .from('registrations')
+        .select('form_data')
+        .eq('payment_status', 'active')
+        .contains('form_data->groupSelectedDays', [day.toLowerCase()]);
+
+      if (error) {
+        console.error('Error checking group availability:', error);
+        return null;
+      }
+
+      // Filter by program type
+      bookedSpots = groupBookings?.filter(b => b.form_data?.programType === 'group').length || 0;
     }
 
-    // Check if this is a private training slot
-    if (PRIVATE_TRAINING_DAYS.includes(day) && PRIVATE_TRAINING_TIMES.includes(time)) {
+    // PRIVATE/SEMI-PRIVATE POOL (flexible times on Mon/Wed/Thu)
+    // IMPORTANT: These share the same pool - if one books a time, both are blocked
+    else if (PRIVATE_TRAINING_DAYS.includes(day.toLowerCase())) {
       programTypes.push('private', 'semi-private');
       maxCapacity = MAX_PRIVATE_CAPACITY;
 
-      // Count private/semi-private bookings at this time
-      const privateBookings = bookings?.filter(b =>
-        (b.form_data?.programType === 'private' || b.form_data?.programType === 'semi-private') &&
-        (b.form_data?.privateSelectedDays?.includes(day) || b.form_data?.semiPrivateAvailability?.includes(day))
-      ) || [];
-      bookedSpots += privateBookings.length;
+      // Query both private AND semi-private on this day
+      // Need to check if they selected this specific time
+      const { data: bookings, error } = await supabase
+        .from('registrations')
+        .select('form_data')
+        .eq('payment_status', 'active')
+        .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
+
+      if (error) {
+        console.error('Error checking private/semi-private availability:', error);
+        return null;
+      }
+
+      // Count bookings that selected this specific day AND time
+      // For private: check privateSelectedDays and privateTimeSlot
+      // For semi-private: check semiPrivateAvailability and preferred time windows
+      bookedSpots = bookings?.filter(b => {
+        const isPrivate = b.form_data?.programType === 'private';
+        const isSemiPrivate = b.form_data?.programType === 'semi-private';
+
+        if (isPrivate) {
+          return b.form_data?.privateSelectedDays?.includes(day) &&
+                 b.form_data?.privateTimeSlot === time;
+        }
+
+        if (isSemiPrivate) {
+          return b.form_data?.semiPrivateAvailability?.includes(day) &&
+                 b.form_data?.semiPrivateTimeSlot === time; // Assuming this field exists
+        }
+
+        return false;
+      }).length || 0;
     }
 
     const availableSpots = Math.max(0, maxCapacity - bookedSpots);

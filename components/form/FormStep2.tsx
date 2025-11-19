@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FormData, ProgramType, WeekDay } from '../../types';
 import FormSelect from './FormSelect';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,13 +11,30 @@ interface FormStep2Props {
   handleMultiSelectChange: (name: keyof FormData, option: string) => void;
 }
 
+interface SlotAvailability {
+  time: string;
+  day: string;
+  availableSpots: number;
+  totalCapacity: number;
+  isFull: boolean;
+  programTypes: string[];
+}
+
 const slideDown = {
     initial: { opacity: 0, height: 0 },
     animate: { opacity: 1, height: 'auto', transition: { duration: 0.3 } },
     exit: { opacity: 0, height: 0, transition: { duration: 0.2 } },
 };
 
+// Day restrictions based on program type
+const GROUP_TRAINING_DAYS = ['tuesday', 'friday'];
+const PRIVATE_TRAINING_DAYS = ['monday', 'wednesday', 'thursday'];
+
 const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handleMultiSelectChange }) => {
+  const [availability, setAvailability] = useState<SlotAvailability[]>([]);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+
   const daysOfWeek: { value: WeekDay; label: string }[] = [
     { value: 'monday', label: 'Monday' },
     { value: 'tuesday', label: 'Tuesday' },
@@ -28,17 +45,79 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
     { value: 'sunday', label: 'Sunday' },
   ];
 
+  // Check availability when program type or selected days change
+  useEffect(() => {
+    if (data.programType && (data.groupSelectedDays.length > 0 || data.privateSelectedDays?.length > 0)) {
+      checkAvailability();
+    }
+  }, [data.programType, data.groupSelectedDays, data.privateSelectedDays]);
+
+  const checkAvailability = async () => {
+    setIsCheckingAvailability(true);
+    setAvailabilityError(null);
+
+    try {
+      const selectedDays = data.programType === 'group'
+        ? data.groupSelectedDays
+        : data.privateSelectedDays || [];
+
+      const response = await fetch('/api/check-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'getSlots',
+          programType: data.programType,
+          selectedDays
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setAvailability(result.slots || []);
+      } else {
+        setAvailabilityError('Failed to check availability');
+      }
+    } catch (error) {
+      console.error('Availability check error:', error);
+      setAvailabilityError('Could not connect to availability service');
+    } finally {
+      setIsCheckingAvailability(false);
+    }
+  };
+
   // Auto-generate monthly dates when days are selected
   useEffect(() => {
     if (data.groupSelectedDays.length > 0) {
       const dates = generateMonthlyDates(data.groupSelectedDays);
-      // Update form data with generated dates
       handleMultiSelectChange('groupMonthlyDates' as keyof FormData, JSON.stringify(dates));
     }
   }, [data.groupSelectedDays]);
 
   const handleDayToggle = (day: WeekDay) => {
+    // Enforce day restrictions
+    if (data.programType === 'group' && !GROUP_TRAINING_DAYS.includes(day)) {
+      return; // Can't select this day for group training
+    }
+    if ((data.programType === 'private' || data.programType === 'semi-private') && !PRIVATE_TRAINING_DAYS.includes(day)) {
+      return; // Can't select this day for private training
+    }
+
     handleMultiSelectChange('groupSelectedDays' as keyof FormData, day);
+  };
+
+  const isDayAvailable = (day: WeekDay): boolean => {
+    if (data.programType === 'group') {
+      return GROUP_TRAINING_DAYS.includes(day);
+    }
+    if (data.programType === 'private' || data.programType === 'semi-private') {
+      return PRIVATE_TRAINING_DAYS.includes(day);
+    }
+    return true;
+  };
+
+  const getDayCapacity = (day: string): SlotAvailability | null => {
+    return availability.find(slot => slot.day.toLowerCase() === day.toLowerCase()) || null;
   };
 
   const maxDays = data.groupFrequency === '1x' ? 1 : data.groupFrequency === '2x' ? 2 : 0;
@@ -62,14 +141,24 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
           <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
             <h4 className="font-bold text-[#9BD4FF]">Group Training Details</h4>
 
+            {/* Schedule Info */}
+            <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
+              <p className="text-sm text-gray-300">
+                📅 <strong>Group Training Schedule:</strong> Available on <span className="text-[#9BD4FF]">Tuesdays & Fridays</span> only
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Time slots: 4:30 PM, 5:45 PM, 7:00 PM, 8:15 PM (Max 6 players per slot)
+              </p>
+            </div>
+
             {/* Frequency Selection */}
             <FormSelect label="Frequency" name="groupFrequency" value={data.groupFrequency} handleChange={handleChange} error={errors.groupFrequency} required>
                 <option value="">-- Select Frequency --</option>
-                <option value="1x">1x / week</option>
-                <option value="2x">2x / week</option>
+                <option value="1x">1x / week (Tuesday OR Friday)</option>
+                <option value="2x">2x / week (Tuesday AND Friday)</option>
             </FormSelect>
 
-            {/* Day Selection - Available 7 days a week */}
+            {/* Day Selection - Restricted to Tuesday/Friday */}
             {data.groupFrequency && (
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -77,29 +166,46 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                     </label>
                     <p className="text-xs text-gray-400 mb-3">
                       {data.groupFrequency === '1x'
-                        ? 'Choose 1 day per week for your training'
-                        : 'Choose 2 days per week for your training'}
+                        ? 'Choose Tuesday OR Friday for your training'
+                        : 'You will train on both Tuesday AND Friday'}
                     </p>
+
+                    {/* Check Availability Button */}
+                    <button
+                      type="button"
+                      onClick={checkAvailability}
+                      disabled={isCheckingAvailability}
+                      className="mb-4 px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg hover:bg-green-500/30 transition text-sm font-medium disabled:opacity-50"
+                    >
+                      {isCheckingAvailability ? '🔄 Checking...' : '🔍 Check Availability'}
+                    </button>
+
                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
                         {daysOfWeek.map(day => {
                           const isSelected = data.groupSelectedDays.includes(day.value);
-                          const isDisabled = !isSelected && !canSelectMore;
+                          const isAllowedDay = isDayAvailable(day.value);
+                          const dayCapacity = getDayCapacity(day.label);
+                          const isDisabled = !isSelected && (!canSelectMore || !isAllowedDay);
 
                           return (
                             <button
                               key={day.value}
                               type="button"
-                              onClick={() => !isDisabled && handleDayToggle(day.value)}
-                              disabled={isDisabled}
-                              className={`p-2 sm:p-3 border-2 rounded-lg text-center font-semibold text-xs sm:text-sm transition-all min-h-[44px] flex flex-col items-center justify-center ${
+                              onClick={() => isAllowedDay && !isDisabled && handleDayToggle(day.value)}
+                              disabled={isDisabled || !isAllowedDay}
+                              className={`p-2 sm:p-3 border-2 rounded-lg text-center font-semibold text-xs sm:text-sm transition-all min-h-[60px] flex flex-col items-center justify-center relative ${
                                 isSelected
                                   ? 'border-[#9BD4FF] bg-[#9BD4FF]/20 text-[#9BD4FF]'
+                                  : !isAllowedDay
+                                  ? 'border-white/10 bg-gray-700/30 text-gray-600 cursor-not-allowed'
                                   : isDisabled
                                   ? 'border-white/10 bg-white/5 text-gray-600 cursor-not-allowed'
+                                  : dayCapacity?.isFull
+                                  ? 'border-red-500/50 bg-red-500/10 text-red-400 cursor-not-allowed'
                                   : 'border-white/20 bg-white/5 text-white hover:border-[#9BD4FF]/50 cursor-pointer'
                               }`}
                             >
-                              <div className="flex items-center justify-center gap-1">
+                              <div className="flex items-center justify-center gap-1 mb-1">
                                 {isSelected && (
                                   <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -107,6 +213,25 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                                 )}
                                 <span className="truncate">{day.label}</span>
                               </div>
+
+                              {/* Capacity Badge */}
+                              {isAllowedDay && dayCapacity && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                  dayCapacity.isFull
+                                    ? 'bg-red-500 text-white'
+                                    : dayCapacity.availableSpots <= 2
+                                    ? 'bg-yellow-500 text-black'
+                                    : 'bg-green-500 text-white'
+                                }`}>
+                                  {dayCapacity.isFull ? 'FULL' : `${dayCapacity.availableSpots}/${dayCapacity.totalCapacity}`}
+                                </span>
+                              )}
+
+                              {!isAllowedDay && (
+                                <span className="text-[9px] text-gray-500 absolute bottom-1">
+                                  Not available
+                                </span>
+                              )}
                             </button>
                           );
                         })}
@@ -115,6 +240,9 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                       Selected: {data.groupSelectedDays.length} / {maxDays}
                     </p>
                     {errors.groupDay && <p className="mt-2 text-sm text-red-500">{errors.groupDay}</p>}
+                    {availabilityError && (
+                      <p className="mt-2 text-sm text-yellow-500">⚠️ {availabilityError}</p>
+                    )}
                 </div>
             )}
 
@@ -156,6 +284,16 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
             <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
                 <h4 className="font-bold text-[#9BD4FF]">Private Training Details</h4>
 
+                {/* Schedule Info */}
+                <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
+                  <p className="text-sm text-gray-300">
+                    📅 <strong>Private Training Schedule:</strong> Available on <span className="text-[#9BD4FF]">Mondays, Wednesdays & Thursdays</span> only
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Time slots: 3:00 PM, 4:15 PM, 5:30 PM, 6:45 PM, 8:00 PM (1-on-1 sessions)
+                  </p>
+                </div>
+
                 <FormSelect label="Session Frequency" name="privateFrequency" value={data.privateFrequency} handleChange={handleChange} error={errors.privateFrequency} required>
                   <option value="">-- Select Frequency --</option>
                   <option value="1x/week">1x / week</option>
@@ -165,39 +303,82 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Days <span className="text-red-500">*</span></label>
+                  <p className="text-xs text-gray-400 mb-3">Available: Monday, Wednesday, Thursday only</p>
+
+                  {/* Check Availability Button */}
+                  <button
+                    type="button"
+                    onClick={checkAvailability}
+                    disabled={isCheckingAvailability}
+                    className="mb-4 px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg hover:bg-green-500/30 transition text-sm font-medium disabled:opacity-50"
+                  >
+                    {isCheckingAvailability ? '🔄 Checking...' : '🔍 Check Availability'}
+                  </button>
+
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                      <label
-                        key={day}
-                        className={`p-3 border rounded-lg cursor-pointer text-center text-sm ${
-                          (data.privateSelectedDays || []).includes(day)
-                            ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF]'
-                            : 'border-white/20 text-gray-300 hover:border-white/40'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={(data.privateSelectedDays || []).includes(day)}
-                          onChange={() => handleMultiSelectChange('privateSelectedDays', day)}
-                        />
-                        {day}
-                      </label>
-                    ))}
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                      const dayLower = day.toLowerCase();
+                      const isAllowed = PRIVATE_TRAINING_DAYS.includes(dayLower);
+                      const dayCapacity = getDayCapacity(day);
+                      const isChecked = (data.privateSelectedDays || []).includes(day);
+
+                      return (
+                        <label
+                          key={day}
+                          className={`p-3 border rounded-lg text-center text-sm relative min-h-[60px] flex flex-col items-center justify-center ${
+                            !isAllowed
+                              ? 'border-white/10 bg-gray-700/30 text-gray-600 cursor-not-allowed'
+                              : isChecked
+                              ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF] cursor-pointer'
+                              : dayCapacity?.isFull
+                              ? 'border-red-500/50 bg-red-500/10 text-red-400 cursor-not-allowed'
+                              : 'border-white/20 text-gray-300 hover:border-white/40 cursor-pointer'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={isChecked}
+                            disabled={!isAllowed || dayCapacity?.isFull}
+                            onChange={() => isAllowed && !dayCapacity?.isFull && handleMultiSelectChange('privateSelectedDays', day)}
+                          />
+                          <span>{day}</span>
+
+                          {/* Capacity Badge */}
+                          {isAllowed && dayCapacity && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded mt-1 ${
+                              dayCapacity.isFull
+                                ? 'bg-red-500 text-white'
+                                : 'bg-green-500 text-white'
+                            }`}>
+                              {dayCapacity.isFull ? 'FULL' : 'Available'}
+                            </span>
+                          )}
+
+                          {!isAllowed && (
+                            <span className="text-[9px] text-gray-500 absolute bottom-1">
+                              Not available
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
                   </div>
                   <p className="text-xs text-gray-400 mt-2">Select all days you're available for private sessions</p>
                 </div>
 
                 <FormSelect label="Preferred Time Slot" name="privateTimeSlot" value={data.privateTimeSlot} handleChange={handleChange}>
                   <option value="">-- Select Time Slot --</option>
-                  <option value="Morning (6 AM - 12 PM)">Morning (6 AM - 12 PM)</option>
-                  <option value="Afternoon (12 PM - 5 PM)">Afternoon (12 PM - 5 PM)</option>
-                  <option value="Evening (5 PM - 9 PM)">Evening (5 PM - 9 PM)</option>
+                  <option value="3:00 PM">3:00 PM</option>
+                  <option value="4:15 PM">4:15 PM</option>
+                  <option value="5:30 PM">5:30 PM</option>
+                  <option value="6:45 PM">6:45 PM</option>
+                  <option value="8:00 PM">8:00 PM</option>
                 </FormSelect>
 
                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-300">
-                    📞 Our team will contact you within 24 hours to schedule your private training sessions based on your preferences.
+                    📞 Our team will contact you within 24 hours to finalize your private training schedule based on your preferences.
                   </p>
                 </div>
             </motion.div>
@@ -207,27 +388,53 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
              <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
                 <h4 className="font-bold text-[#9BD4FF]">Semi-Private Training Details</h4>
 
+                {/* Schedule Info */}
+                <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
+                  <p className="text-sm text-gray-300">
+                    📅 <strong>Semi-Private Training Schedule:</strong> Available on <span className="text-[#9BD4FF]">Mondays, Wednesdays & Thursdays</span> only
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    2-3 players per session (matched by skill level and availability)
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Available Days <span className="text-red-500">*</span></label>
+                  <p className="text-xs text-gray-400 mb-3">Available: Monday, Wednesday, Thursday only</p>
+
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                      <label
-                        key={day}
-                        className={`p-3 border rounded-lg cursor-pointer text-center text-sm ${
-                          (data.semiPrivateAvailability || []).includes(day)
-                            ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF]'
-                            : 'border-white/20 text-gray-300 hover:border-white/40'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={(data.semiPrivateAvailability || []).includes(day)}
-                          onChange={() => handleMultiSelectChange('semiPrivateAvailability', day)}
-                        />
-                        {day}
-                      </label>
-                    ))}
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                      const dayLower = day.toLowerCase();
+                      const isAllowed = PRIVATE_TRAINING_DAYS.includes(dayLower);
+                      const isChecked = (data.semiPrivateAvailability || []).includes(day);
+
+                      return (
+                        <label
+                          key={day}
+                          className={`p-3 border rounded-lg text-center text-sm ${
+                            !isAllowed
+                              ? 'border-white/10 bg-gray-700/30 text-gray-600 cursor-not-allowed'
+                              : isChecked
+                              ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF] cursor-pointer'
+                              : 'border-white/20 text-gray-300 hover:border-white/40 cursor-pointer'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={isChecked}
+                            disabled={!isAllowed}
+                            onChange={() => isAllowed && handleMultiSelectChange('semiPrivateAvailability', day)}
+                          />
+                          {day}
+                          {!isAllowed && (
+                            <span className="block text-[9px] text-gray-500 mt-1">
+                              Not available
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
                   </div>
                   <p className="text-xs text-gray-400 mt-2">Select all days you're available (we'll match you with players with similar availability)</p>
                 </div>
