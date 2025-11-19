@@ -4,7 +4,7 @@ import { supabase } from './supabase';
  * Unified Capacity Manager
  *
  * CAPACITY LOGIC:
- * 1. Group Training: STATIC fixed times (4:30, 5:45, 7:00, 8:15 PM) on Tue/Fri
+ * 1. Group Training: STATIC fixed times (4:30, 5:45, 7:00, 8:15 PM) available 7 days/week
  *    - Max 6 players per slot
  *    - Only blocks within group program (doesn't conflict with private)
  *
@@ -34,7 +34,7 @@ export interface SlotAvailability {
   programTypes: string[]; // Which program types can use this slot
 }
 
-// Group training: Fixed static times on Tue/Fri
+// Group training: Fixed static times, available 7 days/week
 const GROUP_TRAINING_TIMES = [
   '4:30 PM',
   '5:45 PM',
@@ -51,7 +51,7 @@ const PRIVATE_TRAINING_TIMES = [
   '8:00 PM'
 ];
 
-const GROUP_TRAINING_DAYS = ['tuesday', 'friday'];
+const GROUP_TRAINING_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const PRIVATE_TRAINING_DAYS = ['monday', 'wednesday', 'thursday'];
 const MAX_GROUP_CAPACITY = 6;
 const MAX_PRIVATE_CAPACITY = 1; // Shared between private AND semi-private

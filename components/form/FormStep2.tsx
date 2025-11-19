@@ -27,7 +27,7 @@ const slideDown = {
 };
 
 // Day restrictions based on program type
-const GROUP_TRAINING_DAYS = ['tuesday', 'friday'];
+const GROUP_TRAINING_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']; // Available daily
 const PRIVATE_TRAINING_DAYS = ['monday', 'wednesday', 'thursday'];
 
 const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handleMultiSelectChange }) => {
@@ -144,7 +144,7 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
             {/* Schedule Info */}
             <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
               <p className="text-sm text-gray-300">
-                📅 <strong>Group Training Schedule:</strong> Available on <span className="text-[#9BD4FF]">Tuesdays & Fridays</span> only
+                📅 <strong>Group Training Schedule:</strong> Available <span className="text-[#9BD4FF]">7 days a week</span>
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 Time slots: 4:30 PM, 5:45 PM, 7:00 PM, 8:15 PM (Max 6 players per slot)
@@ -154,11 +154,11 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
             {/* Frequency Selection */}
             <FormSelect label="Frequency" name="groupFrequency" value={data.groupFrequency} handleChange={handleChange} error={errors.groupFrequency} required>
                 <option value="">-- Select Frequency --</option>
-                <option value="1x">1x / week (Tuesday OR Friday)</option>
-                <option value="2x">2x / week (Tuesday AND Friday)</option>
+                <option value="1x">1x / week</option>
+                <option value="2x">2x / week</option>
             </FormSelect>
 
-            {/* Day Selection - Restricted to Tuesday/Friday */}
+            {/* Day Selection - Available 7 days a week */}
             {data.groupFrequency && (
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -166,8 +166,8 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                     </label>
                     <p className="text-xs text-gray-400 mb-3">
                       {data.groupFrequency === '1x'
-                        ? 'Choose Tuesday OR Friday for your training'
-                        : 'You will train on both Tuesday AND Friday'}
+                        ? 'Choose any 1 day per week for your training'
+                        : 'Choose any 2 days per week for your training'}
                     </p>
 
                     {/* Check Availability Button */}
