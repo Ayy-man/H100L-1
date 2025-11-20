@@ -65,7 +65,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ formData, onPaymentSuccess, o
       // Create payment method
       const { error, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
-        card: cardElement,
+        card: cardElement as any, // Type assertion needed for Stripe Elements compatibility
         billing_details: {
           name: formData.playerFullName,
           email: formData.parentEmail,
