@@ -34,11 +34,16 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await loginUser(email, password);
+      const userCredential = await loginUser(email, password);
+      console.log('Login successful, user:', userCredential.user.email);
+
       toast.success('Logged in successfully!');
 
-      // Redirect to dashboard
-      window.location.href = '/dashboard';
+      // Wait a bit for Firebase auth state to propagate
+      setTimeout(() => {
+        console.log('Redirecting to dashboard...');
+        window.location.href = '/dashboard';
+      }, 500);
     } catch (err: any) {
       console.error('Login error:', err);
 
