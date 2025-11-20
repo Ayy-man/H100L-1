@@ -2,9 +2,6 @@ import React, { useState } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { FormData } from '../types';
 import { calculatePrice, formatPrice } from '../lib/stripe';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { CreditCard, Lock, RefreshCw } from 'lucide-react';
 
 interface PaymentFormProps {
   formData: FormData;
@@ -86,6 +83,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ formData, onPaymentSuccess, o
 
       // Call success handler with payment method ID
       onPaymentSuccess(paymentMethod.id);
+
     } catch (err: any) {
       onPaymentError(err.message || 'Payment failed. Please try again.');
     } finally {
@@ -96,75 +94,56 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ formData, onPaymentSuccess, o
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {!stripe && (
-        <Card className="border-destructive/50 bg-destructive/10">
-          <CardContent className="pt-6">
-            <p className="text-destructive text-sm">
-              ⚠️ Payment system is loading... If this message persists, the Stripe environment
-              variable may not be configured.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-4">
+          <p className="text-red-400 text-sm">
+            ⚠️ Payment system is loading... If this message persists, the Stripe environment variable may not be configured.
+          </p>
+        </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-primary flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Payment Details
-          </CardTitle>
-          <CardDescription>Complete your registration with secure payment</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Total Amount:</p>
-            <p className="text-3xl font-bold text-foreground">{formatPrice(pricing.amount)}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {pricing.interval === 'month'
-                ? 'Billed monthly'
-                : pricing.interval === 'one-time'
-                ? 'One-time payment'
-                : 'Per session'}
-            </p>
-          </div>
+      <div className="bg-white/5 p-6 rounded-lg border border-white/10">
+        <h4 className="text-lg font-bold text-[#9BD4FF] mb-4">Payment Details</h4>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Card Information
-            </label>
-            <div className="p-4 bg-muted/50 border border-input rounded-lg">
-              <CardElement options={CARD_ELEMENT_OPTIONS} onChange={(e) => setCardComplete(e.complete)} />
-            </div>
-          </div>
+        <div className="mb-4">
+          <p className="text-sm text-gray-300 mb-2">Total Amount:</p>
+          <p className="text-3xl font-bold text-white">{formatPrice(pricing.amount)}</p>
+          <p className="text-sm text-gray-400 mt-1">
+            {pricing.interval === 'month' ? 'Billed monthly' :
+             pricing.interval === 'one-time' ? 'One-time payment' :
+             'Per session'}
+          </p>
+        </div>
 
-          <div className="text-xs text-muted-foreground space-y-2">
-            <p className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              We accept Visa, Mastercard, and American Express
-            </p>
-            <p className="flex items-center gap-2">
-              <Lock className="h-4 w-4" />
-              Your payment information is encrypted and secure
-            </p>
-            {pricing.interval === 'month' && (
-              <p className="flex items-center gap-2">
-                <RefreshCw className="h-4 w-4" />
-                You can cancel your subscription at any time
-              </p>
-            )}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Card Information
+          </label>
+          <div className="p-4 bg-black/30 border border-white/20 rounded-lg">
+            <CardElement
+              options={CARD_ELEMENT_OPTIONS}
+              onChange={(e) => setCardComplete(e.complete)}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Button
+        <div className="text-xs text-gray-400 space-y-1">
+          <p>💳 We accept Visa, Mastercard, and American Express</p>
+          <p>🔒 Your payment information is encrypted and secure</p>
+          {pricing.interval === 'month' && (
+            <p>🔄 You can cancel your subscription at any time</p>
+          )}
+        </div>
+      </div>
+
+      <button
         type="submit"
         disabled={!stripe || isProcessing || !cardComplete}
-        className="w-full h-12 text-lg"
-        size="lg"
+        className="w-full bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isProcessing ? 'Processing...' : `Pay ${formatPrice(pricing.amount)}`}
-      </Button>
+      </button>
 
-      <p className="text-xs text-center text-muted-foreground">
+      <p className="text-xs text-center text-gray-400">
         By confirming payment, you agree to our terms and conditions.
       </p>
     </form>
