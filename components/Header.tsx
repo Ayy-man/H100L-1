@@ -35,12 +35,12 @@ const Header: React.FC<HeaderProps> = ({ language, setLanguage, content }) => {
         </nav>
         <div className="flex items-center space-x-4">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             asChild
-            className="text-gray-300 hover:text-white hover:bg-white/10"
+            className="text-white border-blue-400 hover:bg-blue-400 hover:text-white transition-all"
           >
-            <a href="/login">
+            <a href="/login" className="flex items-center">
               <LogIn className="mr-2 h-4 w-4" />
               Login
             </a>
