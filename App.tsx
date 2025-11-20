@@ -4,6 +4,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { Language, ProgramType } from './types';
 import { content } from './constants';
 import { stripePromise } from './lib/stripe';
+import { Toaster } from './components/ui/sonner';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Features from './components/Features';
@@ -12,6 +13,7 @@ import Pricing from './components/Pricing';
 import Footer from './components/Footer';
 import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
+import Dashboard from './components/Dashboard';
 import Terms from './components/Terms';
 
 function App() {
@@ -36,43 +38,59 @@ function App() {
     setIsFormOpen(true);
   };
 
-  // Simple routing for the admin dashboard and terms page
+  // Simple routing for different pages
   const currentPath = window.location.pathname;
   if (currentPath === '/admin') {
-    return <AdminDashboard />;
+    return (
+      <>
+        <AdminDashboard />
+        <Toaster />
+      </>
+    );
+  }
+  if (currentPath === '/dashboard') {
+    return (
+      <>
+        <Dashboard />
+        <Toaster />
+      </>
+    );
   }
   if (currentPath === '/terms') {
     return <Terms language={language} onClose={() => window.history.back()} />;
   }
 
   return (
-    <div className="bg-gray-900 min-h-screen overflow-x-hidden">
-      <div className={isFormOpen ? 'filter blur-sm' : ''}>
-        <Header
-          language={language}
-          setLanguage={setLanguage}
-          content={selectedContent.nav}
-        />
-        <main>
-          <Hero content={selectedContent.hero} onRegisterClick={openForm} />
-          <Features content={selectedContent.features} />
-          <ProgramCards language={language} onProgramSelect={handleProgramSelect} />
-        </main>
-        <Footer content={selectedContent.footer} />
+    <>
+      <div className="bg-gray-900 min-h-screen overflow-x-hidden">
+        <div className={isFormOpen ? 'filter blur-sm' : ''}>
+          <Header
+            language={language}
+            setLanguage={setLanguage}
+            content={selectedContent.nav}
+          />
+          <main>
+            <Hero content={selectedContent.hero} onRegisterClick={openForm} />
+            <Features content={selectedContent.features} />
+            <ProgramCards language={language} onProgramSelect={handleProgramSelect} />
+          </main>
+          <Footer content={selectedContent.footer} />
+        </div>
+
+        <AnimatePresence>
+          {isFormOpen && (
+            <Elements stripe={stripePromise}>
+              <RegistrationForm
+                onClose={closeForm}
+                preSelectedProgram={selectedProgram}
+                language={language}
+              />
+            </Elements>
+          )}
+        </AnimatePresence>
       </div>
-      
-      <AnimatePresence>
-        {isFormOpen && (
-          <Elements stripe={stripePromise}>
-            <RegistrationForm
-              onClose={closeForm}
-              preSelectedProgram={selectedProgram}
-              language={language}
-            />
-          </Elements>
-        )}
-      </AnimatePresence>
-    </div>
+      <Toaster />
+    </>
   );
 }
 

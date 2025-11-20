@@ -51,6 +51,10 @@ export default async function handler(
   // Handle the event
   try {
     switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
         break;
@@ -91,6 +95,33 @@ export default async function handler(
 }
 
 // Event handlers
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  console.log('Checkout session completed:', session.id);
+
+  const registrationId = session.client_reference_id || session.metadata?.registrationId;
+  if (!registrationId) {
+    console.error('No registration ID found in checkout session');
+    return;
+  }
+
+  // Get subscription ID from session
+  const subscriptionId = session.subscription as string;
+  const customerId = session.customer as string;
+
+  // Update registration with Stripe IDs and set payment status to succeeded
+  await supabase
+    .from('registrations')
+    .update({
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      payment_status: 'succeeded',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', registrationId);
+
+  console.log(`Updated registration ${registrationId} with subscription ${subscriptionId}`);
+}
+
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   console.log('PaymentIntent succeeded:', paymentIntent.id);
 
