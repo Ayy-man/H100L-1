@@ -25,6 +25,14 @@ const validateFirebaseConfig = () => {
   if (missingKeys.length > 0) {
     console.error('⚠️ FIREBASE ERROR: Missing environment variables:', missingKeys.join(', '));
     console.error('Add these to your .env file. See .env.example for template.');
+    console.error('📋 DEBUG - Current config values:');
+    console.error('  apiKey:', firebaseConfig.apiKey ? '✓ Set' : '✗ Missing');
+    console.error('  authDomain:', firebaseConfig.authDomain ? '✓ Set' : '✗ Missing');
+    console.error('  projectId:', firebaseConfig.projectId ? '✓ Set' : '✗ Missing');
+    console.error('  storageBucket:', firebaseConfig.storageBucket ? '✓ Set' : '✗ Missing');
+    console.error('  messagingSenderId:', firebaseConfig.messagingSenderId ? '✓ Set' : '✗ Missing');
+    console.error('  appId:', firebaseConfig.appId ? '✓ Set' : '✗ Missing');
+    console.error('💡 TIP: Restart the dev server (npm run dev) to load environment variables!');
     return false;
   }
 
