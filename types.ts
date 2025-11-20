@@ -87,3 +87,31 @@ export interface FormData {
   photoVideoConsent: boolean;
   policyAcceptance: boolean;
 }
+
+// Firebase Authentication Types
+export interface FirebaseUserData {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  emailVerified: boolean;
+  createdAt: string;
+}
+
+// Registration with Firebase fields (matches Supabase table structure)
+export interface Registration {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  payment_status: 'pending' | 'succeeded' | 'failed' | 'canceled' | null;
+  payment_method_id: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+
+  // Firebase authentication fields
+  firebase_uid: string | null;
+  parent_email: string | null;
+  firebase_user_created_at: string | null;
+
+  // Form data
+  form_data: FormData;
+}
