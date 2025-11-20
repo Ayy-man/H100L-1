@@ -12,7 +12,7 @@ interface ProtectedRouteProps {
  *
  * Checks if user is authenticated via Firebase
  * - If authenticated: renders children
- * - If not authenticated: redirects to home page
+ * - If not authenticated: redirects to login page
  * - While checking: shows loading skeleton
  */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
@@ -25,9 +25,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       setUser(currentUser);
       setLoading(false);
 
-      // If no user is logged in, redirect to home
+      // If no user is logged in, redirect to login page
       if (!currentUser) {
-        window.location.href = '/';
+        window.location.href = '/login';
       }
     });
 

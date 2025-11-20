@@ -14,6 +14,7 @@ import Footer from './components/Footer';
 import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
 import Dashboard from './components/Dashboard';
+import Login from './components/Login';
 import Terms from './components/Terms';
 
 function App() {
@@ -52,6 +53,14 @@ function App() {
     return (
       <>
         <Dashboard />
+        <Toaster />
+      </>
+    );
+  }
+  if (currentPath === '/login') {
+    return (
+      <>
+        <Login />
         <Toaster />
       </>
     );
