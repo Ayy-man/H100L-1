@@ -10,8 +10,10 @@ import { createClient } from '@supabase/supabase-js';
 
 // Detect environment and get credentials accordingly
 const getSupabaseCredentials = () => {
-  // Check if we're in a browser environment (Vite)
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
+  // Check if we're in a browser environment (Vite) with actual values
+  if (typeof import.meta !== 'undefined' &&
+      import.meta.env &&
+      import.meta.env.VITE_SUPABASE_URL) {
     return {
       url: import.meta.env.VITE_SUPABASE_URL,
       key: import.meta.env.VITE_SUPABASE_ANON_KEY
