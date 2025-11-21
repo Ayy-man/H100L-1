@@ -67,8 +67,30 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
 
   const { amount, priceId } = getPrice();
 
+  // Debug logging
+  console.log('PaymentStatus Debug:', {
+    payment_status,
+    programType: form_data.programType,
+    groupFrequency: form_data.groupFrequency,
+    privateFrequency: form_data.privateFrequency,
+    amount,
+    priceId,
+    loading,
+    buttonDisabled: loading || !priceId,
+  });
+
+  // Check if env vars are loaded
+  console.log('Stripe Env Vars:', {
+    VITE_STRIPE_PRICE_GROUP_1X: import.meta.env.VITE_STRIPE_PRICE_GROUP_1X,
+    VITE_STRIPE_PRICE_GROUP_2X: import.meta.env.VITE_STRIPE_PRICE_GROUP_2X,
+    VITE_STRIPE_PRICE_PRIVATE_1X: import.meta.env.VITE_STRIPE_PRICE_PRIVATE_1X,
+    VITE_STRIPE_PRICE_PRIVATE_2X: import.meta.env.VITE_STRIPE_PRICE_PRIVATE_2X,
+    VITE_STRIPE_PRICE_SEMI_PRIVATE: import.meta.env.VITE_STRIPE_PRICE_SEMI_PRIVATE,
+  });
+
   // Handle Stripe Checkout
   const handlePayment = async () => {
+    console.log('handlePayment clicked!', { priceId, loading });
     try {
       setLoading(true);
 
@@ -266,9 +288,10 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
         <CardFooter>
           <Button
             size="lg"
-            className="w-full"
+            className="w-full cursor-pointer"
             onClick={handlePayment}
             disabled={loading || !priceId}
+            style={{ pointerEvents: 'auto' }}
           >
             {loading ? (
               <>
