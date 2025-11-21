@@ -109,7 +109,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const customerId = session.customer as string;
 
   // Update registration with Stripe IDs and set payment status to succeeded
-  await supabase
+  const { error } = await supabase
     .from('registrations')
     .update({
       stripe_customer_id: customerId,
@@ -118,6 +118,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       updated_at: new Date().toISOString(),
     })
     .eq('id', registrationId);
+
+  if (error) {
+    console.error(`Failed to update registration ${registrationId}:`, error);
+    throw new Error(`Database update failed: ${error.message}`);
+  }
 
   console.log(`Updated registration ${registrationId} with subscription ${subscriptionId}`);
 }
@@ -128,13 +133,18 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   const registrationId = paymentIntent.metadata.registrationId;
   if (!registrationId) return;
 
-  await supabase
+  const { error } = await supabase
     .from('registrations')
     .update({
-      payment_status: 'paid',
+      payment_status: 'succeeded',
       updated_at: new Date().toISOString(),
     })
     .eq('id', registrationId);
+
+  if (error) {
+    console.error(`Failed to update registration ${registrationId}:`, error);
+    throw new Error(`Database update failed: ${error.message}`);
+  }
 }
 
 async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
@@ -143,13 +153,18 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   const registrationId = paymentIntent.metadata.registrationId;
   if (!registrationId) return;
 
-  await supabase
+  const { error } = await supabase
     .from('registrations')
     .update({
       payment_status: 'failed',
       updated_at: new Date().toISOString(),
     })
     .eq('id', registrationId);
+
+  if (error) {
+    console.error(`Failed to update registration ${registrationId}:`, error);
+    throw new Error(`Database update failed: ${error.message}`);
+  }
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {

@@ -46,6 +46,23 @@ export default async function handler(
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Validate field formats
+    if (!priceId.startsWith('price_')) {
+      return res.status(400).json({ error: 'Invalid price ID format' });
+    }
+    if (!/^[\w-]+$/.test(registrationId)) {
+      return res.status(400).json({ error: 'Invalid registration ID format' });
+    }
+    if (!/^[\w-]+$/.test(firebaseUid)) {
+      return res.status(400).json({ error: 'Invalid Firebase UID format' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    if (customerName && customerName.length > 100) {
+      return res.status(400).json({ error: 'Customer name too long' });
+    }
+
     // Get the base URL for redirects
     const protocol = req.headers['x-forwarded-proto'] || 'http';
     const host = req.headers['x-forwarded-host'] || req.headers.host;
