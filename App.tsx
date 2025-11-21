@@ -16,6 +16,9 @@ import AdminDashboard from './components/AdminDashboard';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Terms from './components/Terms';
+import SchedulePage from './components/SchedulePage';
+import BillingPage from './components/BillingPage';
+import ProfilePage from './components/ProfilePage';
 
 function App() {
   const [language, setLanguage] = useState<Language>(Language.FR);
@@ -53,6 +56,30 @@ function App() {
     return (
       <>
         <Dashboard />
+        <Toaster />
+      </>
+    );
+  }
+  if (currentPath === '/schedule') {
+    return (
+      <>
+        <SchedulePage />
+        <Toaster />
+      </>
+    );
+  }
+  if (currentPath === '/billing') {
+    return (
+      <>
+        <BillingPage />
+        <Toaster />
+      </>
+    );
+  }
+  if (currentPath === '/profile') {
+    return (
+      <>
+        <ProfilePage />
         <Toaster />
       </>
     );

@@ -84,13 +84,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
                     Dashboard
                   </a>
                 </Button>
-                <Button variant="ghost" size="sm" disabled>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Schedule
+                <Button variant="ghost" size="sm" asChild>
+                  <a href="/schedule">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Schedule
+                  </a>
                 </Button>
-                <Button variant="ghost" size="sm" disabled>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Billing
+                <Button variant="ghost" size="sm" asChild>
+                  <a href="/billing">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Billing
+                  </a>
                 </Button>
               </nav>
             </div>
@@ -129,17 +133,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled>
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                  <DropdownMenuItem asChild>
+                    <a href="/profile" className="cursor-pointer">
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </a>
                   </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <Calendar className="mr-2 h-4 w-4" />
-                    <span>My Schedule</span>
+                  <DropdownMenuItem asChild>
+                    <a href="/schedule" className="cursor-pointer">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>My Schedule</span>
+                    </a>
                   </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    <span>Billing</span>
+                  <DropdownMenuItem asChild>
+                    <a href="/billing" className="cursor-pointer">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <span>Billing</span>
+                    </a>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
@@ -163,13 +173,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
                 Dashboard
               </a>
             </Button>
-            <Button variant="ghost" size="sm" disabled>
-              <Calendar className="mr-2 h-4 w-4" />
-              Schedule
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/schedule">
+                <Calendar className="mr-2 h-4 w-4" />
+                Schedule
+              </a>
             </Button>
-            <Button variant="ghost" size="sm" disabled>
-              <CreditCard className="mr-2 h-4 w-4" />
-              Billing
+            <Button variant="ghost" size="sm" asChild>
+              <a href="/billing">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Billing
+              </a>
             </Button>
           </nav>
         </div>
