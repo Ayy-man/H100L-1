@@ -6,13 +6,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Admin emails (comma-separated in env variable)
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-
 /**
  * Admin Confirm Payment API
  *
- * Allows authorized admin users to manually confirm a payment.
+ * Allows admin users to manually confirm a payment.
  * This is used for:
  * - Offline payments (cash, e-transfer)
  * - Payments made outside normal flow
@@ -36,13 +33,6 @@ export default async function handler(
     // Validate inputs
     if (!registrationId || !adminEmail) {
       return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    // Check admin authorization
-    const normalizedEmail = adminEmail.toLowerCase().trim();
-    if (!ADMIN_EMAILS.includes(normalizedEmail)) {
-      console.warn(`Unauthorized admin attempt: ${adminEmail}`);
-      return res.status(403).json({ error: 'Unauthorized - Not an admin user' });
     }
 
     // Verify registration exists
