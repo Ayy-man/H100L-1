@@ -91,7 +91,7 @@ export default async function handler(
           firebaseUid,
         },
       },
-      success_url: `${baseUrl}/dashboard?payment=success`,
+      success_url: `${baseUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/dashboard?payment=cancelled`,
       allow_promotion_codes: true,
       billing_address_collection: 'auto',

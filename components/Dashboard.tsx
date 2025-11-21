@@ -30,12 +30,50 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check for payment success/cancel in URL params
+  // Check for payment success/cancel in URL params and verify payment
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
+    const sessionId = urlParams.get('session_id');
 
-    if (paymentStatus === 'success') {
+    const verifyPayment = async (sessionId: string) => {
+      try {
+        toast.loading('Verifying your payment...', { id: 'verify-payment' });
+
+        const response = await fetch('/api/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          toast.success('Payment confirmed! Your subscription is now active.', {
+            id: 'verify-payment',
+            duration: 5000,
+            icon: <PartyPopper className="h-5 w-5" />,
+          });
+          // Refresh the page to load updated registration
+          setTimeout(() => window.location.href = '/dashboard', 1500);
+        } else {
+          toast.error(data.error || 'Failed to verify payment. Please refresh the page.', {
+            id: 'verify-payment',
+          });
+        }
+      } catch (error) {
+        console.error('Payment verification error:', error);
+        toast.error('Failed to verify payment. Please refresh the page.', {
+          id: 'verify-payment',
+        });
+      }
+    };
+
+    if (paymentStatus === 'success' && sessionId) {
+      // Verify payment with Stripe API
+      verifyPayment(sessionId);
+    } else if (paymentStatus === 'success') {
+      // Fallback for old success redirects without session_id
       toast.success('Payment successful! Your subscription is now active.', {
         duration: 5000,
         icon: <PartyPopper className="h-5 w-5" />,
