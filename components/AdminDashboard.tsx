@@ -10,6 +10,7 @@ import DocumentsViewer from './DocumentsViewer';
 import PlayerDocumentsSection from './PlayerDocumentsSection';
 import DocumentStatusBadge from './DocumentStatusBadge';
 import ScheduleEditModal from './ScheduleEditModal';
+import SundayRosterView from './SundayRosterView';
 import { MedicalFiles, WeekDay, Language } from '../types';
 
 interface Registration {
@@ -160,7 +161,7 @@ const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Dashboard tab state
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports'>('overview');
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports' | 'sunday'>('overview');
 
   // Mobile responsiveness
   const [isMobile, setIsMobile] = useState(false);
@@ -192,6 +193,7 @@ const AdminDashboard: React.FC = () => {
     analytics: isFrench ? 'Analytique' : 'Analytics',
     matching: isFrench ? 'Jumelage' : 'Matching',
     reports: isFrench ? 'Rapports' : 'Reports',
+    sunday: isFrench ? 'Dimanche' : 'Sunday Practice',
 
     // Stats
     totalRegistrations: isFrench ? 'Total des inscriptions' : 'Total Registrations',
@@ -960,6 +962,16 @@ const AdminDashboard: React.FC = () => {
           >
             📄 {t.reports}
           </button>
+          <button
+            onClick={() => setDashboardTab('sunday')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'sunday'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            🏒 {t.sunday}
+          </button>
         </div>
 
         {/* OVERVIEW TAB */}
@@ -1713,6 +1725,11 @@ const AdminDashboard: React.FC = () => {
             semiPrivateGroups={semiPrivateGroups}
           />
         )}
+
+        {/* SUNDAY PRACTICE TAB */}
+        {dashboardTab === 'sunday' && (
+          <SundayRosterView />
+        )}
       </div>
 
       {/* Slot Details Modal */}
@@ -2320,6 +2337,17 @@ const AdminDashboard: React.FC = () => {
           >
             <span className="text-lg mb-1">📄</span>
             <span className="text-[9px] font-bold uppercase tracking-wider">Reports</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('sunday')}
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
+              dashboardTab === 'sunday'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-lg mb-1">🏒</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">Sunday</span>
           </button>
         </div>
       )}
