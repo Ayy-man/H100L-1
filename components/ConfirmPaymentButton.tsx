@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 interface ConfirmPaymentButtonProps {
@@ -24,13 +23,6 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleConfirm = async () => {
-    const adminEmail = auth.currentUser?.email;
-
-    if (!adminEmail) {
-      toast.error('You must be logged in to confirm payments');
-      return;
-    }
-
     if (!reason) {
       toast.error('Please select a reason for confirmation');
       return;
@@ -44,7 +36,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           registrationId,
-          adminEmail,
+          adminEmail: 'admin', // Admin dashboard user
           reason,
         }),
       });

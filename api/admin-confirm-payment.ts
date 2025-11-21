@@ -28,11 +28,11 @@ export default async function handler(
   }
 
   try {
-    const { registrationId, adminEmail, reason } = req.body;
+    const { registrationId, adminEmail = 'admin', reason } = req.body;
 
     // Validate inputs
-    if (!registrationId || !adminEmail) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!registrationId) {
+      return res.status(400).json({ error: 'Missing registration ID' });
     }
 
     // Verify registration exists
