@@ -9,7 +9,7 @@ import TrainingSchedule from './dashboard/TrainingSchedule';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { supabase } from '@/lib/supabase';
-import { getCurrentUser } from '@/lib/authService';
+import { onAuthStateChange } from '@/lib/authService';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
 
@@ -48,20 +48,14 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
-  // Fetch registration data
+  // Fetch registration data - wait for auth state to be ready
   useEffect(() => {
-    const fetchRegistration = async () => {
+    const fetchRegistration = async (currentUser: User) => {
       try {
         setLoading(true);
         setError(null);
 
-        // Get current user
-        const currentUser = getCurrentUser();
-        if (!currentUser) {
-          throw new Error('No authenticated user found');
-        }
-
-        setUser(currentUser);
+        console.log('Fetching registration for user:', currentUser.email);
 
         // Fetch registration from Supabase using firebase_uid
         const { data, error: fetchError } = await supabase
@@ -81,6 +75,7 @@ const Dashboard: React.FC = () => {
           }
         } else {
           setRegistration(data as Registration);
+          console.log('Registration loaded successfully');
         }
       } catch (err) {
         console.error('Error fetching registration:', err);
@@ -93,9 +88,27 @@ const Dashboard: React.FC = () => {
       }
     };
 
-    fetchRegistration();
+    // Subscribe to auth state changes and wait for user to be confirmed
+    const unsubscribe = onAuthStateChange((currentUser) => {
+      console.log('Auth state changed:', currentUser ? currentUser.email : 'No user');
+      setUser(currentUser);
 
-    // Set up real-time subscription for payment status updates
+      if (currentUser) {
+        // User is authenticated, fetch their registration
+        fetchRegistration(currentUser);
+      } else {
+        // No user, will be redirected by ProtectedRoute
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Set up real-time subscription for payment status updates
+  useEffect(() => {
+    if (!user) return;
+
     const channel = supabase
       .channel('registration-changes')
       .on(
@@ -104,7 +117,7 @@ const Dashboard: React.FC = () => {
           event: 'UPDATE',
           schema: 'public',
           table: 'registrations',
-          filter: `firebase_uid=eq.${getCurrentUser()?.uid}`,
+          filter: `firebase_uid=eq.${user.uid}`,
         },
         (payload) => {
           console.log('Registration updated:', payload);
@@ -126,7 +139,7 @@ const Dashboard: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   return (
     <ProtectedRoute>
