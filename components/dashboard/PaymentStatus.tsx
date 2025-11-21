@@ -39,6 +39,14 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
   const getPrice = () => {
     const { programType, groupFrequency, privateFrequency } = form_data;
 
+    // 🧪 TEST MODE: Use $0 test price if available
+    if (import.meta.env.VITE_STRIPE_PRICE_TEST) {
+      return {
+        amount: '$0.00 (TEST)',
+        priceId: import.meta.env.VITE_STRIPE_PRICE_TEST,
+      };
+    }
+
     if (programType === 'group') {
       return {
         amount: groupFrequency === '1x' ? '$249.99' : '$399.99',
