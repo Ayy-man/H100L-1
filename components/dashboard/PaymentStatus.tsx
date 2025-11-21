@@ -67,30 +67,8 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
 
   const { amount, priceId } = getPrice();
 
-  // Debug logging
-  console.log('PaymentStatus Debug:', {
-    payment_status,
-    programType: form_data.programType,
-    groupFrequency: form_data.groupFrequency,
-    privateFrequency: form_data.privateFrequency,
-    amount,
-    priceId,
-    loading,
-    buttonDisabled: loading || !priceId,
-  });
-
-  // Check if env vars are loaded
-  console.log('Stripe Env Vars:', {
-    VITE_STRIPE_PRICE_GROUP_1X: import.meta.env.VITE_STRIPE_PRICE_GROUP_1X,
-    VITE_STRIPE_PRICE_GROUP_2X: import.meta.env.VITE_STRIPE_PRICE_GROUP_2X,
-    VITE_STRIPE_PRICE_PRIVATE_1X: import.meta.env.VITE_STRIPE_PRICE_PRIVATE_1X,
-    VITE_STRIPE_PRICE_PRIVATE_2X: import.meta.env.VITE_STRIPE_PRICE_PRIVATE_2X,
-    VITE_STRIPE_PRICE_SEMI_PRIVATE: import.meta.env.VITE_STRIPE_PRICE_SEMI_PRIVATE,
-  });
-
   // Handle Stripe Checkout
   const handlePayment = async () => {
-    console.log('handlePayment clicked!', { priceId, loading });
     try {
       setLoading(true);
 
@@ -111,18 +89,13 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
         throw new Error('Failed to create checkout session');
       }
 
-      const { sessionId } = await response.json();
+      const { sessionId, url } = await response.json();
 
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
-      if (!stripe) {
-        throw new Error('Stripe failed to load');
-      }
-
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-
-      if (error) {
-        throw new Error(error.message);
+      // Redirect to Stripe Checkout using the new method
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL received');
       }
     } catch (error) {
       console.error('Payment error:', error);
@@ -288,10 +261,9 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
         <CardFooter>
           <Button
             size="lg"
-            className="w-full cursor-pointer"
+            className="w-full"
             onClick={handlePayment}
             disabled={loading || !priceId}
-            style={{ pointerEvents: 'auto' }}
           >
             {loading ? (
               <>
