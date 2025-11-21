@@ -11,6 +11,7 @@ import PlayerDocumentsSection from './PlayerDocumentsSection';
 import DocumentStatusBadge from './DocumentStatusBadge';
 import ScheduleEditModal from './ScheduleEditModal';
 import SundayRosterView from './SundayRosterView';
+import ConfirmPaymentButton from './ConfirmPaymentButton';
 import { MedicalFiles, WeekDay, Language } from '../types';
 
 interface Registration {
@@ -1221,6 +1222,11 @@ const AdminDashboard: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center gap-2">
+                            <ConfirmPaymentButton
+                              registrationId={reg.id}
+                              currentStatus={reg.payment_status}
+                              onConfirmed={fetchRegistrations}
+                            />
                             <button
                               onClick={() => setSelectedRegistration(reg)}
                               className="text-[#9BD4FF] hover:text-[#7db4d9] transition-colors"
