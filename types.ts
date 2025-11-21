@@ -5,8 +5,21 @@ export enum Language {
 
 export type PlayerCategory = 'M9' | 'M11' | 'M13' | 'M13 Elite' | 'M15' | 'M15 Elite' | 'M18' | 'Junior' | 'Unknown';
 export type BookingFrequency = '1x' | '2x';
-export type BookingDay = 'tuesday' | 'friday';
+export type BookingDay = 'tuesday' | 'friday'; // Legacy - keeping for backward compatibility
+export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type ProgramType = 'group' | 'private' | 'semi-private';
+
+export interface MedicalFile {
+  url: string;
+  filename: string;
+  size: number;
+  uploadedAt: string;
+}
+
+export interface MedicalFiles {
+  actionPlan?: MedicalFile;
+  medicalReport?: MedicalFile;
+}
 
 export interface BookingRequest {
   category: PlayerCategory;
@@ -29,18 +42,25 @@ export interface FormData {
   // Step 1
   playerFullName: string;
   dateOfBirth: string;
+  playerCategory: PlayerCategory | '';
+  parentFullName: string;
   parentEmail: string;
   parentPhone: string;
+  parentCity: string;
+  parentPostalCode: string;
+  communicationLanguage: 'French' | 'English' | '';
   emergencyContactName: string;
   emergencyContactPhone: string;
   emergencyRelationship: string;
 
   // Step 2
   programType: ProgramType | '';
-  
-  // Group Details
+
+  // Group Details - New 7-day schedule with monthly booking
   groupFrequency: '1x' | '2x' | '';
-  groupDay: 'tuesday' | 'friday' | '';
+  groupDay: 'tuesday' | 'friday' | ''; // Legacy field - kept for backward compatibility
+  groupSelectedDays: WeekDay[]; // New: Selected days of the week for recurring training
+  groupMonthlyDates: string[]; // New: Generated dates for the current month (ISO format: YYYY-MM-DD)
 
   // Private Details
   privateFrequency: '1x' | '2x' | 'one-time' | '';
@@ -61,7 +81,37 @@ export interface FormData {
   allergiesDetails: string;
   hasMedicalConditions: boolean;
   medicalConditionsDetails: string;
+  actionPlan: File | null;
   medicalReport: File | null;
+  medicalFiles?: MedicalFiles; // Stored URLs after upload
   photoVideoConsent: boolean;
   policyAcceptance: boolean;
+}
+
+// Firebase Authentication Types
+export interface FirebaseUserData {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  emailVerified: boolean;
+  createdAt: string;
+}
+
+// Registration with Firebase fields (matches Supabase table structure)
+export interface Registration {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  payment_status: 'pending' | 'succeeded' | 'failed' | 'canceled' | null;
+  payment_method_id: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+
+  // Firebase authentication fields
+  firebase_uid: string | null;
+  parent_email: string | null;
+  firebase_user_created_at: string | null;
+
+  // Form data
+  form_data: FormData;
 }

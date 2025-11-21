@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron-generate-sunday-slots",
+      "schedule": "0 0 * * 1"
+    }
+  ]
+}

@@ -1,8 +1,10 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { LogIn } from 'lucide-react';
 import { Language } from '../types';
 import LanguageToggle from './LanguageToggle';
+import { Button } from './ui/button';
 
 interface HeaderProps {
   language: Language;
@@ -31,7 +33,20 @@ const Header: React.FC<HeaderProps> = ({ language, setLanguage, content }) => {
           <a href="#pricing" className="hover:text-white transition-colors duration-300">{content.pricing}</a>
           <a href="#" className="hover:text-white transition-colors duration-300">{content.contact}</a>
         </nav>
-        <LanguageToggle language={language} setLanguage={setLanguage} />
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className="text-white border-blue-400 hover:bg-blue-400 hover:text-white transition-all"
+          >
+            <a href="/login" className="flex items-center">
+              <LogIn className="mr-2 h-4 w-4" />
+              Login
+            </a>
+          </Button>
+          <LanguageToggle language={language} setLanguage={setLanguage} />
+        </div>
       </div>
     </motion.header>
   );
