@@ -612,7 +612,10 @@ const AdminDashboard: React.FC = () => {
 
       const matchesSearch = playerName.includes(search) || parentEmail.includes(search);
       const matchesProgram = programFilter === 'all' || formData.programType === programFilter;
-      const matchesPayment = paymentFilter === 'all' || reg.payment_status === paymentFilter;
+      // Handle legacy 'paid' status as 'succeeded' for filtering
+      const matchesPayment = paymentFilter === 'all' ||
+        reg.payment_status === paymentFilter ||
+        (paymentFilter === 'succeeded' && reg.payment_status === 'paid');
       const matchesCategory = categoryFilter === 'all' || formData.playerCategory === categoryFilter;
 
       return matchesSearch && matchesProgram && matchesPayment && matchesCategory;
@@ -716,8 +719,11 @@ const AdminDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'paid': return 'bg-green-500/10 text-green-400 border-green-500/20';
+      case 'verified': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'; // Admin verified - highest level
+      case 'succeeded': return 'bg-green-500/10 text-green-400 border-green-500/20'; // Stripe payment
+      case 'paid': return 'bg-green-500/10 text-green-400 border-green-500/20'; // Legacy
       case 'pending': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+      case 'canceled': return 'bg-red-500/10 text-red-400 border-red-500/20'; // Canceled subscription
       case 'failed': return 'bg-red-500/10 text-red-400 border-red-500/20';
       default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
@@ -1079,8 +1085,10 @@ const AdminDashboard: React.FC = () => {
               className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             >
               <option value="all">{t.allPaymentStatus}</option>
-              <option value="paid">Paid</option>
+              <option value="verified">Verified (Admin Confirmed)</option>
+              <option value="succeeded">Succeeded (Stripe Paid)</option>
               <option value="pending">Pending</option>
+              <option value="canceled">Canceled</option>
               <option value="failed">Failed</option>
             </select>
 

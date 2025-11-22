@@ -33,6 +33,8 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
  */
 const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
   const [loading, setLoading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const { payment_status, form_data, firebase_uid, id } = registration;
 
   // Calculate monthly price
@@ -112,14 +114,58 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
     }
   };
 
+  // Handle Subscription Cancellation
+  const handleCancelSubscription = async () => {
+    try {
+      setCanceling(true);
+
+      const response = await fetch('/api/cancel-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registrationId: id,
+          firebaseUid: firebase_uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel subscription');
+      }
+
+      const bookingMessage = data.canceledBookings > 0
+        ? ` ${data.canceledBookings} future booking(s) were also canceled.`
+        : '';
+
+      toast.success(
+        `Subscription canceled. Access continues until ${data.willCancelAt}.${bookingMessage}`,
+        { duration: 6000 }
+      );
+
+      setShowCancelDialog(false);
+
+      // Reload page to update UI
+      setTimeout(() => window.location.reload(), 2000);
+    } catch (error: any) {
+      console.error('Cancellation error:', error);
+      toast.error(error.message || 'Failed to cancel subscription');
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   // Render based on payment status
   const renderStatus = () => {
     switch (payment_status) {
+      case 'verified':
       case 'succeeded':
         return (
           <Alert variant="success">
             <CheckCircle className="h-4 w-4" />
-            <AlertTitle>Payment Successful</AlertTitle>
+            <AlertTitle>
+              {payment_status === 'verified' ? 'Payment Verified' : 'Payment Successful'}
+            </AlertTitle>
             <AlertDescription>
               Your payment has been processed successfully. Your training subscription
               is now active!
@@ -146,12 +192,25 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
 
       case 'canceled':
         return (
-          <Alert variant="warning">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Payment Canceled</AlertTitle>
+          <Alert variant="destructive">
+            <XCircle className="h-4 w-4" />
+            <AlertTitle>Subscription Canceled</AlertTitle>
             <AlertDescription>
-              Your payment was canceled. You can complete payment below to activate
-              your training subscription.
+              {registration.stripe_subscription_id ? (
+                <>
+                  Your subscription has been canceled and will not renew.
+                  {registration.canceled_at && (
+                    <p className="mt-2 text-xs">
+                      Canceled on: {new Date(registration.canceled_at).toLocaleDateString()}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs font-semibold">
+                    To resubscribe, please contact support or create a new registration.
+                  </p>
+                </>
+              ) : (
+                'Your payment was canceled. You can complete payment below to activate your training subscription.'
+              )}
             </AlertDescription>
           </Alert>
         );
@@ -181,7 +240,7 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
           </span>
           <Badge
             variant={
-              payment_status === 'succeeded'
+              payment_status === 'succeeded' || payment_status === 'verified'
                 ? 'default'
                 : payment_status === 'failed'
                 ? 'destructive'
@@ -190,6 +249,8 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
             className={
               payment_status === 'pending' || payment_status === 'canceled'
                 ? 'bg-orange-500/20 text-orange-500 border-orange-500/50'
+                : payment_status === 'verified'
+                ? 'bg-blue-500/20 text-blue-500 border-blue-500/50'
                 : ''
             }
           >
@@ -197,7 +258,7 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
           </Badge>
         </CardTitle>
         <CardDescription>
-          {payment_status === 'succeeded'
+          {payment_status === 'succeeded' || payment_status === 'verified'
             ? 'Your subscription is active'
             : 'Complete payment to activate your subscription'}
         </CardDescription>
@@ -237,7 +298,7 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
         )}
 
         {/* Subscription Details for Active Payments */}
-        {payment_status === 'succeeded' && (
+        {(payment_status === 'succeeded' || payment_status === 'verified') && (
           <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Monthly Cost</span>
@@ -289,16 +350,81 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
       )}
 
       {/* Manage Subscription Button for Active Payments */}
-      {payment_status === 'succeeded' && (
+      {(payment_status === 'succeeded' || payment_status === 'verified') && (
         <CardFooter className="flex flex-col space-y-2">
-          <Button variant="outline" size="sm" className="w-full" disabled>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setShowCancelDialog(true)}
+          >
             <CreditCard className="mr-2 h-4 w-4" />
             Manage Subscription
           </Button>
           <p className="text-xs text-center text-muted-foreground">
-            To cancel or update your subscription, please contact support
+            Cancel anytime • No hidden fees
           </p>
         </CardFooter>
+      )}
+
+      {/* Cancellation Confirmation Dialog */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-lg w-full space-y-4 shadow-xl border border-gray-200 dark:border-gray-800">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Cancel Subscription?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Are you sure you want to cancel your subscription? You'll continue to have
+                access until the end of your current billing period.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                    What happens next:
+                  </p>
+                  <ul className="text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                    <li>• Your subscription will not renew</li>
+                    <li>• You keep access until the end of your billing period</li>
+                    <li>• No refunds for the current billing period</li>
+                    <li>• You can resubscribe anytime</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowCancelDialog(false)}
+                disabled={canceling}
+              >
+                Keep Subscription
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleCancelSubscription}
+                disabled={canceling}
+              >
+                {canceling ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Canceling...
+                  </>
+                ) : (
+                  'Cancel Subscription'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </Card>
   );

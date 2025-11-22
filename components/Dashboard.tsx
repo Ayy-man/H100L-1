@@ -30,6 +30,11 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper to check if payment is complete (succeeded or verified)
+  const isPaymentComplete = (status: string) => {
+    return status === 'succeeded' || status === 'verified';
+  };
+
   // Check for payment success/cancel in URL params and verify payment
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -162,10 +167,10 @@ const Dashboard: React.FC = () => {
           console.log('Registration updated:', payload);
           setRegistration(payload.new as Registration);
 
-          // Show toast if payment status changed to succeeded
+          // Show toast if payment status changed to succeeded or verified
           if (
-            payload.new.payment_status === 'succeeded' &&
-            payload.old?.payment_status !== 'succeeded'
+            isPaymentComplete(payload.new.payment_status) &&
+            !isPaymentComplete(payload.old?.payment_status || '')
           ) {
             toast.success('Payment confirmed! Your subscription is now active.', {
               icon: <CheckCircle2 className="h-5 w-5" />,
@@ -266,15 +271,15 @@ const Dashboard: React.FC = () => {
               <div className="space-y-6">
                 <PaymentStatus registration={registration} />
 
-                {/* Show Training Schedule only if payment succeeded */}
-                {registration.payment_status === 'succeeded' && (
+                {/* Show Training Schedule only if payment succeeded or verified */}
+                {isPaymentComplete(registration.payment_status) && (
                   <TrainingSchedule registration={registration} />
                 )}
               </div>
             </div>
 
             {/* Sunday Practice Card - Full Width Below Grid */}
-            {registration.payment_status === 'succeeded' && (
+            {isPaymentComplete(registration.payment_status) && (
               <SundayPracticeCard registration={registration} />
             )}
 
