@@ -68,9 +68,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .update({
         payment_status: 'canceled',
         updated_at: new Date().toISOString(),
-        // Store cancellation metadata
-        stripe_subscription_id: registration.stripe_subscription_id,
-        canceled_at: new Date().toISOString(),
       })
       .eq('id', registrationId);
 
