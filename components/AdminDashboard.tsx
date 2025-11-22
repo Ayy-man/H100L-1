@@ -612,7 +612,10 @@ const AdminDashboard: React.FC = () => {
 
       const matchesSearch = playerName.includes(search) || parentEmail.includes(search);
       const matchesProgram = programFilter === 'all' || formData.programType === programFilter;
-      const matchesPayment = paymentFilter === 'all' || reg.payment_status === paymentFilter;
+      // Handle legacy 'paid' status as 'succeeded' for filtering
+      const matchesPayment = paymentFilter === 'all' ||
+        reg.payment_status === paymentFilter ||
+        (paymentFilter === 'succeeded' && reg.payment_status === 'paid');
       const matchesCategory = categoryFilter === 'all' || formData.playerCategory === categoryFilter;
 
       return matchesSearch && matchesProgram && matchesPayment && matchesCategory;
@@ -1081,7 +1084,8 @@ const AdminDashboard: React.FC = () => {
               className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
             >
               <option value="all">{t.allPaymentStatus}</option>
-              <option value="paid">Paid</option>
+              <option value="verified">Verified (Admin Confirmed)</option>
+              <option value="succeeded">Succeeded (Stripe Paid)</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
             </select>
