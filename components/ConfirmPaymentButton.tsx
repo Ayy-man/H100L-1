@@ -75,13 +75,13 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
 
       {/* Confirmation Dialog */}
       {showDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-lg w-full border border-gray-700">
             <h3 className="text-xl font-bold text-white mb-4">
               Manually Verify Payment
             </h3>
 
-            <p className="text-gray-300 mb-4">
+            <p className="text-gray-300 mb-4 break-words">
               {currentStatus === 'pending'
                 ? 'This will mark the registration as VERIFIED (for offline/cash payments).'
                 : 'This will upgrade the status to VERIFIED (admin double-check on top of Stripe payment).'}
