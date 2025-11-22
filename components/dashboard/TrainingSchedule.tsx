@@ -1,5 +1,5 @@
-import React from 'react';
-import { Calendar, Clock, MapPin, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, MapPin, Users, Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -9,10 +9,34 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { Registration } from '@/types';
+import { toast } from 'sonner';
 
 interface TrainingScheduleProps {
   registration: Registration;
+}
+
+interface SundayBookingStatus {
+  eligible: boolean;
+  already_booked: boolean;
+  next_sunday: string;
+  available_slots: Array<{
+    slot_id: string;
+    slot_date: string;
+    start_time: string;
+    end_time: string;
+    capacity: number;
+    current_bookings: number;
+    spots_remaining: number;
+  }>;
+  existing_booking?: {
+    booking_id: string;
+    slot_date: string;
+    start_time: string;
+    end_time: string;
+  };
+  reason?: string;
 }
 
 /**
@@ -20,11 +44,14 @@ interface TrainingScheduleProps {
  *
  * Displays upcoming training sessions based on the program type:
  * - Weekday synthetic ice sessions
- * - Sunday real ice practice
+ * - Sunday real ice practice (INTERACTIVE - can book next Sunday)
  * - Location details
  */
 const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => {
-  const { form_data } = registration;
+  const { form_data, firebase_uid, id } = registration;
+  const [sundayStatus, setSundayStatus] = useState<SundayBookingStatus | null>(null);
+  const [loadingSunday, setLoadingSunday] = useState(false);
+  const [bookingInProgress, setBookingInProgress] = useState(false);
 
   // Get next 4 weeks of training dates
   const getUpcomingSessions = () => {
@@ -144,6 +171,131 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
   const upcomingSessions = getUpcomingSessions();
 
+  // Fetch Sunday booking status
+  useEffect(() => {
+    const fetchSundayStatus = async () => {
+      if (!firebase_uid || !id) return;
+
+      setLoadingSunday(true);
+      try {
+        const response = await fetch(
+          `/api/sunday-next-slot?registrationId=${id}&firebaseUid=${firebase_uid}`
+        );
+        const data = await response.json();
+
+        console.log('TrainingSchedule - Sunday status:', data);
+
+        if (response.ok && data.success) {
+          setSundayStatus(data);
+
+          // Show toast based on status
+          if (data.already_booked && data.existing_booking) {
+            toast.success('Booked', {
+              description: `You're booked for Sunday ${new Date(data.existing_booking.slot_date).toLocaleDateString()}`,
+              duration: 3000,
+            });
+          } else if (data.available_slots && data.available_slots.length > 0) {
+            const spotsRemaining = data.available_slots[0].spots_remaining;
+            if (spotsRemaining === 0) {
+              toast.error('Full', {
+                description: 'Next Sunday practice is full',
+                duration: 3000,
+              });
+            } else {
+              toast.info('Not Booked', {
+                description: `${spotsRemaining} spot(s) remaining for next Sunday`,
+                duration: 3000,
+              });
+            }
+          }
+        } else {
+          console.error('Sunday status check failed:', data);
+          toast.error('Sunday Practice', {
+            description: data.error || data.reason || 'Unable to check Sunday booking status',
+            duration: 5000,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch Sunday status:', error);
+        toast.error('Error', {
+          description: 'Failed to load Sunday practice status',
+          duration: 5000,
+        });
+      } finally {
+        setLoadingSunday(false);
+      }
+    };
+
+    fetchSundayStatus();
+  }, [firebase_uid, id]);
+
+  // Handle Sunday booking
+  const handleBookSunday = async () => {
+    if (!sundayStatus?.available_slots?.[0]) return;
+
+    const slot = sundayStatus.available_slots[0];
+
+    if (slot.spots_remaining === 0) {
+      toast.error('Full', {
+        description: 'This Sunday practice is full',
+      });
+      return;
+    }
+
+    setBookingInProgress(true);
+    try {
+      const response = await fetch('/api/sunday-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slotId: slot.slot_id,
+          registrationId: id,
+          firebaseUid: firebase_uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success('Booked!', {
+          description: `Sunday ${new Date(slot.slot_date).toLocaleDateString()} at ${slot.start_time}`,
+          duration: 4000,
+        });
+
+        // Refresh status
+        const refreshResponse = await fetch(
+          `/api/sunday-next-slot?registrationId=${id}&firebaseUid=${firebase_uid}`
+        );
+        const refreshData = await refreshResponse.json();
+        if (refreshResponse.ok) {
+          setSundayStatus(refreshData);
+        }
+      } else {
+        toast.error('Booking Failed', {
+          description: data.error || 'Unable to book Sunday practice',
+        });
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast.error('Error', {
+        description: 'Failed to book Sunday practice',
+      });
+    } finally {
+      setBookingInProgress(false);
+    }
+  };
+
+  // Get next Sunday date
+  const getNextSunday = () => {
+    const today = new Date();
+    const daysUntilSunday = (7 - today.getDay()) % 7 || 7;
+    const nextSunday = new Date(today);
+    nextSunday.setDate(today.getDate() + daysUntilSunday);
+    return nextSunday;
+  };
+
+  const nextSundayDate = getNextSunday();
+
   // Get time slots for group training
   const getGroupTimeSlots = () => {
     return ['4:30 PM', '5:45 PM', '7:00 PM', '8:15 PM'];
@@ -207,66 +359,131 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
           </h3>
 
           <div className="space-y-2">
-            {upcomingSessions.map((session, index) => (
-              <div
-                key={index}
-                className={`p-3 rounded-lg border ${
-                  session.type === 'real-ice'
-                    ? 'bg-primary/10 border-primary/30'
-                    : 'bg-muted/50 border-border'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-center min-w-[60px]">
-                      <p className="text-xs text-muted-foreground uppercase">
-                        {session.date.toLocaleDateString('en-US', { month: 'short' })}
-                      </p>
-                      <p className="text-2xl font-bold text-foreground">
-                        {session.date.getDate()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {session.day}
-                      </p>
-                    </div>
-                    <Separator orientation="vertical" className="h-12" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={session.type === 'real-ice' ? 'default' : 'secondary'}
-                        >
-                          {session.type === 'real-ice' ? 'Real Ice' : 'Synthetic Ice'}
-                        </Badge>
-                        {session.type === 'real-ice' && (
-                          <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/50">
-                            Free Included
+            {upcomingSessions.map((session, index) => {
+              // Check if this is the next Sunday (first Sunday in the list)
+              const isNextSunday = session.type === 'real-ice' &&
+                session.date.toDateString() === nextSundayDate.toDateString();
+
+              // Get booking status for this Sunday
+              const getSundayStatus = () => {
+                if (!sundayStatus || !isNextSunday) return null;
+
+                if (sundayStatus.already_booked) {
+                  return {
+                    label: 'Booked',
+                    variant: 'default' as const,
+                    className: 'bg-green-500/10 text-green-500 border-green-500/50',
+                  };
+                }
+
+                if (sundayStatus.available_slots?.[0]) {
+                  const spotsRemaining = sundayStatus.available_slots[0].spots_remaining;
+                  if (spotsRemaining === 0) {
+                    return {
+                      label: 'Full',
+                      variant: 'destructive' as const,
+                      className: 'bg-red-500/10 text-red-500 border-red-500/50',
+                    };
+                  }
+                  return {
+                    label: 'Not Booked',
+                    variant: 'outline' as const,
+                    className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/50',
+                  };
+                }
+
+                return null;
+              };
+
+              const statusBadge = getSundayStatus();
+
+              return (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg border ${
+                    session.type === 'real-ice'
+                      ? 'bg-primary/10 border-primary/30'
+                      : 'bg-muted/50 border-border'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="text-center min-w-[60px]">
+                        <p className="text-xs text-muted-foreground uppercase">
+                          {session.date.toLocaleDateString('en-US', { month: 'short' })}
+                        </p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {session.date.getDate()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {session.day}
+                        </p>
+                      </div>
+                      <Separator orientation="vertical" className="h-12" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge
+                            variant={session.type === 'real-ice' ? 'default' : 'secondary'}
+                          >
+                            {session.type === 'real-ice' ? 'Real Ice' : 'Synthetic Ice'}
                           </Badge>
+                          {session.type === 'real-ice' && (
+                            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/50">
+                              Free Included
+                            </Badge>
+                          )}
+                          {statusBadge && (
+                            <Badge variant={statusBadge.variant} className={statusBadge.className}>
+                              {statusBadge.label}
+                            </Badge>
+                          )}
+                        </div>
+                        {session.time && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">
+                              {session.time}
+                            </p>
+                          </div>
+                        )}
+                        {session.type === 'real-ice' && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Sunday Ice Practice
+                          </p>
                         )}
                       </div>
-                      {session.time && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">
-                            {session.time}
-                          </p>
-                        </div>
-                      )}
-                      {session.type === 'real-ice' && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Sunday Ice Practice
-                        </p>
-                      )}
                     </div>
+
+                    {/* Booking button for next Sunday only */}
+                    {isNextSunday && !loadingSunday && sundayStatus && !sundayStatus.already_booked && (
+                      <Button
+                        size="sm"
+                        onClick={handleBookSunday}
+                        disabled={bookingInProgress || sundayStatus.available_slots?.[0]?.spots_remaining === 0}
+                        className="ml-2"
+                      >
+                        {bookingInProgress ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Booking...
+                          </>
+                        ) : (
+                          'Book Now'
+                        )}
+                      </Button>
+                    )}
+
+                    {/* Max players indicator for group synthetic sessions */}
+                    {form_data.programType === 'group' && session.type === 'synthetic' && (
+                      <div className="text-right ml-2">
+                        <Users className="h-4 w-4 text-muted-foreground mb-1" />
+                        <p className="text-xs text-muted-foreground">Max 6 players</p>
+                      </div>
+                    )}
                   </div>
-                  {form_data.programType === 'group' && session.type === 'synthetic' && (
-                    <div className="text-right">
-                      <Users className="h-4 w-4 text-muted-foreground mb-1" />
-                      <p className="text-xs text-muted-foreground">Max 6 players</p>
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
