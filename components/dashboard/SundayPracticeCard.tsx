@@ -73,10 +73,19 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
 
       const data: NextSlotResponse = await response.json();
 
-      if (!data.success) {
-        console.error('Failed to fetch next slot:', data.error);
+      console.log('Sunday next slot response:', data);
+
+      if (!response.ok) {
+        console.error('API error:', data);
         setEligible(false);
-        setIneligibleReason(data.reason || 'Unable to check eligibility');
+        setIneligibleReason(data.error || data.reason || 'Unable to check eligibility');
+        return;
+      }
+
+      if (!data.success) {
+        console.error('Failed to fetch next slot:', data);
+        setEligible(false);
+        setIneligibleReason(data.reason || data.error || 'Unable to check eligibility');
         return;
       }
 

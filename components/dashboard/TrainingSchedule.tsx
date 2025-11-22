@@ -183,6 +183,8 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         );
         const data = await response.json();
 
+        console.log('TrainingSchedule - Sunday status:', data);
+
         if (response.ok && data.success) {
           setSundayStatus(data);
 
@@ -206,9 +208,19 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
               });
             }
           }
+        } else {
+          console.error('Sunday status check failed:', data);
+          toast.error('Sunday Practice', {
+            description: data.error || data.reason || 'Unable to check Sunday booking status',
+            duration: 5000,
+          });
         }
       } catch (error) {
         console.error('Failed to fetch Sunday status:', error);
+        toast.error('Error', {
+          description: 'Failed to load Sunday practice status',
+          duration: 5000,
+        });
       } finally {
         setLoadingSunday(false);
       }
