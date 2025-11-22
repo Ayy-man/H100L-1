@@ -199,11 +199,6 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
               {registration.stripe_subscription_id ? (
                 <>
                   Your subscription has been canceled and will not renew.
-                  {registration.canceled_at && (
-                    <p className="mt-2 text-xs">
-                      Canceled on: {new Date(registration.canceled_at).toLocaleDateString()}
-                    </p>
-                  )}
                   <p className="mt-2 text-xs font-semibold">
                     To resubscribe, please contact support or create a new registration.
                   </p>
