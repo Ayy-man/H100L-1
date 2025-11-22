@@ -73,20 +73,18 @@ export interface SundayPracticeConfig {
  * Sunday Practice Configuration
  *
  * Business Rules:
- * 1. Only Group Training players with M11+ categories can book
- * 2. M9 players are excluded (too young)
- * 3. Parents can only book the next upcoming Sunday (1 week ahead)
- * 4. No cancellation deadline - can cancel anytime before the practice
- * 5. 6 players max per time slot
- * 6. Two time slots based on age groups:
- *    - 7:30-8:30 AM: M11 to M13 Elite
- *    - 8:30-9:30 AM: M13 to Junior (M18+)
+ * 1. Only Group Training players can book
+ * 2. M7, M9, and M11 in first slot (7:30-8:30 AM) - 12 kids max
+ * 3. M13 and M15 in second slot (8:30-9:30 AM) - 10 kids max
+ * 4. Parents can only book the next upcoming Sunday (1 week ahead)
+ * 5. No cancellation deadline - can cancel anytime before the practice
+ * 6. Two time slots based on age groups
  * 7. Slots auto-generated weekly via cron job
  * 8. Attendance tracked by admins
  */
 export const SUNDAY_PRACTICE_CONFIG: SundayPracticeConfig = {
   // Capacity Settings
-  maxCapacityPerSlot: 6,
+  maxCapacityPerSlot: 12, // Default max, but slots can have different capacities
 
   // Booking Rules
   weeksAheadAvailable: 1, // Only book next Sunday (1 week ahead)
@@ -95,26 +93,26 @@ export const SUNDAY_PRACTICE_CONFIG: SundayPracticeConfig = {
 
   // Eligibility Rules
   eligiblePrograms: ['group'], // Only Group Training
-  ineligibleCategories: ['M9', 'Unknown'], // M9 is too young
-  minimumCategory: 'M11',
+  ineligibleCategories: ['Unknown'], // Only exclude unknown categories
+  minimumCategory: 'M7',
 
   // Time Slots Configuration
   timeSlots: [
     {
       startTime: '07:30',
       endTime: '08:30',
-      minCategory: 'M11',
-      maxCategory: 'M13 Elite',
-      displayName: 'Early Slot (M11-M13)',
-      ageRange: 'M11 to M13 Elite',
+      minCategory: 'M7',
+      maxCategory: 'M11',
+      displayName: 'Early Slot (M7-M9-M11)',
+      ageRange: 'M7 to M11',
     },
     {
       startTime: '08:30',
       endTime: '09:30',
       minCategory: 'M13',
-      maxCategory: 'Junior',
-      displayName: 'Late Slot (M13-M18+)',
-      ageRange: 'M13 to Junior',
+      maxCategory: 'M15',
+      displayName: 'Late Slot (M13-M15)',
+      ageRange: 'M13 to M15',
     },
   ],
 
@@ -141,7 +139,7 @@ export const SUNDAY_PRACTICE_CONFIG: SundayPracticeConfig = {
     showWaitlist: false, // No waitlist for now
     emptySlotMessage: 'No slots available for next Sunday. Check back soon!',
     fullSlotMessage: 'This time slot is fully booked',
-    ineligibleMessage: 'Sunday practice is only available for Group Training players (M11+)',
+    ineligibleMessage: 'Sunday practice is only available for Group Training players',
   },
 
   // Status Messages
@@ -151,7 +149,7 @@ export const SUNDAY_PRACTICE_CONFIG: SundayPracticeConfig = {
     cancellationSuccess: 'Your booking has been cancelled successfully.',
     alreadyBookedError: 'You already have a booking for this Sunday.',
     slotFullError: 'Sorry, this time slot is fully booked.',
-    ineligibleError: 'Only Group Training players (M11+) can book Sunday practice.',
+    ineligibleError: 'Only Group Training players can book Sunday practice.',
     paymentRequiredError: 'Active subscription required to book Sunday practice.',
   },
 };
@@ -177,6 +175,7 @@ export const getTimeSlotForCategory = (
   category: string
 ): SundayPracticeTimeSlot | null => {
   const categoryOrder = [
+    'M7',
     'M9',
     'M11',
     'M13',
