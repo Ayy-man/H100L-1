@@ -47,10 +47,11 @@ export default async function handler(
     }
 
     // Update registration with manual confirmation
+    // Set status to 'verified' - one step above 'succeeded'
     const { data, error } = await supabase
       .from('registrations')
       .update({
-        payment_status: 'succeeded',
+        payment_status: 'verified',
         manually_confirmed: true,
         manually_confirmed_by: adminEmail,
         manually_confirmed_at: new Date().toISOString(),
