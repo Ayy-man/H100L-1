@@ -723,6 +723,7 @@ const AdminDashboard: React.FC = () => {
       case 'succeeded': return 'bg-green-500/10 text-green-400 border-green-500/20'; // Stripe payment
       case 'paid': return 'bg-green-500/10 text-green-400 border-green-500/20'; // Legacy
       case 'pending': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+      case 'canceled': return 'bg-red-500/10 text-red-400 border-red-500/20'; // Canceled subscription
       case 'failed': return 'bg-red-500/10 text-red-400 border-red-500/20';
       default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
@@ -1087,6 +1088,7 @@ const AdminDashboard: React.FC = () => {
               <option value="verified">Verified (Admin Confirmed)</option>
               <option value="succeeded">Succeeded (Stripe Paid)</option>
               <option value="pending">Pending</option>
+              <option value="canceled">Canceled</option>
               <option value="failed">Failed</option>
             </select>
 

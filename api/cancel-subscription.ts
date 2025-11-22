@@ -59,6 +59,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     );
 
+    // Calculate the end of paid access (current billing period end)
+    const billingPeriodEnd = new Date(canceledSubscription.current_period_end * 1000);
+
     // Update registration in database
     const { error: updateError } = await supabase
       .from('registrations')
@@ -76,13 +79,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to update registration' });
     }
 
+    // Cancel all Sunday practice bookings AFTER the billing period end
+    // User keeps bookings they've already paid for (during current billing period)
+    const { data: canceledBookings, error: bookingError } = await supabase
+      .from('sunday_bookings')
+      .update({
+        booking_status: 'cancelled',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('registration_id', registrationId)
+      .eq('booking_status', 'confirmed')
+      .gt('booking_date', billingPeriodEnd.toISOString())
+      .select();
+
+    if (bookingError) {
+      console.error('Failed to cancel future bookings:', bookingError);
+      // Don't fail the whole request, just log the error
+    }
+
+    const canceledBookingCount = canceledBookings?.length || 0;
+
     // Return success with cancellation details
     return res.status(200).json({
       success: true,
       message: 'Subscription canceled successfully',
       canceledAt: canceledSubscription.canceled_at,
       currentPeriodEnd: canceledSubscription.current_period_end,
-      willCancelAt: new Date(canceledSubscription.current_period_end * 1000).toLocaleDateString(),
+      willCancelAt: billingPeriodEnd.toLocaleDateString(),
+      canceledBookings: canceledBookingCount,
     });
 
   } catch (error: any) {

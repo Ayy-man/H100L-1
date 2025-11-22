@@ -134,9 +134,13 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
         throw new Error(data.error || 'Failed to cancel subscription');
       }
 
+      const bookingMessage = data.canceledBookings > 0
+        ? ` ${data.canceledBookings} future booking(s) were also canceled.`
+        : '';
+
       toast.success(
-        `Subscription canceled. Access continues until ${data.willCancelAt}`,
-        { duration: 5000 }
+        `Subscription canceled. Access continues until ${data.willCancelAt}.${bookingMessage}`,
+        { duration: 6000 }
       );
 
       setShowCancelDialog(false);
@@ -188,12 +192,25 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
 
       case 'canceled':
         return (
-          <Alert variant="warning">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Payment Canceled</AlertTitle>
+          <Alert variant="destructive">
+            <XCircle className="h-4 w-4" />
+            <AlertTitle>Subscription Canceled</AlertTitle>
             <AlertDescription>
-              Your payment was canceled. You can complete payment below to activate
-              your training subscription.
+              {registration.stripe_subscription_id ? (
+                <>
+                  Your subscription has been canceled and will not renew.
+                  {registration.canceled_at && (
+                    <p className="mt-2 text-xs">
+                      Canceled on: {new Date(registration.canceled_at).toLocaleDateString()}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs font-semibold">
+                    To resubscribe, please contact support or create a new registration.
+                  </p>
+                </>
+              ) : (
+                'Your payment was canceled. You can complete payment below to activate your training subscription.'
+              )}
             </AlertDescription>
           </Alert>
         );
