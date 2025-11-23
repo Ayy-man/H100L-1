@@ -5,6 +5,7 @@ import { Language, ProgramType } from './types';
 import { content } from './constants';
 import { stripePromise } from './lib/stripe';
 import { Toaster } from './components/ui/sonner';
+import { ProfileProvider } from './contexts/ProfileContext';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Features from './components/Features';
@@ -19,6 +20,7 @@ import Terms from './components/Terms';
 import SchedulePage from './components/SchedulePage';
 import BillingPage from './components/BillingPage';
 import ProfilePage from './components/ProfilePage';
+import ProfileSelectionScreen from './components/ProfileSelectionScreen';
 
 function App() {
   const [language, setLanguage] = useState<Language>(Language.FR);
@@ -44,60 +46,59 @@ function App() {
 
   // Simple routing for different pages
   const currentPath = window.location.pathname;
-  if (currentPath === '/admin') {
-    return (
-      <>
-        <AdminDashboard />
-        <Toaster />
-      </>
-    );
-  }
-  if (currentPath === '/dashboard') {
-    return (
-      <>
-        <Dashboard />
-        <Toaster />
-      </>
-    );
-  }
-  if (currentPath === '/schedule') {
-    return (
-      <>
-        <SchedulePage />
-        <Toaster />
-      </>
-    );
-  }
-  if (currentPath === '/billing') {
-    return (
-      <>
-        <BillingPage />
-        <Toaster />
-      </>
-    );
-  }
-  if (currentPath === '/profile') {
-    return (
-      <>
-        <ProfilePage />
-        <Toaster />
-      </>
-    );
-  }
-  if (currentPath === '/login') {
-    return (
-      <>
-        <Login />
-        <Toaster />
-      </>
-    );
-  }
-  if (currentPath === '/terms') {
-    return <Terms language={language} onClose={() => window.history.back()} />;
-  }
 
+  // Wrap all routes with ProfileProvider for authentication and profile management
   return (
-    <>
+    <ProfileProvider>
+      {renderRoute(currentPath)}
+      <Toaster />
+    </ProfileProvider>
+  );
+
+  function renderRoute(path: string) {
+    if (path === '/admin') {
+      return <AdminDashboard />;
+    }
+    if (path === '/dashboard') {
+      return <Dashboard />;
+    }
+    if (path === '/select-profile') {
+      return <ProfileSelectionScreen />;
+    }
+    if (path === '/schedule') {
+      return <SchedulePage />;
+    }
+    if (path === '/billing') {
+      return <BillingPage />;
+    }
+    if (path === '/profile') {
+      return <ProfilePage />;
+    }
+    if (path === '/login') {
+      return <Login />;
+    }
+    if (path === '/terms') {
+      return <Terms language={language} onClose={() => window.history.back()} />;
+    }
+    if (path === '/register') {
+      // Check if add-child mode
+      const urlParams = new URLSearchParams(window.location.search);
+      const mode = urlParams.get('mode');
+
+      return (
+        <Elements stripe={stripePromise}>
+          <RegistrationForm
+            onClose={() => window.location.href = '/dashboard'}
+            preSelectedProgram={selectedProgram}
+            language={language}
+            mode={mode === 'add-child' ? 'add-child' : 'new-parent'}
+          />
+        </Elements>
+      );
+    }
+
+    // Home page
+    return (
       <div className="bg-gray-900 min-h-screen overflow-x-hidden">
         <div className={isFormOpen ? 'filter blur-sm' : ''}>
           <Header
@@ -120,14 +121,14 @@ function App() {
                 onClose={closeForm}
                 preSelectedProgram={selectedProgram}
                 language={language}
+                mode="new-parent"
               />
             </Elements>
           )}
         </AnimatePresence>
       </div>
-      <Toaster />
-    </>
-  );
+    );
+  }
 }
 
 export default App;

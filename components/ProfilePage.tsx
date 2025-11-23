@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
-import { User as UserIcon, Edit, Save, X, Info } from 'lucide-react';
+import { User as UserIcon, Edit, Save, X, Info, AlertCircle } from 'lucide-react';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from './dashboard/DashboardLayout';
 import {
@@ -18,7 +17,7 @@ import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { supabase } from '@/lib/supabase';
-import { onAuthStateChange } from '@/lib/authService';
+import { useProfile } from '@/contexts/ProfileContext';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
 
@@ -32,45 +31,58 @@ import { toast } from 'sonner';
  * - Training preferences
  */
 const ProfilePage: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, selectedProfile, selectedProfileId } = useProfile();
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editedData, setEditedData] = useState<any>({});
 
-  // Fetch registration data
+  // Fetch selected child's registration data
   useEffect(() => {
-    const unsubscribe = onAuthStateChange(async (currentUser) => {
-      setUser(currentUser);
+    const fetchRegistration = async () => {
+      if (!selectedProfileId || !user) {
+        setLoading(false);
+        return;
+      }
 
-      if (currentUser) {
-        try {
-          const { data, error } = await supabase
-            .from('registrations')
-            .select('*')
-            .eq('firebase_uid', currentUser.uid)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+      try {
+        setLoading(true);
+        setError(null);
 
-          if (error) throw error;
+        const { data, error: fetchError } = await supabase
+          .from('registrations')
+          .select('*')
+          .eq('id', selectedProfileId)
+          .eq('firebase_uid', user.uid) // Verify ownership
+          .single();
+
+        if (fetchError) {
+          if (fetchError.code === 'PGRST116') {
+            setError('Registration not found.');
+          } else {
+            throw fetchError;
+          }
+        } else {
           setRegistration(data as Registration);
           setEditedData(data.form_data);
-        } catch (err) {
-          console.error('Error fetching registration:', err);
-          toast.error('Failed to load profile data');
         }
+      } catch (err) {
+        console.error('Error fetching registration:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load profile data');
+        toast.error('Failed to load profile data');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    fetchRegistration();
+  }, [selectedProfileId, user]);
 
   // Handle save
   const handleSave = async () => {
-    if (!registration) return;
+    if (!registration || !user) return;
 
     setIsSaving(true);
     try {
@@ -80,7 +92,8 @@ const ProfilePage: React.FC = () => {
           form_data: editedData,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', registration.id);
+        .eq('id', registration.id)
+        .eq('firebase_uid', user.uid); // Verify ownership
 
       if (error) throw error;
 
@@ -107,11 +120,27 @@ const ProfilePage: React.FC = () => {
   return (
     <ProtectedRoute>
       {loading ? (
-        <DashboardLayout user={{ email: 'loading...', uid: '' } as User}>
+        <DashboardLayout user={user || ({ email: 'loading...', uid: '' } as any)}>
           <div className="space-y-6">
+            <Skeleton className="h-12 w-64" />
             <Skeleton className="h-32" />
             <Skeleton className="h-96" />
           </div>
+        </DashboardLayout>
+      ) : error ? (
+        <DashboardLayout user={user!}>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Profile</AlertTitle>
+            <AlertDescription>
+              {error}
+              <div className="mt-4">
+                <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                  Refresh Page
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
         </DashboardLayout>
       ) : !registration ? (
         <DashboardLayout user={user!}>
@@ -119,7 +148,9 @@ const ProfilePage: React.FC = () => {
             <Info className="h-4 w-4" />
             <AlertTitle>No Profile Found</AlertTitle>
             <AlertDescription>
-              Complete your registration to view your profile.
+              {!selectedProfile
+                ? 'Please select a child profile to view their profile information.'
+                : 'Complete your registration to view your profile.'}
             </AlertDescription>
           </Alert>
         </DashboardLayout>

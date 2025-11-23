@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { logoutUser } from '@/lib/authService';
 import { toast } from 'sonner';
+import ProfileSwitcher from './ProfileSwitcher';
 
 interface DashboardLayoutProps {
   user: User;
@@ -99,8 +100,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
               </nav>
             </div>
 
-            {/* User Menu */}
+            {/* Profile Switcher & User Menu */}
             <div className="flex items-center space-x-4">
+              {/* Profile Switcher (multiple children) */}
+              <ProfileSwitcher />
+
               <div className="hidden sm:flex flex-col items-end">
                 <p className="text-sm font-medium text-foreground">
                   {user.displayName || 'Parent'}
