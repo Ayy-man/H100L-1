@@ -6,18 +6,18 @@ import { createClient } from '@supabase/supabase-js';
  * POST /api/sunday-attendance
  *
  * Marks attendance for a Sunday practice booking.
- * Updates booking status to 'attended' or 'no-show'.
+ * Updates attendance status to: attended, absent, or excused
  *
  * Request Body:
  *   - bookingId: UUID of the booking
- *   - attended: boolean (true = attended, false = no-show)
+ *   - attendanceStatus: string ('attended', 'absent', or 'excused')
  *   - markedBy: string (admin name/email)
- *   - adminToken: string (admin authentication token, optional for future use)
+ *   - notes: string (optional admin notes)
  *
  * Returns:
  *   - success: boolean
  *   - booking_id: UUID
- *   - status: updated booking status
+ *   - attendance_status: updated attendance status
  *   - message: success message
  */
 
@@ -37,13 +37,13 @@ export default async function handler(
   }
 
   try {
-    const { bookingId, attended, markedBy } = req.body;
+    const { bookingId, attendanceStatus, markedBy, notes } = req.body;
 
     // Validate required fields
-    if (!bookingId || attended === undefined || !markedBy) {
+    if (!bookingId || !attendanceStatus || !markedBy) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: bookingId, attended, and markedBy',
+        error: 'Missing required fields: bookingId, attendanceStatus, and markedBy',
         code: 'MISSING_FIELDS',
       });
     }
@@ -57,11 +57,11 @@ export default async function handler(
       });
     }
 
-    if (typeof attended !== 'boolean') {
+    if (!['attended', 'absent', 'excused'].includes(attendanceStatus)) {
       return res.status(400).json({
         success: false,
-        error: 'attended must be a boolean',
-        code: 'INVALID_ATTENDED_VALUE',
+        error: 'attendanceStatus must be: attended, absent, or excused',
+        code: 'INVALID_ATTENDANCE_STATUS',
       });
     }
 
@@ -73,65 +73,40 @@ export default async function handler(
       });
     }
 
-    // Check if booking exists and is not cancelled
-    const { data: existingBooking, error: fetchError } = await supabase
-      .from('sunday_bookings')
-      .select('booking_status, slot_id')
-      .eq('id', bookingId)
-      .single();
+    // Call the database function to mark attendance
+    const { data, error } = await supabase.rpc('mark_attendance', {
+      p_booking_id: bookingId,
+      p_attendance_status: attendanceStatus,
+      p_admin_email: markedBy,
+      p_notes: notes || null,
+    });
 
-    if (fetchError || !existingBooking) {
-      return res.status(404).json({
-        success: false,
-        error: 'Booking not found',
-        code: 'BOOKING_NOT_FOUND',
-      });
-    }
-
-    if (existingBooking.booking_status === 'cancelled') {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot mark attendance for cancelled booking',
-        code: 'BOOKING_CANCELLED',
-      });
-    }
-
-    // Determine new status
-    const newStatus = attended ? 'attended' : 'no-show';
-
-    // Update the booking
-    const { data: updatedBooking, error: updateError } = await supabase
-      .from('sunday_bookings')
-      .update({
-        booking_status: newStatus,
-        attended: attended,
-        attendance_marked_at: new Date().toISOString(),
-        attendance_marked_by: markedBy,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', bookingId)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Update error:', updateError);
+    if (error) {
+      console.error('Database error:', error);
       return res.status(500).json({
         success: false,
-        error: 'Failed to update attendance',
+        error: 'Database query failed',
         code: 'DATABASE_ERROR',
-        details: updateError.message,
+        details: error.message,
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      booking_id: bookingId,
-      status: newStatus,
-      attended: attended,
-      marked_at: updatedBooking.attendance_marked_at,
-      marked_by: markedBy,
-      message: `Attendance marked as ${newStatus} successfully`,
-    });
+    // The database function returns a JSON object with success/error
+    if (!data.success) {
+      // Map error codes to appropriate HTTP status codes
+      const statusMap: Record<string, number> = {
+        BOOKING_NOT_FOUND: 404,
+        BOOKING_CANCELLED: 400,
+        INVALID_STATUS: 400,
+        DATABASE_ERROR: 500,
+      };
+
+      const statusCode = statusMap[data.code] || 400;
+      return res.status(statusCode).json(data);
+    }
+
+    // Success - return 200 with confirmation
+    return res.status(200).json(data);
   } catch (error: any) {
     console.error('Sunday attendance error:', error);
     return res.status(500).json({

@@ -10,7 +10,7 @@ import DocumentsViewer from './DocumentsViewer';
 import PlayerDocumentsSection from './PlayerDocumentsSection';
 import DocumentStatusBadge from './DocumentStatusBadge';
 import ScheduleEditModal from './ScheduleEditModal';
-import SundayRosterView from './SundayRosterView';
+import SundayRosterAdmin from './admin/SundayRosterAdmin';
 import ConfirmPaymentButton from './ConfirmPaymentButton';
 import { MedicalFiles, WeekDay, Language } from '../types';
 
@@ -1742,7 +1742,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* SUNDAY PRACTICE TAB */}
         {dashboardTab === 'sunday' && (
-          <SundayRosterView />
+          <SundayRosterAdmin />
         )}
       </div>
 

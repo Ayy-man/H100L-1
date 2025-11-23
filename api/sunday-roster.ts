@@ -62,78 +62,28 @@ export default async function handler(
       targetDate = nextSunday.toISOString().split('T')[0];
     }
 
-    // Fetch slots for the target date
-    const { data: slots, error: slotsError } = await supabase
-      .from('sunday_practice_slots')
-      .select('*')
-      .eq('practice_date', targetDate)
-      .order('start_time', { ascending: true });
-
-    if (slotsError) {
-      console.error('Slots query error:', slotsError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch practice slots',
-        code: 'DATABASE_ERROR',
-        details: slotsError.message,
-      });
-    }
-
-    if (!slots || slots.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'No slots found for this date',
-        code: 'NO_SLOTS_FOUND',
-        practice_date: targetDate,
-      });
-    }
-
-    // Fetch bookings for all slots on this date
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('sunday_bookings_detail')
-      .select('*')
-      .eq('practice_date', targetDate)
-      .order('start_time', { ascending: true });
-
-    if (bookingsError) {
-      console.error('Bookings query error:', bookingsError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch bookings',
-        code: 'DATABASE_ERROR',
-        details: bookingsError.message,
-      });
-    }
-
-    // Format the response
-    const formattedSlots = slots.map((slot) => {
-      const slotBookings = bookings?.filter((b) => b.slot_id === slot.id) || [];
-
-      return {
-        slot_id: slot.id,
-        time_range: `${formatTime(slot.start_time)} - ${formatTime(slot.end_time)}`,
-        age_range: `${slot.min_category} - ${slot.max_category}`,
-        capacity: `${slot.current_bookings}/${slot.max_capacity}`,
-        available_spots: slot.available_spots,
-        bookings: slotBookings.map((booking) => ({
-          booking_id: booking.booking_id,
-          player_name: booking.player_name,
-          player_category: booking.player_category,
-          parent_email: booking.parent_email,
-          parent_name: booking.parent_name,
-          booking_status: booking.booking_status,
-          attended: booking.attended,
-          booked_at: booking.booked_at,
-          registration_id: booking.registration_id,
-        })),
-      };
+    // Call the database function to get roster
+    const { data, error } = await supabase.rpc('get_sunday_roster', {
+      p_practice_date: targetDate,
     });
 
-    return res.status(200).json({
-      success: true,
-      practice_date: targetDate,
-      slots: formattedSlots,
-    });
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Database query failed',
+        code: 'DATABASE_ERROR',
+        details: error.message,
+      });
+    }
+
+    // The database function returns a JSON object with success/error
+    if (!data.success) {
+      return res.status(400).json(data);
+    }
+
+    // Return the roster data with stats
+    return res.status(200).json(data);
   } catch (error: any) {
     console.error('Sunday roster error:', error);
     return res.status(500).json({
