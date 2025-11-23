@@ -187,40 +187,12 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
         if (response.ok && data.success) {
           setSundayStatus(data);
-
-          // Show toast based on status
-          if (data.already_booked && data.existing_booking) {
-            toast.success('Booked', {
-              description: `You're booked for Sunday ${new Date(data.existing_booking.slot_date).toLocaleDateString()}`,
-              duration: 3000,
-            });
-          } else if (data.available_slots && data.available_slots.length > 0) {
-            const spotsRemaining = data.available_slots[0].spots_remaining;
-            if (spotsRemaining === 0) {
-              toast.error('Full', {
-                description: 'Next Sunday practice is full',
-                duration: 3000,
-              });
-            } else {
-              toast.info('Not Booked', {
-                description: `${spotsRemaining} spot(s) remaining for next Sunday`,
-                duration: 3000,
-              });
-            }
-          }
+          // Toast notifications removed - only show on user actions (book/cancel)
         } else {
           console.error('Sunday status check failed:', data);
-          toast.error('Sunday Practice', {
-            description: data.error || data.reason || 'Unable to check Sunday booking status',
-            duration: 5000,
-          });
         }
       } catch (error) {
         console.error('Failed to fetch Sunday status:', error);
-        toast.error('Error', {
-          description: 'Failed to load Sunday practice status',
-          duration: 5000,
-        });
       } finally {
         setLoadingSunday(false);
       }

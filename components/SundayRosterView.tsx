@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { parseISODateEST, formatDateEST, getTodayEST, addDaysEST, formatISODateEST, getNextSundayEST } from '@/lib/timezoneUtils';
 import {
   Table,
   TableBody,
@@ -58,9 +59,10 @@ const SundayRosterView: React.FC = () => {
 
   // Generate list of all Sundays from first Sunday of November through next 3 months
   // Updates monthly to always show 3 months ahead
+  // Uses EST timezone for consistent date handling
   const getAvailableSundays = useMemo(() => {
     const sundays: { value: string; label: string }[] = [];
-    const today = new Date();
+    const today = getTodayEST();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth();
 
@@ -76,20 +78,20 @@ const SundayRosterView: React.FC = () => {
 
     const startDate = new Date(startYear, startMonth, 1);
 
-    // Find first Sunday of start month
-    const firstSunday = new Date(startDate);
+    // Find first Sunday of start month using EST
+    let firstSunday = new Date(startDate);
     while (firstSunday.getDay() !== 0) {
-      firstSunday.setDate(firstSunday.getDate() + 1);
+      firstSunday = addDaysEST(firstSunday, 1);
     }
 
     // Generate Sundays for 3 months from first Sunday
-    let currentSunday = new Date(firstSunday);
+    let currentSunday = firstSunday;
     const endDate = new Date(firstSunday);
     endDate.setMonth(endDate.getMonth() + 3);
 
     while (currentSunday <= endDate) {
-      const dateStr = currentSunday.toISOString().split('T')[0];
-      const label = currentSunday.toLocaleDateString('en-US', {
+      const dateStr = formatISODateEST(currentSunday);
+      const label = formatDateEST(currentSunday, {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
@@ -98,8 +100,7 @@ const SundayRosterView: React.FC = () => {
       sundays.push({ value: dateStr, label: `Sunday, ${label}` });
 
       // Move to next Sunday
-      currentSunday = new Date(currentSunday);
-      currentSunday.setDate(currentSunday.getDate() + 7);
+      currentSunday = addDaysEST(currentSunday, 7);
     }
 
     return sundays;
@@ -119,14 +120,10 @@ const SundayRosterView: React.FC = () => {
     }
   };
 
-  // Calculate next Sunday on mount and fetch capacities
+  // Calculate next Sunday on mount and fetch capacities (using EST timezone)
   useEffect(() => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-    const nextSunday = new Date(today);
-    nextSunday.setDate(today.getDate() + daysUntilSunday);
-    const dateStr = nextSunday.toISOString().split('T')[0];
+    const nextSunday = getNextSundayEST();
+    const dateStr = formatISODateEST(nextSunday);
     setSelectedDate(dateStr);
     fetchRoster(dateStr);
     fetchCapacities();
@@ -334,7 +331,7 @@ const SundayRosterView: React.FC = () => {
             <p className="text-sm text-muted-foreground">
               Showing roster for:{' '}
               <span className="font-semibold text-foreground">
-                {new Date(practiceDate).toLocaleDateString('en-US', {
+                {formatDateEST(parseISODateEST(practiceDate), {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
