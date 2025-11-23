@@ -235,19 +235,21 @@ const SchedulePage: React.FC = () => {
       });
     }
 
-    // Add all Sundays for real ice
-    let currentDate = new Date(firstDay);
-    while (currentDate.getDay() !== 0 && currentDate <= lastDay) {
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
+    // Add all Sundays for real ice (Group Training only)
+    if (form_data.programType === 'group') {
+      let currentDate = new Date(firstDay);
+      while (currentDate.getDay() !== 0 && currentDate <= lastDay) {
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
 
-    while (currentDate <= lastDay) {
-      sessions.push({
-        date: new Date(currentDate),
-        day: 'Sunday',
-        type: 'real-ice',
-      });
-      currentDate.setDate(currentDate.getDate() + 7);
+      while (currentDate <= lastDay) {
+        sessions.push({
+          date: new Date(currentDate),
+          day: 'Sunday',
+          type: 'real-ice',
+        });
+        currentDate.setDate(currentDate.getDate() + 7);
+      }
     }
 
     sessions.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -695,7 +697,9 @@ const SchedulePage: React.FC = () => {
                       <ul className="space-y-1 text-sm text-muted-foreground">
                         <li>Monday - Friday: 4:30 PM - 9:30 PM</li>
                         <li>Saturday: 9:00 AM - 5:00 PM</li>
-                        <li>Sunday: 10:00 AM - 2:00 PM (Ice Practice)</li>
+                        {registration.form_data.programType === 'group' && (
+                          <li>Sunday: 10:00 AM - 2:00 PM (Ice Practice)</li>
+                        )}
                       </ul>
                     </div>
                     <div>

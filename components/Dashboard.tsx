@@ -262,8 +262,9 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Sunday Practice Card - Full Width Below Grid */}
-            {isPaymentComplete(registration.payment_status) && (
+            {/* Sunday Practice Card - Full Width Below Grid (Group Training Only) */}
+            {isPaymentComplete(registration.payment_status) &&
+              registration.form_data.programType === 'group' && (
               <SundayPracticeCard registration={registration} />
             )}
 

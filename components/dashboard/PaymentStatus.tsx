@@ -282,9 +282,11 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
               <p className="text-xs text-muted-foreground">
                 • Billed monthly, cancel anytime
               </p>
-              <p className="text-xs text-muted-foreground">
-                • Includes Sunday ice practice
-              </p>
+              {form_data.programType === 'group' && (
+                <p className="text-xs text-muted-foreground">
+                  • Includes Sunday ice practice
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 • Secure payment via Stripe
               </p>

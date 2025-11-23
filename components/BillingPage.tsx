@@ -292,10 +292,12 @@ const BillingPage: React.FC = () => {
                           'Small group training'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>Sunday real ice practice (free)</span>
-                    </div>
+                    {registration.form_data.programType === 'group' && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>Sunday real ice practice (free)</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-sm">
                       <Check className="h-4 w-4 text-green-500" />
                       <span>Professional coaching staff</span>

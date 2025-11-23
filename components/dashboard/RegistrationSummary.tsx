@@ -164,24 +164,26 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
             )}
           </div>
 
-          {/* Sunday Ice Practice Info */}
-          <div className="mt-4 p-4 rounded-lg bg-primary/10 border border-primary/20">
-            <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-primary mt-0.5" />
-              <div className="flex-1">
-                <p className="font-semibold text-foreground">Sunday Ice Practice Included</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Every Sunday on real ice at:
-                </p>
-                <p className="text-sm font-medium mt-1">
-                  7515 Boulevard Henri-Bourassa E, Montreal, Quebec H1E 1N9
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Included free with your monthly subscription
-                </p>
+          {/* Sunday Ice Practice Info (Group Training Only) */}
+          {form_data.programType === 'group' && (
+            <div className="mt-4 p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">Sunday Ice Practice Included</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Every Sunday on real ice at:
+                  </p>
+                  <p className="text-sm font-medium mt-1">
+                    7515 Boulevard Henri-Bourassa E, Montreal, Quebec H1E 1N9
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Included free with your monthly subscription
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <Separator />
