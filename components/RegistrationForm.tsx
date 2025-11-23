@@ -4,6 +4,7 @@ import { FormData, Language, ProgramType } from '../types';
 import { supabase } from '../lib/supabase';
 import { uploadMedicalFiles, validateFile } from '../lib/storageService';
 import { createFirebaseUser, isValidEmail, validatePassword } from '../lib/authService';
+import { useProfile } from '../contexts/ProfileContext';
 import ProgressIndicator from './form/ProgressIndicator';
 import FormStep1 from './form/FormStep1';
 import FormStep2 from './form/FormStep2';
@@ -17,6 +18,7 @@ interface RegistrationFormProps {
     frequency: '1x' | '2x' | '';
   };
   language?: Language;
+  mode?: 'new-parent' | 'add-child'; // new-parent: create Firebase account, add-child: use existing account
 }
 
 const initialFormData: FormData = {
@@ -40,7 +42,7 @@ const formSteps = [
   { id: 4, title: 'Review & Create Account' }
 ];
 
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram, language }) => {
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelectedProgram, language, mode = 'new-parent' }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData | 'password' | 'confirmPassword' | 'email', string>>>({});
@@ -50,6 +52,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
   // New: Password fields for account creation
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Get profile context for add-child mode
+  const { user: currentUser, refreshProfiles, selectProfile } = useProfile();
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -137,27 +142,31 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
 
     // New: Step 4 validation for account creation
     if (currentStep === 4) {
-      // Validate email
-      if (!formData.parentEmail || !isValidEmail(formData.parentEmail)) {
-        newErrors.email = 'A valid email is required for your account.';
-      }
+      // Only validate password fields for new-parent mode
+      if (mode === 'new-parent') {
+        // Validate email
+        if (!formData.parentEmail || !isValidEmail(formData.parentEmail)) {
+          newErrors.email = 'A valid email is required for your account.';
+        }
 
-      // Validate password
-      if (!password) {
-        newErrors.password = 'Password is required.';
-      } else {
-        const passwordValidation = validatePassword(password);
-        if (!passwordValidation.isValid) {
-          newErrors.password = passwordValidation.message;
+        // Validate password
+        if (!password) {
+          newErrors.password = 'Password is required.';
+        } else {
+          const passwordValidation = validatePassword(password);
+          if (!passwordValidation.isValid) {
+            newErrors.password = passwordValidation.message;
+          }
+        }
+
+        // Validate password confirmation
+        if (!confirmPassword) {
+          newErrors.confirmPassword = 'Please confirm your password.';
+        } else if (password !== confirmPassword) {
+          newErrors.confirmPassword = 'Passwords do not match.';
         }
       }
-
-      // Validate password confirmation
-      if (!confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password.';
-      } else if (password !== confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match.';
-      }
+      // In add-child mode, step 4 is just a review - no password validation needed
     }
 
     setErrors(newErrors);
@@ -225,16 +234,27 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
     setIsSubmitting(true);
 
     try {
-      // Step 1: Create Firebase user
-      console.log('Creating Firebase user...');
-      const userCredential = await createFirebaseUser(
-        formData.parentEmail,
-        password,
-        formData.parentFullName
-      );
+      let firebaseUid: string;
 
-      const firebaseUid = userCredential.user.uid;
-      console.log('Firebase user created:', firebaseUid);
+      // Step 1: Handle Firebase user based on mode
+      if (mode === 'add-child') {
+        // Add-child mode: use existing logged-in user
+        if (!currentUser) {
+          throw new Error('You must be logged in to add a child. Please log in and try again.');
+        }
+        firebaseUid = currentUser.uid;
+        console.log('Adding child to existing account:', firebaseUid);
+      } else {
+        // New-parent mode: create new Firebase user
+        console.log('Creating Firebase user...');
+        const userCredential = await createFirebaseUser(
+          formData.parentEmail,
+          password,
+          formData.parentFullName
+        );
+        firebaseUid = userCredential.user.uid;
+        console.log('Firebase user created:', firebaseUid);
+      }
 
       // Step 2: Upload files to Supabase Storage if any are provided
       const tempRegistrationId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -284,10 +304,21 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
 
       console.log('Registration created:', registrationData.id);
 
-      // Success! Clear form data and redirect to dashboard
+      // Success! Clear form data
       localStorage.removeItem('registrationFormData');
 
-      alert('✅ Account Created Successfully!\n\nRedirecting to your dashboard where you can complete payment.');
+      // Handle success based on mode
+      if (mode === 'add-child') {
+        // Add-child mode: refresh profiles and select new child
+        console.log('Refreshing profiles and selecting new child...');
+        await refreshProfiles();
+        selectProfile(registrationData.id);
+
+        alert('✅ Child Added Successfully!\n\nRedirecting to your dashboard where you can complete payment for this registration.');
+      } else {
+        // New-parent mode: just show success message
+        alert('✅ Account Created Successfully!\n\nRedirecting to your dashboard where you can complete payment.');
+      }
 
       // Redirect to dashboard
       window.location.href = '/dashboard';
@@ -365,6 +396,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                         onPasswordChange={setPassword}
                         onConfirmPasswordChange={setConfirmPassword}
                         errors={errors}
+                        mode={mode}
                       />
                     )}
                 </motion.div>
@@ -389,7 +421,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                   disabled={isSubmitting}
                   className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'Creating Account...' : 'Create Account & Continue'}
+                  {isSubmitting
+                    ? (mode === 'add-child' ? 'Adding Child...' : 'Creating Account...')
+                    : (mode === 'add-child' ? 'Add Child & Continue' : 'Create Account & Continue')
+                  }
                 </button>
             )}
         </div>

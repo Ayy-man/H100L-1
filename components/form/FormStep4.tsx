@@ -18,6 +18,7 @@ interface FormStep4Props {
     confirmPassword?: string;
     email?: string;
   };
+  mode?: 'new-parent' | 'add-child';
 }
 
 const SummaryItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -34,6 +35,7 @@ const FormStep4: React.FC<FormStep4Props> = ({
   onPasswordChange,
   onConfirmPasswordChange,
   errors,
+  mode = 'new-parent',
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -187,114 +189,150 @@ const FormStep4: React.FC<FormStep4Props> = ({
         </CardContent>
       </Card>
 
-      {/* Account Creation Section */}
-      <Card className="border-[#9BD4FF]/20 bg-[#9BD4FF]/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <svg
-              className="w-6 h-6 text-[#9BD4FF]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            Create Your Account
-          </CardTitle>
-          <CardDescription>
-            Set up your account to access your dashboard and complete payment
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Email (Pre-filled, read-only) */}
-            <div className="space-y-2">
-              <Label htmlFor="account-email">Email Address</Label>
-              <Input
-                id="account-email"
-                type="email"
-                value={data.parentEmail}
-                disabled
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">
-                This will be your login email
-              </p>
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="account-password">
-                Password <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="account-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => onPasswordChange(e.target.value)}
-                  placeholder="Create a strong password"
-                  className={errors.password ? 'border-destructive' : ''}
+      {/* Account Creation Section - Conditional based on mode */}
+      {mode === 'new-parent' ? (
+        <Card className="border-[#9BD4FF]/20 bg-[#9BD4FF]/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg
+                className="w-6 h-6 text-[#9BD4FF]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Must be at least 6 characters long
-              </p>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">
-                Confirm Password <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
+              </svg>
+              Create Your Account
+            </CardTitle>
+            <CardDescription>
+              Set up your account to access your dashboard and complete payment
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Email (Pre-filled, read-only) */}
+              <div className="space-y-2">
+                <Label htmlFor="account-email">Email Address</Label>
                 <Input
-                  id="confirm-password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => onConfirmPasswordChange(e.target.value)}
-                  placeholder="Re-enter your password"
-                  className={errors.confirmPassword ? 'border-destructive' : ''}
+                  id="account-email"
+                  type="email"
+                  value={data.parentEmail}
+                  disabled
+                  className="bg-muted"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                <p className="text-xs text-muted-foreground">
+                  This will be your login email
+                </p>
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
               </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-              )}
-            </div>
 
-            <div className="pt-4 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                ✅ After creating your account, you'll be redirected to your dashboard where you can complete payment and manage your registration.
-              </p>
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="account-password">
+                  Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="account-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => onPasswordChange(e.target.value)}
+                    placeholder="Create a strong password"
+                    className={errors.password ? 'border-destructive' : ''}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 6 characters long
+                </p>
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password}</p>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">
+                  Confirm Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => onConfirmPasswordChange(e.target.value)}
+                    placeholder="Re-enter your password"
+                    className={errors.confirmPassword ? 'border-destructive' : ''}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  ✅ After creating your account, you'll be redirected to your dashboard where you can complete payment and manage your registration.
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-green-500/20 bg-green-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Check className="w-6 h-6 text-green-500" />
+              Add to Your Account
+            </CardTitle>
+            <CardDescription>
+              This child will be added to your existing account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Parent Email</Label>
+                <Input
+                  type="email"
+                  value={data.parentEmail}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Using your existing account credentials
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  ✅ This child will be added to your account. You can switch between your children from the dashboard and manage their registrations separately.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
