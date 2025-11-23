@@ -686,7 +686,7 @@ CREATE POLICY parent_access ON public.registrations
   FOR SELECT
   USING (
     firebase_uid = current_setting('request.jwt.claims', true)::json->>'sub'
-    OR auth.uid() = firebase_uid
+    OR auth.uid()::text = firebase_uid
   );
 
 CREATE POLICY parent_sunday_bookings_access ON public.sunday_bookings
@@ -695,7 +695,7 @@ CREATE POLICY parent_sunday_bookings_access ON public.sunday_bookings
     registration_id IN (
       SELECT id FROM public.registrations
       WHERE firebase_uid = current_setting('request.jwt.claims', true)::json->>'sub'
-         OR auth.uid() = firebase_uid
+         OR auth.uid()::text = firebase_uid
     )
   );
 
