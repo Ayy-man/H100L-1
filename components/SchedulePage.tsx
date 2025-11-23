@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from './dashboard/DashboardLayout';
@@ -49,6 +51,15 @@ import { toast } from 'sonner';
  * - Request schedule changes
  * - View session details
  */
+interface SundaySlotStatus {
+  date: string;
+  booked: boolean;
+  bookingId?: string;
+  availableSpots: number;
+  maxCapacity: number;
+  slotId?: string;
+}
+
 const SchedulePage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -56,6 +67,50 @@ const SchedulePage: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isChangeDialogOpen, setIsChangeDialogOpen] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [sundayStatuses, setSundayStatuses] = useState<Map<string, SundaySlotStatus>>(new Map());
+
+  // Fetch Sunday slot statuses for the current month
+  const fetchSundayStatuses = async () => {
+    if (!registration) return;
+
+    try {
+      const response = await fetch(
+        `/api/sunday-upcoming-slots?registrationId=${registration.id}&firebaseUid=${registration.firebase_uid}&weeks=8`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success && data.weeks) {
+        const statusMap = new Map<string, SundaySlotStatus>();
+
+        data.weeks.forEach((week: any) => {
+          if (week.slots && week.slots.length > 0) {
+            // Find the slot player is booked for or get first available
+            const bookedSlot = week.slots.find((s: any) => s.player_booked);
+            const firstSlot = week.slots[0];
+            const slotToUse = bookedSlot || firstSlot;
+
+            statusMap.set(week.date, {
+              date: week.date,
+              booked: !!bookedSlot,
+              bookingId: bookedSlot?.booking_id,
+              availableSpots: slotToUse.available_spots,
+              maxCapacity: slotToUse.max_capacity,
+              slotId: slotToUse.slot_id,
+            });
+          }
+        });
+
+        setSundayStatuses(statusMap);
+      }
+    } catch (error) {
+      console.error('Error fetching Sunday statuses:', error);
+    }
+  };
 
   // Fetch registration data
   useEffect(() => {
@@ -84,6 +139,13 @@ const SchedulePage: React.FC = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // Fetch Sunday statuses when registration or month changes
+  useEffect(() => {
+    if (registration) {
+      fetchSundayStatuses();
+    }
+  }, [registration, currentMonth]);
 
   // Get all sessions for the current month
   const getMonthSessions = () => {
@@ -447,6 +509,23 @@ const SchedulePage: React.FC = () => {
                     const isToday =
                       day.date.toDateString() === today.toDateString();
                     const hasSessions = day.sessions.length > 0;
+                    const isSunday = day.date.getDay() === 0;
+                    const dateStr = day.date.toISOString().split('T')[0];
+                    const sundayStatus = sundayStatuses.get(dateStr);
+
+                    // Determine Sunday cell styling
+                    let sundayBorderColor = '';
+                    if (isSunday && day.isCurrentMonth && sundayStatus) {
+                      if (sundayStatus.booked) {
+                        sundayBorderColor = 'border-green-400 border-2';
+                      } else if (sundayStatus.availableSpots === 0) {
+                        sundayBorderColor = 'border-red-400 border-2';
+                      } else if (sundayStatus.availableSpots <= 2) {
+                        sundayBorderColor = 'border-yellow-400 border-2';
+                      } else {
+                        sundayBorderColor = 'border-blue-400 border-2';
+                      }
+                    }
 
                     return (
                       <div
@@ -459,7 +538,7 @@ const SchedulePage: React.FC = () => {
                             : hasSessions
                             ? 'bg-card hover:bg-accent cursor-pointer'
                             : 'bg-card'
-                        }`}
+                        } ${sundayBorderColor}`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span
@@ -469,7 +548,7 @@ const SchedulePage: React.FC = () => {
                           >
                             {day.date.getDate()}
                           </span>
-                          {hasSessions && (
+                          {hasSessions && !isSunday && (
                             <Badge variant="secondary" className="h-5 text-xs px-1">
                               {day.sessions.length}
                             </Badge>
@@ -477,15 +556,55 @@ const SchedulePage: React.FC = () => {
                         </div>
                         <div className="space-y-1">
                           {day.sessions.slice(0, 2).map((session, idx) => (
-                            <div
-                              key={idx}
-                              className={`text-xs p-1 rounded ${
-                                session.type === 'real-ice'
-                                  ? 'bg-primary/20 text-primary'
-                                  : 'bg-secondary/50 text-secondary-foreground'
-                              }`}
-                            >
-                              {session.type === 'real-ice' ? '🧊 Ice' : '🏒 Training'}
+                            <div key={idx}>
+                              {session.type === 'real-ice' && sundayStatus ? (
+                                // Enhanced Sunday display
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <div className={`text-xs p-1 rounded flex items-center gap-1 ${
+                                      sundayStatus.booked
+                                        ? 'bg-green-100 text-green-700'
+                                        : sundayStatus.availableSpots === 0
+                                        ? 'bg-red-100 text-red-700'
+                                        : sundayStatus.availableSpots <= 2
+                                        ? 'bg-yellow-100 text-yellow-700'
+                                        : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                      {sundayStatus.booked ? (
+                                        <>
+                                          <CheckCircle className="h-3 w-3" />
+                                          <span>Booked</span>
+                                        </>
+                                      ) : sundayStatus.availableSpots === 0 ? (
+                                        <>
+                                          <XCircle className="h-3 w-3" />
+                                          <span>Full</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          🧊 Ice
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {!sundayStatus.booked && sundayStatus.availableSpots > 0 && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {sundayStatus.availableSpots} {sundayStatus.availableSpots === 1 ? 'spot' : 'spots'} left
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                // Regular session display
+                                <div
+                                  className={`text-xs p-1 rounded ${
+                                    session.type === 'real-ice'
+                                      ? 'bg-primary/20 text-primary'
+                                      : 'bg-secondary/50 text-secondary-foreground'
+                                  }`}
+                                >
+                                  {session.type === 'real-ice' ? '🧊 Ice' : '🏒 Training'}
+                                </div>
+                              )}
                             </div>
                           ))}
                           {day.sessions.length > 2 && (

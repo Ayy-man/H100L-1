@@ -10,6 +10,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Registration } from '@/types';
 import {
@@ -209,6 +220,35 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
     return available;
   };
 
+  // Helper function to get capacity status information
+  const getCapacityStatus = (availableSpots: number, maxCapacity: number) => {
+    if (availableSpots === 0) {
+      return {
+        text: 'Fully Booked',
+        bgColor: 'bg-red-50',
+        textColor: 'text-red-700',
+        borderColor: 'border-red-200',
+        badgeVariant: 'destructive' as const,
+      };
+    } else if (availableSpots <= 2) {
+      return {
+        text: `Almost Full - ${availableSpots} spot${availableSpots === 1 ? '' : 's'} left`,
+        bgColor: 'bg-yellow-50',
+        textColor: 'text-yellow-700',
+        borderColor: 'border-yellow-200',
+        badgeVariant: 'secondary' as const,
+      };
+    } else {
+      return {
+        text: `${availableSpots} spots remaining`,
+        bgColor: 'bg-green-50',
+        textColor: 'text-green-700',
+        borderColor: 'border-green-200',
+        badgeVariant: 'default' as const,
+      };
+    }
+  };
+
   // Load data on mount
   useEffect(() => {
     fetchNextSlot();
@@ -318,21 +358,55 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
                 </div>
               </div>
 
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Capacity</p>
+                  <p className="text-base font-semibold text-foreground">
+                    {slot.current_bookings}/{slot.max_capacity} spots filled
+                  </p>
+                </div>
+              </div>
+
               {slot.booking_id && (
                 <>
                   <Separator />
-                  {/* Cancel Button */}
+                  {/* Cancel Button with Confirmation Dialog */}
                   {canCancelBooking(new Date(week.date)) && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleCancel(slot.booking_id!)}
-                      disabled={actionLoading}
-                      className="w-full"
-                    >
-                      <XCircle className="mr-2 h-4 w-4" />
-                      {actionLoading ? 'Cancelling...' : 'Cancel Booking'}
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          disabled={actionLoading}
+                          className="w-full text-destructive hover:text-destructive"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Cancel Booking
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Cancel Sunday Practice Booking?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to cancel your booking for {formatPracticeDate(new Date(week.date))} at {slot.time_range}?
+                            This will free up your spot for other players.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleCancel(slot.booking_id!)}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            {actionLoading ? 'Cancelling...' : 'Yes, Cancel Booking'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
+                  <p className="text-xs text-muted-foreground text-center">
+                    ℹ️ You can cancel anytime before the practice
+                  </p>
                 </>
               )}
             </div>
@@ -398,46 +472,48 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
                   </div>
 
                   {/* Slots for this week */}
-                  {weekAvailableSlots.map(({ slot }) => (
-                    <div
-                      key={slot.slot_id}
-                      className="p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <p className="font-semibold text-base">{slot.time_range}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Ages: {slot.min_category} - {slot.max_category}
-                          </p>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={`flex items-center gap-1 ${
-                            slot.available_spots === 0
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : slot.available_spots <= 2
-                              ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                              : 'bg-green-50 text-green-700 border-green-200'
-                          }`}
-                        >
-                          <Users className="h-3 w-3" />
-                          {slot.available_spots}/{slot.max_capacity}
-                        </Badge>
-                      </div>
-
-                      <Button
-                        onClick={() => handleBook(slot.slot_id)}
-                        disabled={actionLoading || slot.available_spots === 0}
-                        className="w-full"
+                  {weekAvailableSlots.map(({ slot }) => {
+                    const capacityStatus = getCapacityStatus(slot.available_spots, slot.max_capacity);
+                    return (
+                      <div
+                        key={slot.slot_id}
+                        className="p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors"
                       >
-                        {actionLoading
-                          ? 'Booking...'
-                          : slot.available_spots === 0
-                          ? 'Fully Booked'
-                          : 'Book This Slot'}
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex-1">
+                            <p className="font-semibold text-base">{slot.time_range}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Ages: {slot.min_category} - {slot.max_category}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={capacityStatus.badgeVariant}
+                            className={`flex items-center gap-1 ${capacityStatus.bgColor} ${capacityStatus.textColor} ${capacityStatus.borderColor}`}
+                          >
+                            <Users className="h-3 w-3" />
+                            {slot.available_spots}/{slot.max_capacity}
+                          </Badge>
+                        </div>
+
+                        {/* Capacity Status Text */}
+                        <div className={`mb-3 p-2 rounded text-center text-sm font-medium ${capacityStatus.bgColor} ${capacityStatus.textColor}`}>
+                          {capacityStatus.text}
+                        </div>
+
+                        <Button
+                          onClick={() => handleBook(slot.slot_id)}
+                          disabled={actionLoading || slot.available_spots === 0}
+                          className="w-full"
+                        >
+                          {actionLoading
+                            ? 'Booking...'
+                            : slot.available_spots === 0
+                            ? 'Fully Booked'
+                            : 'Book My Spot'}
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
