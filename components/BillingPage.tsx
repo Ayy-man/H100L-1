@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
 import {
   CreditCard,
   Check,
@@ -24,7 +23,7 @@ import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { supabase } from '@/lib/supabase';
-import { onAuthStateChange } from '@/lib/authService';
+import { useProfile } from '@/contexts/ProfileContext';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
 
@@ -38,37 +37,50 @@ import { toast } from 'sonner';
  * - Subscription management
  */
 const BillingPage: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, selectedProfile, selectedProfileId } = useProfile();
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch registration data
+  // Fetch selected child's registration data
   useEffect(() => {
-    const unsubscribe = onAuthStateChange(async (currentUser) => {
-      setUser(currentUser);
-
-      if (currentUser) {
-        try {
-          const { data, error } = await supabase
-            .from('registrations')
-            .select('*')
-            .eq('firebase_uid', currentUser.uid)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (error) throw error;
-          setRegistration(data as Registration);
-        } catch (err) {
-          console.error('Error fetching registration:', err);
-          toast.error('Failed to load billing data');
-        }
+    const fetchRegistration = async () => {
+      if (!selectedProfileId || !user) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    });
 
-    return () => unsubscribe();
-  }, []);
+      try {
+        setLoading(true);
+        setError(null);
+
+        const { data, error: fetchError } = await supabase
+          .from('registrations')
+          .select('*')
+          .eq('id', selectedProfileId)
+          .eq('firebase_uid', user.uid) // Verify ownership
+          .single();
+
+        if (fetchError) {
+          if (fetchError.code === 'PGRST116') {
+            setError('Registration not found.');
+          } else {
+            throw fetchError;
+          }
+        } else {
+          setRegistration(data as Registration);
+        }
+      } catch (err) {
+        console.error('Error fetching registration:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load billing data');
+        toast.error('Failed to load billing data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRegistration();
+  }, [selectedProfileId, user]);
 
   // Calculate monthly price
   const getMonthlyPrice = () => {
@@ -164,11 +176,27 @@ const BillingPage: React.FC = () => {
   return (
     <ProtectedRoute>
       {loading ? (
-        <DashboardLayout user={{ email: 'loading...', uid: '' } as User}>
+        <DashboardLayout user={user || ({ email: 'loading...', uid: '' } as any)}>
           <div className="space-y-6">
+            <Skeleton className="h-12 w-64" />
             <Skeleton className="h-32" />
             <Skeleton className="h-96" />
           </div>
+        </DashboardLayout>
+      ) : error ? (
+        <DashboardLayout user={user!}>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Billing Information</AlertTitle>
+            <AlertDescription>
+              {error}
+              <div className="mt-4">
+                <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                  Refresh Page
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
         </DashboardLayout>
       ) : !registration ? (
         <DashboardLayout user={user!}>
@@ -176,7 +204,9 @@ const BillingPage: React.FC = () => {
             <Info className="h-4 w-4" />
             <AlertTitle>No Billing Information</AlertTitle>
             <AlertDescription>
-              Complete your registration to view billing information.
+              {!selectedProfile
+                ? 'Please select a child profile to view billing information.'
+                : 'Complete your registration to view billing information.'}
             </AlertDescription>
           </Alert>
         </DashboardLayout>

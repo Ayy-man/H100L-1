@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -10,6 +9,7 @@ import {
   Info,
   CheckCircle,
   XCircle,
+  AlertCircle,
 } from 'lucide-react';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from './dashboard/DashboardLayout';
@@ -38,7 +38,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Skeleton } from './ui/skeleton';
 import { supabase } from '@/lib/supabase';
-import { onAuthStateChange } from '@/lib/authService';
+import { useProfile } from '@/contexts/ProfileContext';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
 
@@ -61,9 +61,10 @@ interface SundaySlotStatus {
 }
 
 const SchedulePage: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, selectedProfile, selectedProfileId } = useProfile();
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isChangeDialogOpen, setIsChangeDialogOpen] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -112,33 +113,45 @@ const SchedulePage: React.FC = () => {
     }
   };
 
-  // Fetch registration data
+  // Fetch selected child's registration data
   useEffect(() => {
-    const unsubscribe = onAuthStateChange(async (currentUser) => {
-      setUser(currentUser);
-
-      if (currentUser) {
-        try {
-          const { data, error } = await supabase
-            .from('registrations')
-            .select('*')
-            .eq('firebase_uid', currentUser.uid)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (error) throw error;
-          setRegistration(data as Registration);
-        } catch (err) {
-          console.error('Error fetching registration:', err);
-          toast.error('Failed to load schedule data');
-        }
+    const fetchRegistration = async () => {
+      if (!selectedProfileId || !user) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    });
 
-    return () => unsubscribe();
-  }, []);
+      try {
+        setLoading(true);
+        setError(null);
+
+        const { data, error: fetchError } = await supabase
+          .from('registrations')
+          .select('*')
+          .eq('id', selectedProfileId)
+          .eq('firebase_uid', user.uid) // Verify ownership
+          .single();
+
+        if (fetchError) {
+          if (fetchError.code === 'PGRST116') {
+            setError('Registration not found.');
+          } else {
+            throw fetchError;
+          }
+        } else {
+          setRegistration(data as Registration);
+        }
+      } catch (err) {
+        console.error('Error fetching registration:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load schedule data');
+        toast.error('Failed to load schedule data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRegistration();
+  }, [selectedProfileId, user]);
 
   // Fetch Sunday statuses when registration or month changes
   useEffect(() => {
@@ -312,8 +325,31 @@ const SchedulePage: React.FC = () => {
   return (
     <ProtectedRoute>
       {loading ? (
-        <DashboardLayout user={{ email: 'loading...', uid: '' } as User}>
-          <Skeleton className="h-96" />
+        <DashboardLayout user={user || ({ email: 'loading...', uid: '' } as any)}>
+          <div className="space-y-6">
+            <Skeleton className="h-12 w-64" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+            </div>
+            <Skeleton className="h-96" />
+          </div>
+        </DashboardLayout>
+      ) : error ? (
+        <DashboardLayout user={user!}>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Schedule</AlertTitle>
+            <AlertDescription>
+              {error}
+              <div className="mt-4">
+                <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                  Refresh Page
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
         </DashboardLayout>
       ) : !registration ? (
         <DashboardLayout user={user!}>
@@ -321,7 +357,9 @@ const SchedulePage: React.FC = () => {
             <Info className="h-4 w-4" />
             <AlertTitle>No Schedule Found</AlertTitle>
             <AlertDescription>
-              Complete your registration to view your training schedule.
+              {!selectedProfile
+                ? 'Please select a child profile to view their training schedule.'
+                : 'Complete your registration to view your training schedule.'}
             </AlertDescription>
           </Alert>
         </DashboardLayout>
