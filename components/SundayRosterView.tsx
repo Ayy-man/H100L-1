@@ -334,7 +334,7 @@ const SundayRosterView: React.FC = () => {
             <p className="text-sm text-muted-foreground">
               Showing roster for:{' '}
               <span className="font-semibold text-foreground">
-                {new Date(practiceDate).toLocaleDateString('en-US', {
+                {new Date(practiceDate + 'T12:00:00').toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
                   month: 'long',
