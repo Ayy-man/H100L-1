@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -27,15 +26,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireProfile = true,
 }) => {
   const { user, children: profiles, selectedProfileId, loading } = useProfile();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     if (loading) return;
 
     // Not authenticated - redirect to login
     if (!user) {
-      navigate('/login', { replace: true });
+      window.location.href = '/login';
       return;
     }
 
@@ -44,8 +41,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       // Has multiple children but no profile selected - redirect to selection screen
       if (profiles.length > 1 && !selectedProfileId) {
         // Don't redirect if already on select-profile page
-        if (location.pathname !== '/select-profile') {
-          navigate('/select-profile', { replace: true });
+        if (window.location.pathname !== '/select-profile') {
+          window.location.href = '/select-profile';
         }
         return;
       }
@@ -54,12 +51,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       if (profiles.length > 0 && selectedProfileId) {
         const profileExists = profiles.find(p => p.registrationId === selectedProfileId);
         if (!profileExists) {
-          navigate('/select-profile', { replace: true });
+          window.location.href = '/select-profile';
           return;
         }
       }
     }
-  }, [user, profiles, selectedProfileId, loading, requireProfile, navigate, location]);
+  }, [user, profiles, selectedProfileId, loading, requireProfile]);
 
   // Show loading skeleton while checking auth and profiles
   if (loading) {

@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, Plus, User } from 'lucide-react';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -21,15 +20,14 @@ import { Skeleton } from './ui/skeleton';
  */
 const ProfileSelectionScreen: React.FC = () => {
   const { children, selectProfile, loading, user } = useProfile();
-  const navigate = useNavigate();
 
   const handleSelectProfile = (profileId: string) => {
     selectProfile(profileId);
-    navigate('/dashboard');
+    window.location.href = '/dashboard';
   };
 
   const handleAddChild = () => {
-    navigate('/register?mode=add-child');
+    window.location.href = '/register?mode=add-child';
   };
 
   if (loading) {

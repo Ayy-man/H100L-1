@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Check, ChevronDown, Plus, User } from 'lucide-react';
 import { useProfile } from '@/contexts/ProfileContext';
 import {
@@ -27,7 +26,6 @@ import { Badge } from '@/components/ui/badge';
  */
 const ProfileSwitcher: React.FC = () => {
   const { children, selectedProfile, selectedProfileId, selectProfile } = useProfile();
-  const navigate = useNavigate();
 
   const handleSwitchProfile = (profileId: string) => {
     selectProfile(profileId);
@@ -36,11 +34,11 @@ const ProfileSwitcher: React.FC = () => {
   };
 
   const handleAddChild = () => {
-    navigate('/register?mode=add-child');
+    window.location.href = '/register?mode=add-child';
   };
 
   const handleManageProfiles = () => {
-    navigate('/select-profile');
+    window.location.href = '/select-profile';
   };
 
   // Don't show switcher if only one child
