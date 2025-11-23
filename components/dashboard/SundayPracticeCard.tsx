@@ -34,6 +34,14 @@ interface AvailableSlot {
   max_category: string;
   available_spots: number;
   max_capacity: number;
+  current_bookings: number;
+  player_booked: boolean;
+  booking_id?: string;
+}
+
+interface WeekSlots {
+  date: string;
+  slots: AvailableSlot[];
 }
 
 /**
@@ -52,28 +60,25 @@ interface AvailableSlot {
 const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration }) => {
   const [loading, setLoading] = useState(true);
   const [eligible, setEligible] = useState(false);
-  const [alreadyBooked, setAlreadyBooked] = useState(false);
-  const [existingBookingId, setExistingBookingId] = useState<string | null>(null);
-  const [nextSunday, setNextSunday] = useState<Date | null>(null);
-  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [upcomingWeeks, setUpcomingWeeks] = useState<WeekSlots[]>([]);
   const [ineligibleReason, setIneligibleReason] = useState<string>('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Fetch eligibility and available slots
+  // Fetch eligibility and available slots for next 2 weeks
   const fetchNextSlot = async () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/sunday-next-slot?registrationId=${registration.id}&firebaseUid=${registration.firebase_uid}`,
+        `/api/sunday-upcoming-slots?registrationId=${registration.id}&firebaseUid=${registration.firebase_uid}&weeks=2`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         }
       );
 
-      const data: NextSlotResponse = await response.json();
+      const data = await response.json();
 
-      console.log('Sunday next slot response:', data);
+      console.log('Sunday upcoming slots response:', data);
 
       if (!response.ok) {
         console.error('API error:', data);
@@ -83,7 +88,7 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
       }
 
       if (!data.success) {
-        console.error('Failed to fetch next slot:', data);
+        console.error('Failed to fetch upcoming slots:', data);
         setEligible(false);
         setIneligibleReason(data.reason || data.error || 'Unable to check eligibility');
         return;
@@ -96,20 +101,14 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
         return;
       }
 
-      setAlreadyBooked(data.already_booked || false);
-      setExistingBookingId(data.booking_id || null);
-
-      if (data.next_sunday) {
-        setNextSunday(new Date(data.next_sunday));
-      }
-
-      if (data.available_slots && data.available_slots.length > 0) {
-        setAvailableSlots(data.available_slots);
+      // Process weeks data
+      if (data.weeks && data.weeks.length > 0) {
+        setUpcomingWeeks(data.weeks);
       } else {
-        setAvailableSlots([]);
+        setUpcomingWeeks([]);
       }
     } catch (error) {
-      console.error('Error fetching next slot:', error);
+      console.error('Error fetching upcoming slots:', error);
       toast.error('Failed to load Sunday practice information');
       setEligible(false);
     } finally {
@@ -151,8 +150,8 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
   };
 
   // Cancel a booking
-  const handleCancel = async () => {
-    if (!existingBookingId) return;
+  const handleCancel = async (bookingId: string) => {
+    if (!bookingId) return;
 
     setActionLoading(true);
     try {
@@ -160,7 +159,7 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bookingId: existingBookingId,
+          bookingId,
           firebaseUid: registration.firebase_uid,
         }),
       });
@@ -182,6 +181,32 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
     } finally {
       setActionLoading(false);
     }
+  };
+
+  // Get all booked slots across all weeks
+  const getBookedSlots = () => {
+    const booked: Array<{ week: WeekSlots; slot: AvailableSlot }> = [];
+    upcomingWeeks.forEach((week) => {
+      week.slots?.forEach((slot) => {
+        if (slot.player_booked) {
+          booked.push({ week, slot });
+        }
+      });
+    });
+    return booked;
+  };
+
+  // Get all available (not booked) slots across all weeks
+  const getAvailableSlots = () => {
+    const available: Array<{ week: WeekSlots; slot: AvailableSlot }> = [];
+    upcomingWeeks.forEach((week) => {
+      week.slots?.forEach((slot) => {
+        if (!slot.player_booked) {
+          available.push({ week, slot });
+        }
+      });
+    });
+    return available;
   };
 
   // Load data on mount
@@ -229,8 +254,11 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
     );
   }
 
-  // Already booked
-  if (alreadyBooked) {
+  const bookedSlots = getBookedSlots();
+  const availableSlots = getAvailableSlots();
+
+  // Already booked - show existing bookings
+  if (bookedSlots.length > 0) {
     return (
       <Card className="border-primary/50">
         <CardHeader>
@@ -255,29 +283,27 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
           </div>
 
           {/* Practice Details */}
-          {nextSunday && (
-            <div className="space-y-3">
+          {bookedSlots.map(({ week, slot }) => (
+            <div key={slot.slot_id} className="space-y-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Date</p>
                   <p className="text-base font-semibold text-foreground">
-                    {formatPracticeDate(nextSunday)}
+                    {formatPracticeDate(new Date(week.date))}
                   </p>
                 </div>
               </div>
 
-              {availableSlots.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Time</p>
-                    <p className="text-base font-semibold text-foreground">
-                      {availableSlots[0].time_range}
-                    </p>
-                  </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Time</p>
+                  <p className="text-base font-semibold text-foreground">
+                    {slot.time_range}
+                  </p>
                 </div>
-              )}
+              </div>
 
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -291,23 +317,26 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
                   </p>
                 </div>
               </div>
+
+              {slot.booking_id && (
+                <>
+                  <Separator />
+                  {/* Cancel Button */}
+                  {canCancelBooking(new Date(week.date)) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleCancel(slot.booking_id!)}
+                      disabled={actionLoading}
+                      className="w-full"
+                    >
+                      <XCircle className="mr-2 h-4 w-4" />
+                      {actionLoading ? 'Cancelling...' : 'Cancel Booking'}
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
-          )}
-
-          <Separator />
-
-          {/* Cancel Button */}
-          {nextSunday && canCancelBooking(nextSunday) && (
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              disabled={actionLoading}
-              className="w-full"
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              {actionLoading ? 'Cancelling...' : 'Cancel Booking'}
-            </Button>
-          )}
+          ))}
 
           {/* Important Notes */}
           <div className="p-3 rounded-lg bg-muted/50 border border-border">
@@ -336,50 +365,82 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Next Sunday Info */}
-        {nextSunday && (
-          <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              <p className="font-semibold text-sm">Next Sunday</p>
-            </div>
-            <p className="text-base font-bold text-foreground">
-              {formatPracticeDate(nextSunday)}
-            </p>
-          </div>
-        )}
-
-        {/* Available Time Slots */}
+        {/* Available Time Slots - Grouped by Week */}
         {availableSlots.length > 0 ? (
-          <div className="space-y-3">
-            <p className="font-semibold text-sm">Select Your Time Slot</p>
-            {availableSlots.map((slot) => (
-              <div
-                key={slot.slot_id}
-                className="p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="font-semibold text-base">{slot.time_range}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Ages: {slot.min_category} - {slot.max_category}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {slot.available_spots}/{slot.max_capacity}
-                  </Badge>
-                </div>
+          <div className="space-y-4">
+            <p className="font-semibold text-sm">Next 2 Sundays - Select Your Time Slot</p>
 
-                <Button
-                  onClick={() => handleBook(slot.slot_id)}
-                  disabled={actionLoading || slot.available_spots === 0}
-                  className="w-full"
-                >
-                  {actionLoading ? 'Booking...' : slot.available_spots === 0 ? 'Fully Booked' : 'Book This Slot'}
-                </Button>
-              </div>
-            ))}
+            {/* Group slots by week */}
+            {upcomingWeeks.map((week, weekIndex) => {
+              const weekAvailableSlots = availableSlots.filter(
+                (item) => item.week.date === week.date
+              );
+
+              if (weekAvailableSlots.length === 0) return null;
+
+              return (
+                <div key={week.date} className="space-y-3">
+                  {/* Week Header */}
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <div>
+                          <p className="font-semibold text-sm">
+                            {weekIndex === 0 ? 'This Sunday' : 'Next Sunday'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatPracticeDate(new Date(week.date))}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Slots for this week */}
+                  {weekAvailableSlots.map(({ slot }) => (
+                    <div
+                      key={slot.slot_id}
+                      className="p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="font-semibold text-base">{slot.time_range}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Ages: {slot.min_category} - {slot.max_category}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`flex items-center gap-1 ${
+                            slot.available_spots === 0
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : slot.available_spots <= 2
+                              ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                              : 'bg-green-50 text-green-700 border-green-200'
+                          }`}
+                        >
+                          <Users className="h-3 w-3" />
+                          {slot.available_spots}/{slot.max_capacity}
+                        </Badge>
+                      </div>
+
+                      <Button
+                        onClick={() => handleBook(slot.slot_id)}
+                        disabled={actionLoading || slot.available_spots === 0}
+                        className="w-full"
+                      >
+                        {actionLoading
+                          ? 'Booking...'
+                          : slot.available_spots === 0
+                          ? 'Fully Booked'
+                          : 'Book This Slot'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="p-4 rounded-lg bg-muted/50 border border-border text-center">
@@ -414,7 +475,7 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
           </p>
           <ul className="space-y-1 text-xs text-blue-700">
             <li>• Sunday practice is FREE and included with your subscription</li>
-            <li>• You can only book the next upcoming Sunday</li>
+            <li>• You can book for either of the next 2 upcoming Sundays</li>
             <li>• Cancel anytime before the practice if plans change</li>
             <li>• Arrive 15 minutes early with full equipment</li>
           </ul>

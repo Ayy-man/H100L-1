@@ -54,6 +54,7 @@ const SundayRosterView: React.FC = () => {
   const [slots, setSlots] = useState<SlotRoster[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [markingAttendance, setMarkingAttendance] = useState<string | null>(null);
+  const [sundayCapacities, setSundayCapacities] = useState<Record<string, { total: number; booked: number }>>({});
 
   // Generate list of all Sundays from first Sunday of November through next 3 months
   // Updates monthly to always show 3 months ahead
@@ -104,7 +105,21 @@ const SundayRosterView: React.FC = () => {
     return sundays;
   }, []);
 
-  // Calculate next Sunday on mount
+  // Fetch capacity data for all Sundays
+  const fetchCapacities = async () => {
+    try {
+      const response = await fetch('/api/sunday-capacities');
+      const data = await response.json();
+
+      if (data.success && data.capacities) {
+        setSundayCapacities(data.capacities);
+      }
+    } catch (error) {
+      console.error('Error fetching capacities:', error);
+    }
+  };
+
+  // Calculate next Sunday on mount and fetch capacities
   useEffect(() => {
     const today = new Date();
     const dayOfWeek = today.getDay();
@@ -114,6 +129,7 @@ const SundayRosterView: React.FC = () => {
     const dateStr = nextSunday.toISOString().split('T')[0];
     setSelectedDate(dateStr);
     fetchRoster(dateStr);
+    fetchCapacities();
   }, []);
 
   // Fetch roster for a specific date
@@ -262,7 +278,10 @@ const SundayRosterView: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchRoster()}
+            onClick={() => {
+              fetchRoster();
+              fetchCapacities();
+            }}
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -298,11 +317,17 @@ const SundayRosterView: React.FC = () => {
               className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="" disabled>Select a Sunday...</option>
-              {getAvailableSundays.map((sunday) => (
-                <option key={sunday.value} value={sunday.value}>
-                  {sunday.label}
-                </option>
-              ))}
+              {getAvailableSundays.map((sunday) => {
+                const capacity = sundayCapacities[sunday.value];
+                const capacityText = capacity
+                  ? ` [${capacity.booked}/${capacity.total} booked]`
+                  : '';
+                return (
+                  <option key={sunday.value} value={sunday.value}>
+                    {sunday.label}{capacityText}
+                  </option>
+                );
+              })}
             </select>
           </div>
           {practiceDate && (
