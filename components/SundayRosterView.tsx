@@ -55,11 +55,60 @@ const SundayRosterView: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [markingAttendance, setMarkingAttendance] = useState<string | null>(null);
 
+  // Generate list of all Sundays from first Sunday of November through next 3 months
+  // Updates monthly to always show 3 months ahead
+  const getAvailableSundays = useMemo(() => {
+    const sundays: { value: string; label: string }[] = [];
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+
+    // Determine start date: first Sunday of November or current month, whichever is earlier
+    let startMonth = currentMonth;
+    let startYear = currentYear;
+
+    // If we're before November, start from November
+    // If we're in November or later, start from current month
+    if (currentMonth < 10) { // Before November
+      startMonth = 10; // November
+    }
+
+    const startDate = new Date(startYear, startMonth, 1);
+
+    // Find first Sunday of start month
+    const firstSunday = new Date(startDate);
+    while (firstSunday.getDay() !== 0) {
+      firstSunday.setDate(firstSunday.getDate() + 1);
+    }
+
+    // Generate Sundays for 3 months from first Sunday
+    let currentSunday = new Date(firstSunday);
+    const endDate = new Date(firstSunday);
+    endDate.setMonth(endDate.getMonth() + 3);
+
+    while (currentSunday <= endDate) {
+      const dateStr = currentSunday.toISOString().split('T')[0];
+      const label = currentSunday.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      sundays.push({ value: dateStr, label: `Sunday, ${label}` });
+
+      // Move to next Sunday
+      currentSunday = new Date(currentSunday);
+      currentSunday.setDate(currentSunday.getDate() + 7);
+    }
+
+    return sundays;
+  }, []);
+
   // Calculate next Sunday on mount
   useEffect(() => {
     const today = new Date();
     const dayOfWeek = today.getDay();
-    const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek;
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
     const nextSunday = new Date(today);
     nextSunday.setDate(today.getDate() + daysUntilSunday);
     const dateStr = nextSunday.toISOString().split('T')[0];
@@ -234,19 +283,27 @@ const SundayRosterView: React.FC = () => {
       {/* Date Selector */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Select Date</CardTitle>
+          <CardTitle className="text-base">Select Sunday</CardTitle>
+          <CardDescription>Choose from available Sunday practice sessions</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <input
-              type="date"
+            <select
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-            <Button onClick={() => fetchRoster(selectedDate)} disabled={loading}>
-              Load Roster
-            </Button>
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                fetchRoster(e.target.value);
+              }}
+              disabled={loading}
+              className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="" disabled>Select a Sunday...</option>
+              {getAvailableSundays.map((sunday) => (
+                <option key={sunday.value} value={sunday.value}>
+                  {sunday.label}
+                </option>
+              ))}
+            </select>
           </div>
           {practiceDate && (
             <p className="text-sm text-muted-foreground">
