@@ -5,7 +5,6 @@
       "destination": "/index.html"
     }
   ],
-  "_comment": "Cron schedule '0 5 * * 1' = Every Monday at 5:00 AM UTC (midnight EST)",
   "crons": [
     {
       "path": "/api/cron-generate-sunday-slots",

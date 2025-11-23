@@ -3,11 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 
 /**
  * Cron Job: Generate Sunday Practice Slots
- * Schedule: Every Monday at midnight (0 0 * * 1)
+ * Schedule: Every Monday at midnight EST (0 5 * * 1 UTC)
  *
  * This cron job automatically generates Sunday practice time slots
  * for the upcoming weeks. It's called weekly to ensure slots are
  * always available for parents to book.
+ *
+ * Cron Schedule Details:
+ * - "0 5 * * 1" = Monday at 5:00 AM UTC
+ * - Equivalent to Monday at 12:00 AM EST (midnight Eastern Time)
+ * - Configured in vercel.json
  *
  * Configuration:
  * - Generates slots for 4 weeks ahead
