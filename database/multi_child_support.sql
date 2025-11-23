@@ -463,16 +463,16 @@ BEGIN
     v_ineligibility_reason := 'Payment must be completed before booking Sunday practice';
   END IF;
 
-  -- Check category (M11 and above only)
+  -- Check category (M7 to M15 only, as per business rules)
   IF v_eligible THEN
     v_category_order := CAST(REGEXP_REPLACE(
       v_registration.form_data->>'playerCategory', '[^0-9]', '', 'g'
     ) AS INTEGER);
 
-    IF v_category_order < 11 THEN
+    IF v_category_order < 7 OR v_category_order > 15 THEN
       v_eligible := false;
       v_ineligibility_reason := FORMAT(
-        '%s category is not eligible. Sunday practice is for M11 and above.',
+        '%s category is not eligible. Sunday practice is for M7 to M15.',
         v_registration.form_data->>'playerCategory'
       );
     END IF;
@@ -598,10 +598,10 @@ BEGIN
       v_registration.form_data->>'playerCategory', '[^0-9]', '', 'g'
     ) AS INTEGER);
 
-    IF v_category_order < 11 THEN
+    IF v_category_order < 7 OR v_category_order > 15 THEN
       v_eligible := false;
       v_ineligibility_reason := FORMAT(
-        '%s category is not eligible. Sunday practice is for M11 and above.',
+        '%s category is not eligible. Sunday practice is for M7 to M15.',
         v_registration.form_data->>'playerCategory'
       );
     END IF;
