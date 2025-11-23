@@ -673,31 +673,25 @@ END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 -- ============================================
--- 9. UPDATE RLS POLICIES
+-- 9. DISABLE RLS POLICIES (Firebase Auth Strategy)
 -- ============================================
--- Update Row Level Security to allow multi-child access
+-- Since we're using Firebase Authentication (client-side) instead of Supabase Auth,
+-- we cannot use auth.uid() in RLS policies. All security is enforced at the API level
+-- through the verify_registration_ownership() function.
 
 -- Drop existing policies
 DROP POLICY IF EXISTS parent_access ON public.registrations;
 DROP POLICY IF EXISTS parent_sunday_bookings_access ON public.sunday_bookings;
 
--- Recreate with multi-child support
-CREATE POLICY parent_access ON public.registrations
-  FOR SELECT
-  USING (
-    firebase_uid = current_setting('request.jwt.claims', true)::json->>'sub'
-    OR auth.uid()::text = firebase_uid
-  );
+-- Disable RLS (API endpoints handle all security)
+ALTER TABLE public.registrations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sunday_bookings DISABLE ROW LEVEL SECURITY;
 
-CREATE POLICY parent_sunday_bookings_access ON public.sunday_bookings
-  FOR SELECT
-  USING (
-    registration_id IN (
-      SELECT id FROM public.registrations
-      WHERE firebase_uid = current_setting('request.jwt.claims', true)::json->>'sub'
-         OR auth.uid()::text = firebase_uid
-    )
-  );
+-- NOTE: Security is enforced by:
+-- 1. API endpoints validate firebaseUid from Firebase Auth token
+-- 2. Database functions use verify_registration_ownership() before operations
+-- 3. All API calls require both registrationId + firebaseUid
+-- 4. Ownership verification prevents cross-parent data access
 
 -- ============================================
 -- 10. CREATE INDEXES FOR MULTI-CHILD QUERIES
