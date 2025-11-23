@@ -5,11 +5,11 @@
       "destination": "/index.html"
     }
   ],
+  "_comment": "Cron schedule '0 5 * * 1' = Every Monday at 5:00 AM UTC (midnight EST)",
   "crons": [
     {
       "path": "/api/cron-generate-sunday-slots",
-      "schedule": "0 5 * * 1",
-      "description": "Generate Sunday practice slots every Monday at midnight EST (5:00 AM UTC)"
+      "schedule": "0 5 * * 1"
     }
   ]
 }
