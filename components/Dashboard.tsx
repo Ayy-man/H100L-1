@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
-import { AlertCircle, CheckCircle2, PartyPopper } from 'lucide-react';
+import { AlertCircle, CheckCircle2, PartyPopper, ChevronDown } from 'lucide-react';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from './dashboard/DashboardLayout';
 import RegistrationSummary from './dashboard/RegistrationSummary';
@@ -9,16 +9,35 @@ import TrainingSchedule from './dashboard/TrainingSchedule';
 import SundayPracticeCard from './dashboard/SundayPracticeCard';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { supabase } from '@/lib/supabase';
 import { onAuthStateChange } from '@/lib/authService';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
 
+interface ChildProfile {
+  registrationId: string;
+  profileDisplayName: string;
+  playerName: string;
+  playerCategory: string;
+  programType: string;
+  paymentStatus: string;
+  hasActiveSubscription: boolean;
+  createdAt: string;
+}
+
 /**
  * Dashboard Component
  *
  * Main parent dashboard page that:
- * - Fetches user's registration data from Supabase
+ * - Fetches all child registrations for the parent
+ * - Allows selection between multiple children
  * - Shows registration summary
  * - Displays payment status with checkout button if pending
  * - Shows training schedule if payment is complete
@@ -26,6 +45,8 @@ import { toast } from 'sonner';
  */
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [children, setChildren] = useState<ChildProfile[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,37 +113,42 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
-  // Fetch registration data - wait for auth state to be ready
+  // Fetch all children for the parent
   useEffect(() => {
-    const fetchRegistration = async (currentUser: User) => {
+    const fetchChildren = async (currentUser: User) => {
       try {
         setLoading(true);
         setError(null);
 
-        console.log('Fetching registration for user:', currentUser.email);
+        console.log('Fetching children for user:', currentUser.email);
 
-        // Fetch registration from Supabase using firebase_uid
-        const { data, error: fetchError } = await supabase
-          .from('registrations')
-          .select('*')
-          .eq('firebase_uid', currentUser.uid)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+        // Fetch all children from API
+        const response = await fetch(
+          `/api/get-children?firebaseUid=${currentUser.uid}`
+        );
 
-        if (fetchError) {
-          if (fetchError.code === 'PGRST116') {
-            // No registration found
-            setError('No registration found for your account.');
-          } else {
-            throw fetchError;
-          }
+        if (!response.ok) {
+          throw new Error('Failed to fetch children');
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.children.length > 0) {
+          setChildren(data.children);
+
+          // Auto-select first child or previously selected child from localStorage
+          const savedChildId = localStorage.getItem('selectedChildId');
+          const childToSelect = savedChildId && data.children.find((c: ChildProfile) => c.registrationId === savedChildId)
+            ? savedChildId
+            : data.children[0].registrationId;
+
+          setSelectedChildId(childToSelect);
+          console.log(`Loaded ${data.children.length} children, selected:`, childToSelect);
         } else {
-          setRegistration(data as Registration);
-          console.log('Registration loaded successfully');
+          setError('No registration found for your account.');
         }
       } catch (err) {
-        console.error('Error fetching registration:', err);
+        console.error('Error fetching children:', err);
         setError(
           err instanceof Error ? err.message : 'Failed to load registration data'
         );
@@ -138,8 +164,8 @@ const Dashboard: React.FC = () => {
       setUser(currentUser);
 
       if (currentUser) {
-        // User is authenticated, fetch their registration
-        fetchRegistration(currentUser);
+        // User is authenticated, fetch their children
+        fetchChildren(currentUser);
       } else {
         // No user, will be redirected by ProtectedRoute
         setLoading(false);
@@ -149,32 +175,67 @@ const Dashboard: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Fetch selected child's full registration data
+  useEffect(() => {
+    const fetchRegistration = async () => {
+      if (!selectedChildId || !user) return;
+
+      try {
+        console.log('Fetching registration for child:', selectedChildId);
+
+        const { data, error: fetchError } = await supabase
+          .from('registrations')
+          .select('*')
+          .eq('id', selectedChildId)
+          .eq('firebase_uid', user.uid) // Verify ownership
+          .single();
+
+        if (fetchError) {
+          console.error('Error fetching registration:', fetchError);
+          setError('Failed to load registration details.');
+        } else {
+          setRegistration(data as Registration);
+          // Save selected child to localStorage
+          localStorage.setItem('selectedChildId', selectedChildId);
+          console.log('Registration loaded successfully');
+        }
+      } catch (err) {
+        console.error('Error fetching registration:', err);
+      }
+    };
+
+    fetchRegistration();
+  }, [selectedChildId, user]);
+
   // Set up real-time subscription for payment status updates
   useEffect(() => {
-    if (!user) return;
+    if (!user || !selectedChildId) return;
 
     const channel = supabase
-      .channel('registration-changes')
+      .channel(`registration-changes-${selectedChildId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'registrations',
-          filter: `firebase_uid=eq.${user.uid}`,
+          filter: `id=eq.${selectedChildId}`,
         },
         (payload) => {
           console.log('Registration updated:', payload);
-          setRegistration(payload.new as Registration);
+          // Only update if it's the currently selected child
+          if (payload.new.id === selectedChildId) {
+            setRegistration(payload.new as Registration);
 
-          // Show toast if payment status changed to succeeded or verified
-          if (
-            isPaymentComplete(payload.new.payment_status) &&
-            !isPaymentComplete(payload.old?.payment_status || '')
-          ) {
-            toast.success('Payment confirmed! Your subscription is now active.', {
-              icon: <CheckCircle2 className="h-5 w-5" />,
-            });
+            // Show toast if payment status changed to succeeded or verified
+            if (
+              isPaymentComplete(payload.new.payment_status) &&
+              !isPaymentComplete(payload.old?.payment_status || '')
+            ) {
+              toast.success('Payment confirmed! Your subscription is now active.', {
+                icon: <CheckCircle2 className="h-5 w-5" />,
+              });
+            }
           }
         }
       )
@@ -183,7 +244,7 @@ const Dashboard: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, selectedChildId]);
 
   return (
     <ProtectedRoute>
@@ -259,6 +320,35 @@ const Dashboard: React.FC = () => {
                 Manage your training subscription and view upcoming sessions
               </p>
             </div>
+
+            {/* Child Selector - Show if multiple children */}
+            {children.length > 1 && (
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Select Child Profile
+                </label>
+                <Select value={selectedChildId || ''} onValueChange={setSelectedChildId}>
+                  <SelectTrigger className="w-full max-w-md">
+                    <SelectValue placeholder="Select a child" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {children.map((child) => (
+                      <SelectItem key={child.registrationId} value={child.registrationId}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{child.profileDisplayName}</span>
+                          {child.hasActiveSubscription && (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 ml-2" />
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  You have {children.length} registered children. Switch between profiles to manage each child.
+                </p>
+              </div>
+            )}
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

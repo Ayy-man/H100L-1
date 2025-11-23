@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js';
  *
  * Request Body:
  *   - bookingId: UUID of the booking to cancel
+ *   - registrationId: UUID of the registration (ownership validation)
  *   - firebaseUid: Firebase UID for authentication
  *
  * Returns:
@@ -35,13 +36,13 @@ export default async function handler(
   }
 
   try {
-    const { bookingId, firebaseUid } = req.body;
+    const { bookingId, registrationId, firebaseUid } = req.body;
 
     // Validate required fields
-    if (!bookingId || !firebaseUid) {
+    if (!bookingId || !registrationId || !firebaseUid) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: bookingId and firebaseUid',
+        error: 'Missing required fields: bookingId, registrationId, and firebaseUid',
         code: 'MISSING_FIELDS',
       });
     }
@@ -52,6 +53,14 @@ export default async function handler(
         success: false,
         error: 'Invalid bookingId format',
         code: 'INVALID_BOOKING_ID',
+      });
+    }
+
+    if (!/^[0-9a-f-]{36}$/i.test(registrationId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid registrationId format',
+        code: 'INVALID_REGISTRATION_ID',
       });
     }
 
@@ -66,6 +75,7 @@ export default async function handler(
     // Call the database function to cancel the booking
     const { data, error } = await supabase.rpc('cancel_sunday_booking', {
       p_booking_id: bookingId,
+      p_registration_id: registrationId,
       p_firebase_uid: firebaseUid,
     });
 
@@ -83,6 +93,7 @@ export default async function handler(
     if (!data.success) {
       // Map error codes to appropriate HTTP status codes
       const statusMap: Record<string, number> = {
+        OWNERSHIP_VERIFICATION_FAILED: 403,
         BOOKING_NOT_FOUND: 404,
         ALREADY_CANCELLED: 409,
         BOOKING_PAST: 400,

@@ -171,6 +171,7 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bookingId,
+          registrationId: registration.id,
           firebaseUid: registration.firebase_uid,
         }),
       });
