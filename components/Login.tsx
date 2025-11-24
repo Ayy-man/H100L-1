@@ -92,8 +92,12 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Logo and Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-lg bg-primary mb-4">
-            <span className="text-primary-foreground font-bold text-2xl">SZ</span>
+          <div className="inline-flex items-center justify-center mb-4">
+            <img
+              src="/images/logos/sniperzone-logo-black.jpg"
+              alt="SniperZone Logo"
+              className="h-20 w-auto"
+            />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
           <p className="text-muted-foreground mt-1">
