@@ -25,17 +25,9 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from './ui/dialog';
-import { Label } from './ui/label';
-import { Checkbox } from './ui/checkbox';
+import { RescheduleGroupModal } from './dashboard/RescheduleGroupModal';
+import { ReschedulePrivateModal } from './dashboard/ReschedulePrivateModal';
+import { RescheduleSemiPrivateModal } from './dashboard/RescheduleSemiPrivateModal';
 import { Skeleton } from './ui/skeleton';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/contexts/ProfileContext';
@@ -66,8 +58,7 @@ const SchedulePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [isChangeDialogOpen, setIsChangeDialogOpen] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [sundayStatuses, setSundayStatuses] = useState<Map<string, SundaySlotStatus>>(new Map());
 
   // Fetch Sunday slot statuses for the current month
@@ -301,24 +292,6 @@ const SchedulePage: React.FC = () => {
     return days;
   };
 
-  // Handle schedule change request
-  const handleScheduleChangeRequest = async () => {
-    if (!registration || selectedDays.length === 0) {
-      toast.error('Please select at least one training day');
-      return;
-    }
-
-    try {
-      // In a real app, this would create a schedule change request
-      // For now, we'll just show a success message
-      toast.success('Schedule change request submitted! We will contact you within 24 hours.');
-      setIsChangeDialogOpen(false);
-      setSelectedDays([]);
-    } catch (error) {
-      console.error('Schedule change error:', error);
-      toast.error('Failed to submit schedule change request');
-    }
-  };
 
   const monthSessions = registration ? getMonthSessions() : [];
   const calendarDays = registration ? getCalendarDays() : [];
@@ -376,62 +349,10 @@ const SchedulePage: React.FC = () => {
                   View and manage your training sessions
                 </p>
               </div>
-              <Dialog open={isChangeDialogOpen} onOpenChange={setIsChangeDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Request Schedule Change
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Request Schedule Change</DialogTitle>
-                    <DialogDescription>
-                      Select your preferred training days. Our team will contact you within 24
-                      hours to confirm availability.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <Label>Preferred Training Days</Label>
-                    <div className="space-y-2">
-                      {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(
-                        (day) => (
-                          <div key={day} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={day}
-                              checked={selectedDays.includes(day.toLowerCase())}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedDays([...selectedDays, day.toLowerCase()]);
-                                } else {
-                                  setSelectedDays(
-                                    selectedDays.filter((d) => d !== day.toLowerCase())
-                                  );
-                                }
-                              }}
-                            />
-                            <Label htmlFor={day} className="cursor-pointer">
-                              {day}
-                            </Label>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsChangeDialogOpen(false);
-                        setSelectedDays([]);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button onClick={handleScheduleChangeRequest}>Submit Request</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button onClick={() => setIsRescheduleModalOpen(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Reschedule
+              </Button>
             </div>
 
             {/* Stats Card */}
@@ -714,6 +635,29 @@ const SchedulePage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Reschedule Modals */}
+            {registration && registration.form_data.programType === 'group' && (
+              <RescheduleGroupModal
+                isOpen={isRescheduleModalOpen}
+                onClose={() => setIsRescheduleModalOpen(false)}
+                registration={registration}
+              />
+            )}
+            {registration && registration.form_data.programType === 'private' && (
+              <ReschedulePrivateModal
+                isOpen={isRescheduleModalOpen}
+                onClose={() => setIsRescheduleModalOpen(false)}
+                registration={registration}
+              />
+            )}
+            {registration && registration.form_data.programType === 'semi-private' && (
+              <RescheduleSemiPrivateModal
+                isOpen={isRescheduleModalOpen}
+                onClose={() => setIsRescheduleModalOpen(false)}
+                registration={registration}
+              />
+            )}
           </div>
         </DashboardLayout>
       )}
