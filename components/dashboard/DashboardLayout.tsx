@@ -65,7 +65,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
             <div className="flex items-center space-x-8">
               <a href="/dashboard" className="flex items-center">
                 <img
-                  src="/images/logos/sniperzone-logo-black.jpg"
+                  src="/images/logos/sniperzone-logo-black-on-white.jpg"
                   alt="SniperZone Logo"
                   className="h-12 w-auto"
                 />
