@@ -71,16 +71,32 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
         })
       });
 
+      // Check if response is OK
+      if (!response.ok) {
+        // Try to parse error message
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to check availability');
+        } else {
+          // Non-JSON response (e.g., server error page)
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+          throw new Error('Server error occurred. Please try again later.');
+        }
+      }
+
       const result = await response.json();
 
       if (result.success) {
         setAvailability(result.slots || []);
       } else {
-        setAvailabilityError('Failed to check availability');
+        setAvailabilityError(result.error || 'Failed to check availability');
       }
     } catch (error) {
       console.error('Availability check error:', error);
-      setAvailabilityError('Could not connect to availability service');
+      const errorMessage = error instanceof Error ? error.message : 'Could not connect to availability service';
+      setAvailabilityError(errorMessage);
     } finally {
       setIsCheckingAvailability(false);
     }
