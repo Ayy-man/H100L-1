@@ -38,7 +38,7 @@ const DAYS_OF_WEEK = [
   { value: 'sunday', label: 'Sun' },
 ];
 
-const TIME_SLOTS = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM'];
+const TIME_SLOTS = ['8-9', '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'];
 
 export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
   isOpen,

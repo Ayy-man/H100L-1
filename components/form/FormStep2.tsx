@@ -465,13 +465,6 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                   </div>
                 </div>
 
-                <FormSelect label="Matching Preference" name="semiPrivateMatchingPreference" value={data.semiPrivateMatchingPreference} handleChange={handleChange}>
-                  <option value="">-- Select Preference --</option>
-                  <option value="same-level">Same skill level</option>
-                  <option value="flexible">Flexible - any skill level</option>
-                  <option value="higher-level">Train with higher skill level</option>
-                </FormSelect>
-
                 <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
                   <p className="text-sm font-medium text-purple-300 mb-2">🤝 How Semi-Private Works</p>
                   <ul className="text-xs text-gray-300 space-y-1 list-disc list-inside">

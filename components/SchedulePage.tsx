@@ -641,21 +641,42 @@ const SchedulePage: React.FC = () => {
               <RescheduleGroupModal
                 isOpen={isRescheduleModalOpen}
                 onClose={() => setIsRescheduleModalOpen(false)}
-                registration={registration}
+                registrationId={registration.id}
+                firebaseUid={registration.firebase_uid}
+                currentSchedule={{
+                  days: registration.form_data.groupSelectedDays || [],
+                  frequency: registration.form_data.groupFrequency || '1x',
+                  playerCategory: registration.form_data.playerCategory || ''
+                }}
+                onSuccess={() => window.location.reload()}
               />
             )}
             {registration && registration.form_data.programType === 'private' && (
               <ReschedulePrivateModal
                 isOpen={isRescheduleModalOpen}
                 onClose={() => setIsRescheduleModalOpen(false)}
-                registration={registration}
+                registrationId={registration.id}
+                firebaseUid={registration.firebase_uid}
+                currentSchedule={{
+                  day: registration.form_data.privateSelectedDays?.[0] || '',
+                  timeSlot: registration.form_data.privateTimeSlot || '',
+                  playerCategory: registration.form_data.playerCategory || ''
+                }}
+                onSuccess={() => window.location.reload()}
               />
             )}
             {registration && registration.form_data.programType === 'semi-private' && (
               <RescheduleSemiPrivateModal
                 isOpen={isRescheduleModalOpen}
                 onClose={() => setIsRescheduleModalOpen(false)}
-                registration={registration}
+                registrationId={registration.id}
+                firebaseUid={registration.firebase_uid}
+                currentSchedule={{
+                  day: registration.form_data.semiPrivateAvailability?.[0],
+                  timeSlot: registration.form_data.privateTimeSlot,
+                  playerCategory: registration.form_data.playerCategory || ''
+                }}
+                onSuccess={() => window.location.reload()}
               />
             )}
           </div>
