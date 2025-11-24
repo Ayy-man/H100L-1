@@ -80,7 +80,7 @@ const pricingData: PricingCardProps[] = [
     price: "$349.99",
     description: "Small group with personalized focus.",
     features: [
-      "Monthly training package",
+      "1 session per week",
       "2-3 players per session",
       "Personalized attention",
       "Player matching service",

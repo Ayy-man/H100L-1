@@ -41,27 +41,34 @@ const ProfileSwitcher: React.FC = () => {
     window.location.href = '/select-profile';
   };
 
-  // Don't show switcher if only one child
-  if (children.length <= 1) {
+  // Don't show if no children or still loading
+  if (children.length === 0 || !selectedProfile) {
     return null;
   }
+
+  // Get display text - show "PlayerName - Program" format
+  const getDisplayText = () => {
+    if (!selectedProfile) return 'Select Child';
+    // Use profileDisplayName which has format "PlayerName - Program Type"
+    return selectedProfile.profileDisplayName || selectedProfile.playerName;
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="flex items-center gap-2 min-w-[200px] justify-between"
+          className="flex items-center gap-2 min-w-[200px] max-w-[280px] justify-between"
         >
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
               <User className="h-3 w-3 text-primary" />
             </div>
-            <span className="font-medium truncate">
-              {selectedProfile?.playerName || 'Select Child'}
+            <span className="font-medium text-sm truncate">
+              {getDisplayText()}
             </span>
           </div>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[280px]">

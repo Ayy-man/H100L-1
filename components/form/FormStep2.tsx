@@ -290,7 +290,7 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                     📅 <strong>Private Training Schedule:</strong> Available on <span className="text-[#9BD4FF]">Mondays, Wednesdays & Thursdays</span> only
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    Time slots: 3:00 PM, 4:15 PM, 5:30 PM, 6:45 PM, 8:00 PM (1-on-1 sessions)
+                    Time slots: 8:00 AM - 3:00 PM (1-on-1 sessions, before group training)
                   </p>
                 </div>
 
@@ -369,11 +369,12 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
 
                 <FormSelect label="Preferred Time Slot" name="privateTimeSlot" value={data.privateTimeSlot} handleChange={handleChange}>
                   <option value="">-- Select Time Slot --</option>
-                  <option value="3:00 PM">3:00 PM</option>
-                  <option value="4:15 PM">4:15 PM</option>
-                  <option value="5:30 PM">5:30 PM</option>
-                  <option value="6:45 PM">6:45 PM</option>
-                  <option value="8:00 PM">8:00 PM</option>
+                  <option value="8:00 AM">8:00 AM</option>
+                  <option value="9:15 AM">9:15 AM</option>
+                  <option value="10:30 AM">10:30 AM</option>
+                  <option value="11:45 AM">11:45 AM</option>
+                  <option value="1:00 PM">1:00 PM</option>
+                  <option value="2:15 PM">2:15 PM</option>
                 </FormSelect>
 
                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">

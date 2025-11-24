@@ -59,9 +59,9 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
     if (programType === 'group') {
       return groupFrequency === '1x' ? '$249.99' : '$399.99';
     } else if (programType === 'private') {
-      return privateFrequency === '1x' ? '$899.99' : '$1,499.99';
+      return privateFrequency === '1x' ? '$499.99' : '$799.99';
     } else if (programType === 'semi-private') {
-      return '$599.99';
+      return '$349.99';
     }
     return '$0.00';
   };
@@ -164,24 +164,26 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
             )}
           </div>
 
-          {/* Sunday Ice Practice Info */}
-          <div className="mt-4 p-4 rounded-lg bg-primary/10 border border-primary/20">
-            <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-primary mt-0.5" />
-              <div className="flex-1">
-                <p className="font-semibold text-foreground">Sunday Ice Practice Included</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Every Sunday on real ice at:
-                </p>
-                <p className="text-sm font-medium mt-1">
-                  7515 Boulevard Henri-Bourassa E, Montreal, Quebec H1E 1N9
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Included free with your monthly subscription
-                </p>
+          {/* Sunday Ice Practice Info (Group Training Only) */}
+          {form_data.programType === 'group' && (
+            <div className="mt-4 p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">Sunday Ice Practice Included</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Every Sunday on real ice at:
+                  </p>
+                  <p className="text-sm font-medium mt-1">
+                    7515 Boulevard Henri-Bourassa E, Montreal, Quebec H1E 1N9
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Included free with your monthly subscription
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <Separator />

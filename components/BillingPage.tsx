@@ -91,9 +91,9 @@ const BillingPage: React.FC = () => {
     if (programType === 'group') {
       return groupFrequency === '1x' ? '$249.99' : '$399.99';
     } else if (programType === 'private') {
-      return privateFrequency === '1x' ? '$899.99' : '$1,499.99';
+      return privateFrequency === '1x' ? '$499.99' : '$799.99';
     } else if (programType === 'semi-private') {
-      return '$599.99';
+      return '$349.99';
     }
 
     return '$0.00';
@@ -292,10 +292,12 @@ const BillingPage: React.FC = () => {
                           'Small group training'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>Sunday real ice practice (free)</span>
-                    </div>
+                    {registration.form_data.programType === 'group' && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>Sunday real ice practice (free)</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-sm">
                       <Check className="h-4 w-4 text-green-500" />
                       <span>Professional coaching staff</span>

@@ -54,48 +54,72 @@ const termsContent = {
     ]
   },
   fr: {
-    title: 'Termes et Conditions',
-    lastUpdated: 'Dernière mise à jour: Novembre 2025',
+    title: 'Politique et Code d\'éthique',
+    lastUpdated: 'Hockey100Limites - SniperZone',
     sections: [
       {
-        title: '1. Acceptation des Conditions',
-        content: 'En vous inscrivant aux programmes d\'entraînement SniperZone Hockey, vous acceptez d\'être lié par ces Termes et Conditions. Si vous n\'acceptez pas ces conditions, veuillez ne pas compléter le processus d\'inscription.'
+        title: '1. Mission et Objectifs',
+        content: 'La mission de Hockey100Limites est de promouvoir le hockey comme un sport amusant, inclusif et respectueux pour tous les participants. Nos objectifs incluent le développement des compétences, la promotion de l\'esprit sportif et le renforcement des valeurs positives chez les joueurs et les parents.'
       },
       {
-        title: '2. Inscription au Programme',
-        content: 'L\'inscription est sujette à la disponibilité et aux limites de capacité. Le paiement doit être complété au moment de l\'inscription. Tous les frais sont non remboursables sauf indication contraire.'
+        title: '2. Respect et Fair-play',
+        content: 'Nous valorisons le respect de soi-même, des coéquipiers, des adversaires et des règles du jeu. Nous encourageons le fair-play et la tolérance zéro envers le comportement antisportif, la tricherie ou les jeux dangereux.'
       },
       {
-        title: '3. Conditions de Paiement',
-        content: 'Le paiement est traité en toute sécurité via Stripe. En fournissant vos informations de paiement, vous autorisez SniperZone à facturer les frais applicables pour le programme sélectionné. Les programmes par abonnement seront facturés de façon récurrente jusqu\'à l\'annulation.'
+        title: '3. Développement des joueurs',
+        content: 'Nous nous engageons à fournir un environnement d\'apprentissage positif où les joueurs peuvent développer leurs compétences, leur confiance et leur amour pour le jeu. Les entraîneurs sont encouragés à être des modèles positifs et à encourager la croissance personnelle et sportive de chaque joueur.'
       },
       {
-        title: '4. Politique d\'Annulation et de Remboursement',
-        content: '[PLACEHOLDER - Ajoutez vos politiques spécifiques d\'annulation et de remboursement ici. Incluez les délais de préavis, les montants de remboursement et toutes conditions applicables.]'
+        title: '4. Communication et Transparence',
+        content: 'Nous nous engageons à communiquer de manière transparente avec les joueurs, les parents et les entraîneurs sur les attentes, les règles et les politiques du programme. Toutes les décisions importantes seront communiquées de manière claire et opportune.'
       },
       {
-        title: '5. Sécurité des Participants et Responsabilité',
-        content: '[PLACEHOLDER - Ajoutez la décharge de responsabilité, l\'acceptation des risques, l\'autorisation d\'urgence médicale et les exigences d\'assurance ici.]'
+        title: '5. Engagement Communautaire',
+        content: 'Nous encourageons l\'engagement des joueurs, des entraîneurs et des parents dans la communauté locale en participant à des événements et à des activités de bénévolat. Nous cherchons à établir des partenariats positifs avec d\'autres organisations et à contribuer positivement à la vie communautaire.'
       },
       {
-        title: '6. Code de Conduite',
-        content: '[PLACEHOLDER - Ajoutez le comportement attendu pour les participants, parents et spectateurs. Incluez les procédures disciplinaires et les motifs de retrait du programme.]'
+        title: '6. Responsabilité et Discipline',
+        content: 'Tous les participants sont responsables de leur comportement sur et en dehors de la glace. Les violations du code d\'éthique peuvent entraîner des mesures disciplinaires, y compris la suspension ou l\'expulsion du programme. Les plaintes ou les préoccupations doivent être signalées au comité de gestion pour examen et action appropriée.'
       },
       {
-        title: '7. Consentement Photo et Vidéo',
-        content: 'Si vous avez donné votre consentement, SniperZone peut utiliser des photographies et vidéos prises lors des sessions d\'entraînement à des fins promotionnelles incluant le site web, les réseaux sociaux et le matériel marketing.'
+        title: '7. Processus d\'inscription',
+        content: 'Les inscriptions au camp de hockey doivent être effectuées en ligne via notre site web officiel ou en contactant l\'école. Les participants doivent remplir un formulaire d\'inscription complet, y compris les informations personnelles, les détails médicaux et les autorisations parentales.'
       },
       {
-        title: '8. Politique de Confidentialité',
-        content: 'Vos informations personnelles sont collectées et stockées en toute sécurité. Nous ne partageons pas vos informations avec des tiers sauf si nécessaire pour fournir nos services (ex: traitement des paiements). Vous avez le droit de demander l\'accès, la correction ou la suppression de vos données personnelles.'
+        title: '8. Critères d\'admissibilité',
+        content: 'Le camp de hockey est ouvert aux joueurs et joueuses de tous niveaux de compétence, âgés de 5 ans à adultes.'
       },
       {
-        title: '9. Changements d\'Horaire',
-        content: '[PLACEHOLDER - Ajoutez les politiques concernant les modifications d\'horaire, les annulations dues aux conditions météo, les fermetures d\'installations et les sessions de rattrapage.]'
+        title: '9. Dates et tarifs',
+        content: 'Les dates, les horaires et les tarifs du camp de hockey sont publiés sur notre site web et peuvent varier en fonction de la durée du camp et des options choisies. Des réductions peuvent être offertes pour les inscriptions anticipées ou les inscriptions de plusieurs séances.'
       },
       {
-        title: '10. Coordonnées',
-        content: 'Pour toute question concernant ces conditions, veuillez contacter SniperZone Hockey Training au [ADRESSE COURRIEL] ou [NUMÉRO DE TÉLÉPHONE].'
+        title: '10. Politique de Paiement',
+        content: 'Un paiement de 50% doit être effectué au moment de l\'inscription avant la première pratique pour séance ou le mois(semaine) est requis pour garantir la place du participant au camp. Le paiement complet de l\'inscription doit être effectué lors de la première séance, sauf accord préalable entre l\'école et le client. Les paiements peuvent être effectués en ligne par carte débit, par virement bancaire ou argent comptant.'
+      },
+      {
+        title: '11. Politique de Remboursement',
+        content: 'Les demandes de remboursement doivent être soumises par écrit avant la date limite d\'annulation spécifiée. Toute annulation de participation doit être effectuée au minimum 72 heures avant la séance. Toute annulation effectuée après le délai de 72 heures entraînera l\'imposition d\'un montant de 25% du prix total de la séance ou de la session complète.'
+      },
+      {
+        title: '12. Annulation ou Modification du Camp',
+        content: 'En cas d\'annulation ou de modification du camp de hockey en raison de circonstances imprévues, les participants seront informés dès que possible et des arrangements seront pris pour un remboursement ou un report des frais d\'inscription.'
+      },
+      {
+        title: '13. Documents Requis',
+        content: 'Avant le début du camp, les participants doivent fournir une preuve d\'assurance médicale et un formulaire d\'autorisation parentale signé.'
+      },
+      {
+        title: '14. Politique de Confidentialité',
+        content: 'Les informations personnelles des participants seront traitées conformément à notre politique de confidentialité et ne seront pas partagées avec des tiers sans autorisation.'
+      },
+      {
+        title: '15. Politique de discipline',
+        content: 'Tout manque de respect verbal ou physique envers les participants ou les membres du personnel ne sera pas accepté et peut entraîner l\'expulsion immédiate de notre programme sans aucun remboursement. Aucun langage ou comportement à caractère raciste, sexiste ou discriminatoire ne sera toléré. Toute action de vandalisme envers les établissements et les équipements utilisés par Hockey100limites sera facturée au participant ou aux parents du participant (si mineur).'
+      },
+      {
+        title: '16. Politique de sécurité',
+        content: 'Équipement de protection: Tous les participants doivent porter un équipement de protection complet, y compris un casque et des gants. Protocoles d\'urgence: Des protocoles d\'urgence clairs seront en place en cas d\'accident ou de blessure grave, y compris l\'accès immédiat aux services médicaux d\'urgence. Communication des risques: Les participants et leurs parents seront informés des risques associés à la pratique du hockey et des mesures prises pour les minimiser. Supervision adéquate: Un ratio adéquat d\'entraîneurs et de personnel de soutien sera maintenu pour assurer une supervision appropriée des participants. Communication en cas d\'urgence: Un plan de communication d\'urgence sera en place pour informer rapidement les parents en cas d\'accident ou de situation d\'urgence impliquant leur enfant. Contrôle d\'identité à la sortie: Une pièce d\'identité sera demandée chaque jour au parent ou au tuteur légal venant chercher l\'enfant afin d\'assurer sa sécurité.'
       }
     ]
   }
