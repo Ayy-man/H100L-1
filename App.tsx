@@ -6,6 +6,7 @@ import { content } from './constants';
 import { stripePromise } from './lib/stripe';
 import { Toaster } from './components/ui/sonner';
 import { ProfileProvider } from './contexts/ProfileContext';
+import { ToastProvider } from './hooks/useToast';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Features from './components/Features';
@@ -49,10 +50,12 @@ function App() {
 
   // Wrap all routes with ProfileProvider for authentication and profile management
   return (
-    <ProfileProvider>
-      {renderRoute(currentPath)}
-      <Toaster />
-    </ProfileProvider>
+    <ToastProvider>
+      <ProfileProvider>
+        {renderRoute(currentPath)}
+        <Toaster />
+      </ProfileProvider>
+    </ToastProvider>
   );
 
   function renderRoute(path: string) {

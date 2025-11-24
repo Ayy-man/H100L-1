@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, Loader2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Loader2, RefreshCw } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -12,6 +12,9 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
+import { RescheduleGroupModal } from './RescheduleGroupModal';
+import { ReschedulePrivateModal } from './ReschedulePrivateModal';
+import { RescheduleSemiPrivateModal } from './RescheduleSemiPrivateModal';
 
 interface TrainingScheduleProps {
   registration: Registration;
@@ -52,6 +55,8 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   const [sundayStatus, setSundayStatus] = useState<SundayBookingStatus | null>(null);
   const [loadingSunday, setLoadingSunday] = useState(false);
   const [bookingInProgress, setBookingInProgress] = useState(false);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Helper function to check Sunday eligibility
   const isSundayEligible = () => {
@@ -294,17 +299,36 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
     return ['4:30 PM', '5:45 PM', '7:00 PM', '8:15 PM'];
   };
 
+  const handleRescheduleSuccess = () => {
+    setRefreshKey(prev => prev + 1);
+    window.location.reload();
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          Training Schedule
-        </CardTitle>
-        <CardDescription>
-          Your upcoming training sessions and ice practice times
-        </CardDescription>
-      </CardHeader>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Training Schedule
+              </CardTitle>
+              <CardDescription>
+                Your upcoming training sessions and ice practice times
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsRescheduleModalOpen(true)}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Reschedule
+            </Button>
+          </div>
+        </CardHeader>
       <CardContent className="space-y-4">
         {/* Location Card */}
         <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
@@ -495,6 +519,53 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         </div>
       </CardContent>
     </Card>
+
+    {/* Reschedule Modals */}
+    {form_data.programType === 'group' && (
+      <RescheduleGroupModal
+        isOpen={isRescheduleModalOpen}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        registrationId={id}
+        firebaseUid={firebase_uid}
+        currentSchedule={{
+          days: form_data.groupSelectedDays || [],
+          frequency: form_data.groupFrequency || '1x',
+          playerCategory: form_data.playerCategory || ''
+        }}
+        onSuccess={handleRescheduleSuccess}
+      />
+    )}
+
+    {form_data.programType === 'private' && (
+      <ReschedulePrivateModal
+        isOpen={isRescheduleModalOpen}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        registrationId={id}
+        firebaseUid={firebase_uid}
+        currentSchedule={{
+          day: form_data.privateSelectedDays?.[0] || '',
+          timeSlot: form_data.privateTimeSlot || '',
+          playerCategory: form_data.playerCategory || ''
+        }}
+        onSuccess={handleRescheduleSuccess}
+      />
+    )}
+
+    {form_data.programType === 'semi-private' && (
+      <RescheduleSemiPrivateModal
+        isOpen={isRescheduleModalOpen}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        registrationId={id}
+        firebaseUid={firebase_uid}
+        currentSchedule={{
+          day: form_data.semiPrivateAvailability?.[0],
+          timeSlot: form_data.privateTimeSlot,
+          playerCategory: form_data.playerCategory || ''
+        }}
+        onSuccess={handleRescheduleSuccess}
+      />
+    )}
+  </>
   );
 };
 
