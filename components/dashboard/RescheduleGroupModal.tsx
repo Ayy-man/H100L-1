@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useToast } from '@/hooks/useToast';
 
 interface RescheduleGroupModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
   currentSchedule,
   onSuccess
 }) => {
+  const toast = useToast();
   const [changeType, setChangeType] = useState<'one_time' | 'permanent'>('permanent');
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
@@ -130,16 +132,21 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
       const data = await response.json();
       if (data.success) {
         setSuccess(true);
+        toast.success('Schedule Updated', `Your training days have been successfully changed to ${selectedDays.map(d => getDayLabel(d)).join(', ')}`);
         setTimeout(() => {
           onSuccess();
           onClose();
         }, 2000);
       } else {
-        setError(data.error || 'Failed to reschedule');
+        const errorMsg = data.error || 'Failed to reschedule';
+        setError(errorMsg);
+        toast.error('Rescheduling Failed', errorMsg);
       }
     } catch (err) {
       console.error('Error rescheduling:', err);
-      setError('Failed to reschedule. Please try again.');
+      const errorMsg = 'Failed to reschedule. Please try again.';
+      setError(errorMsg);
+      toast.error('Error', errorMsg);
     } finally {
       setIsLoading(false);
     }

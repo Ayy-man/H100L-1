@@ -1,5 +1,5 @@
-import React from 'react';
-import { User, Calendar, MapPin, Phone, Mail, Heart, Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Calendar, MapPin, Phone, Mail, Heart, Shield, RefreshCw } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -9,7 +9,11 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Registration } from '@/types';
+import { RescheduleGroupModal } from './RescheduleGroupModal';
+import { ReschedulePrivateModal } from './ReschedulePrivateModal';
+import { RescheduleSemiPrivateModal } from './RescheduleSemiPrivateModal';
 
 interface RegistrationSummaryProps {
   registration: Registration;
@@ -28,7 +32,12 @@ interface RegistrationSummaryProps {
 const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
   registration,
 }) => {
-  const { form_data } = registration;
+  const { form_data, id, firebase_uid } = registration;
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+
+  const handleRescheduleSuccess = () => {
+    window.location.reload();
+  };
 
   // Format program type for display
   const getProgramLabel = () => {
@@ -116,10 +125,21 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
 
         {/* Program Details */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
-            Program Details
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              Program Details
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsRescheduleModalOpen(true)}
+              className="gap-2 text-primary hover:text-primary"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Reschedule
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Program Type</p>
@@ -292,6 +312,53 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
         )}
       </CardContent>
     </Card>
+
+    {/* Reschedule Modals */}
+    {form_data.programType === 'group' && (
+      <RescheduleGroupModal
+        isOpen={isRescheduleModalOpen}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        registrationId={id}
+        firebaseUid={firebase_uid}
+        currentSchedule={{
+          days: form_data.groupSelectedDays || [],
+          frequency: form_data.groupFrequency || '1x',
+          playerCategory: form_data.playerCategory || ''
+        }}
+        onSuccess={handleRescheduleSuccess}
+      />
+    )}
+
+    {form_data.programType === 'private' && (
+      <ReschedulePrivateModal
+        isOpen={isRescheduleModalOpen}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        registrationId={id}
+        firebaseUid={firebase_uid}
+        currentSchedule={{
+          day: form_data.privateSelectedDays?.[0] || '',
+          timeSlot: form_data.privateTimeSlot || '',
+          playerCategory: form_data.playerCategory || ''
+        }}
+        onSuccess={handleRescheduleSuccess}
+      />
+    )}
+
+    {form_data.programType === 'semi-private' && (
+      <RescheduleSemiPrivateModal
+        isOpen={isRescheduleModalOpen}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        registrationId={id}
+        firebaseUid={firebase_uid}
+        currentSchedule={{
+          day: form_data.semiPrivateAvailability?.[0],
+          timeSlot: form_data.privateTimeSlot,
+          playerCategory: form_data.playerCategory || ''
+        }}
+        onSuccess={handleRescheduleSuccess}
+      />
+    )}
+  </>
   );
 };
 
