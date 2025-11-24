@@ -59,7 +59,7 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
       };
     } else if (programType === 'private') {
       return {
-        amount: privateFrequency === '1x' ? '$899.99' : '$1,499.99',
+        amount: privateFrequency === '1x' ? '$499.99' : '$799.99',
         priceId:
           privateFrequency === '1x'
             ? import.meta.env.VITE_STRIPE_PRICE_PRIVATE_1X
@@ -67,7 +67,7 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
       };
     } else if (programType === 'semi-private') {
       return {
-        amount: '$599.99',
+        amount: '$349.99',
         priceId: import.meta.env.VITE_STRIPE_PRICE_SEMI_PRIVATE,
       };
     }

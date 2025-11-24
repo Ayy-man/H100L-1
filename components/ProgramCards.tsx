@@ -129,6 +129,7 @@ const programs: ProgramCard[] = [
     period: { en: '/month', fr: '/mois' },
     features: {
       en: [
+        '1 session per week',
         'Small group (2-3 players)',
         'Matched by skill & age',
         'Customized group program',
@@ -136,6 +137,7 @@ const programs: ProgramCard[] = [
         'Personal attention',
       ],
       fr: [
+        '1 session par semaine',
         'Petit groupe (2-3 joueurs)',
         'Jumelage par compétence et âge',
         'Programme de groupe personnalisé',
