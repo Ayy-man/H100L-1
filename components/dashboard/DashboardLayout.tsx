@@ -63,18 +63,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
           <div className="flex items-center justify-between h-16">
             {/* Logo and Brand */}
             <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-xl">SZ</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-foreground font-bold text-lg leading-tight">
-                    SniperZone
-                  </span>
-                  <span className="text-muted-foreground text-xs leading-tight">
-                    Hockey Training
-                  </span>
-                </div>
+              <a href="/dashboard" className="flex items-center">
+                <img
+                  src="/images/logos/sniperzone-logo-black-on-white.jpg"
+                  alt="SniperZone Logo"
+                  className="h-12 w-auto"
+                />
               </a>
 
               {/* Desktop Navigation */}
