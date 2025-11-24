@@ -43,8 +43,8 @@ BEGIN
 
   v_player_category_num := extract_category_number(v_player_category);
 
-  IF v_player_category_num < 11 OR v_player_category_num > 15 THEN
-    RETURN json_build_object('success', true, 'eligible', false, 'reason', 'Only M11-M15 players can book Sunday practice');
+  IF v_player_category_num < 7 OR v_player_category_num > 15 THEN
+    RETURN json_build_object('success', true, 'eligible', false, 'reason', 'Sunday practice is only available for M7-M15 players');
   END IF;
 
   IF v_payment_status NOT IN ('succeeded', 'verified', 'paid') THEN

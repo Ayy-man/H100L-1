@@ -5,7 +5,6 @@ import DashboardLayout from './dashboard/DashboardLayout';
 import RegistrationSummary from './dashboard/RegistrationSummary';
 import PaymentStatus from './dashboard/PaymentStatus';
 import TrainingSchedule from './dashboard/TrainingSchedule';
-import SundayPracticeCard from './dashboard/SundayPracticeCard';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { supabase } from '@/lib/supabase';
@@ -261,12 +260,6 @@ const Dashboard: React.FC = () => {
                 )}
               </div>
             </div>
-
-            {/* Sunday Practice Card - Full Width Below Grid (Group Training Only) */}
-            {isPaymentComplete(registration.payment_status) &&
-              registration.form_data.programType === 'group' && (
-              <SundayPracticeCard registration={registration} />
-            )}
 
             {/* First-time user welcome message */}
             {registration.payment_status === 'pending' &&
