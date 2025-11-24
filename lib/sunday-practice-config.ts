@@ -76,7 +76,7 @@ export interface SundayPracticeConfig {
  * 1. Only Group Training players can book
  * 2. M7, M9, and M11 in first slot (7:30-8:30 AM) - 12 kids max
  * 3. M13 and M15 in second slot (8:30-9:30 AM) - 10 kids max
- * 4. Parents can only book the next upcoming Sunday (1 week ahead)
+ * 4. Parents can book upcoming Sundays (up to 8 weeks ahead)
  * 5. No cancellation deadline - can cancel anytime before the practice
  * 6. Two time slots based on age groups
  * 7. Slots auto-generated weekly via cron job
@@ -84,7 +84,7 @@ export interface SundayPracticeConfig {
  */
 export const SUNDAY_PRACTICE_CONFIG: SundayPracticeConfig = {
   // Capacity Settings
-  maxCapacityPerSlot: 12, // Default max, but slots can have different capacities
+  maxCapacityPerSlot: 12, // Default max for early slot, late slot is 10
 
   // Booking Rules
   weeksAheadAvailable: 1, // Only book next Sunday (1 week ahead)

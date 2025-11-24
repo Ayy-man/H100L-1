@@ -28,7 +28,7 @@ const slideDown = {
 
 // Day restrictions based on program type
 const GROUP_TRAINING_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']; // Available daily
-const PRIVATE_TRAINING_DAYS = ['monday', 'wednesday', 'thursday'];
+const PRIVATE_TRAINING_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']; // Available all 7 days
 
 const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handleMultiSelectChange }) => {
   const [availability, setAvailability] = useState<SlotAvailability[]>([]);
@@ -287,10 +287,10 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                 {/* Schedule Info */}
                 <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-300">
-                    📅 <strong>Private Training Schedule:</strong> Available on <span className="text-[#9BD4FF]">Mondays, Wednesdays & Thursdays</span> only
+                    📅 <strong>Private Training Schedule:</strong> Available <span className="text-[#9BD4FF]">7 days a week</span>
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    Time slots: 8:00 AM - 3:00 PM (1-on-1 sessions, before group training)
+                    Time slots: 8:00 AM - 3:00 PM (1-on-1 hourly sessions, 7 slots per day)
                   </p>
                 </div>
 
@@ -303,7 +303,7 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Days <span className="text-red-500">*</span></label>
-                  <p className="text-xs text-gray-400 mb-3">Available: Monday, Wednesday, Thursday only</p>
+                  <p className="text-xs text-gray-400 mb-3">Available all 7 days a week - Select all days you're available</p>
 
                   {/* Check Availability Button */}
                   <button
@@ -369,12 +369,13 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
 
                 <FormSelect label="Preferred Time Slot" name="privateTimeSlot" value={data.privateTimeSlot} handleChange={handleChange}>
                   <option value="">-- Select Time Slot --</option>
-                  <option value="8:00 AM">8:00 AM</option>
-                  <option value="9:15 AM">9:15 AM</option>
-                  <option value="10:30 AM">10:30 AM</option>
-                  <option value="11:45 AM">11:45 AM</option>
-                  <option value="1:00 PM">1:00 PM</option>
-                  <option value="2:15 PM">2:15 PM</option>
+                  <option value="8:00 AM">8:00 AM - 9:00 AM</option>
+                  <option value="9:00 AM">9:00 AM - 10:00 AM</option>
+                  <option value="10:00 AM">10:00 AM - 11:00 AM</option>
+                  <option value="11:00 AM">11:00 AM - 12:00 PM</option>
+                  <option value="12:00 PM">12:00 PM - 1:00 PM</option>
+                  <option value="1:00 PM">1:00 PM - 2:00 PM</option>
+                  <option value="2:00 PM">2:00 PM - 3:00 PM</option>
                 </FormSelect>
 
                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
@@ -392,16 +393,16 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                 {/* Schedule Info */}
                 <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-300">
-                    📅 <strong>Semi-Private Training Schedule:</strong> Available on <span className="text-[#9BD4FF]">Mondays, Wednesdays & Thursdays</span> only
+                    📅 <strong>Semi-Private Training Schedule:</strong> Available <span className="text-[#9BD4FF]">7 days a week</span>
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    2-3 players per session (matched by skill level and availability)
+                    Time slots: 8:00 AM - 3:00 PM (2-3 players per session, matched by skill level and availability)
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Available Days <span className="text-red-500">*</span></label>
-                  <p className="text-xs text-gray-400 mb-3">Available: Monday, Wednesday, Thursday only</p>
+                  <p className="text-xs text-gray-400 mb-3">Available all 7 days a week - Select all days you're available</p>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {

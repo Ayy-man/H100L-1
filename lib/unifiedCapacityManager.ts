@@ -8,9 +8,10 @@ import { supabase } from './supabase';
  *    - Max 6 players per slot
  *    - Only blocks within group program (doesn't conflict with private)
  *
- * 2. Private & Semi-Private: FLEXIBLE times chosen by customer on Mon/Wed/Thu
+ * 2. Private & Semi-Private: FLEXIBLE times 8 AM-3 PM, available 7 days/week
+ *    - Hourly slots: 8-9, 9-10, 10-11, 11-12, 12-1, 1-2, 2-3 AM (7 slots per day)
  *    - Max 1 booking per specific time/day combination
- *    - BLOCKS ACROSS BOTH PROGRAMS: if private booked 3pm Mon → semi-private can't book same slot
+ *    - BLOCKS ACROSS BOTH PROGRAMS: if private booked 9am Mon → semi-private can't book same slot
  *    - If 2-hour booking, blocks BOTH consecutive hours
  */
 
@@ -42,17 +43,19 @@ const GROUP_TRAINING_TIMES = [
   '8:15 PM'
 ];
 
-// Private/Semi-Private: Flexible times on Mon/Wed/Thu (customer chooses)
+// Private/Semi-Private: Flexible times 8 AM-3 PM, available 7 days/week (customer chooses)
 const PRIVATE_TRAINING_TIMES = [
-  '3:00 PM',
-  '4:15 PM',
-  '5:30 PM',
-  '6:45 PM',
-  '8:00 PM'
+  '8:00 AM',
+  '9:00 AM',
+  '10:00 AM',
+  '11:00 AM',
+  '12:00 PM',
+  '1:00 PM',
+  '2:00 PM'
 ];
 
 const GROUP_TRAINING_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-const PRIVATE_TRAINING_DAYS = ['monday', 'wednesday', 'thursday'];
+const PRIVATE_TRAINING_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const MAX_GROUP_CAPACITY = 6;
 const MAX_PRIVATE_CAPACITY = 1; // Shared between private AND semi-private
 
