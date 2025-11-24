@@ -76,16 +76,17 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5 text-primary" />
-          Registration Summary
-        </CardTitle>
-        <CardDescription>
-          Complete details of your SniperZone hockey training registration
-        </CardDescription>
-      </CardHeader>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5 text-primary" />
+            Registration Summary
+          </CardTitle>
+          <CardDescription>
+            Complete details of your SniperZone hockey training registration
+          </CardDescription>
+        </CardHeader>
       <CardContent className="space-y-6">
         {/* Player Information */}
         <div className="space-y-4">
@@ -311,54 +312,54 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
           </>
         )}
       </CardContent>
-    </Card>
+      </Card>
 
-    {/* Reschedule Modals */}
-    {form_data.programType === 'group' && (
-      <RescheduleGroupModal
-        isOpen={isRescheduleModalOpen}
-        onClose={() => setIsRescheduleModalOpen(false)}
-        registrationId={id}
-        firebaseUid={firebase_uid}
-        currentSchedule={{
-          days: form_data.groupSelectedDays || [],
-          frequency: form_data.groupFrequency || '1x',
-          playerCategory: form_data.playerCategory || ''
-        }}
-        onSuccess={handleRescheduleSuccess}
-      />
-    )}
+      {/* Reschedule Modals */}
+      {form_data.programType === 'group' && (
+        <RescheduleGroupModal
+          isOpen={isRescheduleModalOpen}
+          onClose={() => setIsRescheduleModalOpen(false)}
+          registrationId={id}
+          firebaseUid={firebase_uid}
+          currentSchedule={{
+            days: form_data.groupSelectedDays || [],
+            frequency: form_data.groupFrequency || '1x',
+            playerCategory: form_data.playerCategory || ''
+          }}
+          onSuccess={handleRescheduleSuccess}
+        />
+      )}
 
-    {form_data.programType === 'private' && (
-      <ReschedulePrivateModal
-        isOpen={isRescheduleModalOpen}
-        onClose={() => setIsRescheduleModalOpen(false)}
-        registrationId={id}
-        firebaseUid={firebase_uid}
-        currentSchedule={{
-          day: form_data.privateSelectedDays?.[0] || '',
-          timeSlot: form_data.privateTimeSlot || '',
-          playerCategory: form_data.playerCategory || ''
-        }}
-        onSuccess={handleRescheduleSuccess}
-      />
-    )}
+      {form_data.programType === 'private' && (
+        <ReschedulePrivateModal
+          isOpen={isRescheduleModalOpen}
+          onClose={() => setIsRescheduleModalOpen(false)}
+          registrationId={id}
+          firebaseUid={firebase_uid}
+          currentSchedule={{
+            day: form_data.privateSelectedDays?.[0] || '',
+            timeSlot: form_data.privateTimeSlot || '',
+            playerCategory: form_data.playerCategory || ''
+          }}
+          onSuccess={handleRescheduleSuccess}
+        />
+      )}
 
-    {form_data.programType === 'semi-private' && (
-      <RescheduleSemiPrivateModal
-        isOpen={isRescheduleModalOpen}
-        onClose={() => setIsRescheduleModalOpen(false)}
-        registrationId={id}
-        firebaseUid={firebase_uid}
-        currentSchedule={{
-          day: form_data.semiPrivateAvailability?.[0],
-          timeSlot: form_data.privateTimeSlot,
-          playerCategory: form_data.playerCategory || ''
-        }}
-        onSuccess={handleRescheduleSuccess}
-      />
-    )}
-  </>
+      {form_data.programType === 'semi-private' && (
+        <RescheduleSemiPrivateModal
+          isOpen={isRescheduleModalOpen}
+          onClose={() => setIsRescheduleModalOpen(false)}
+          registrationId={id}
+          firebaseUid={firebase_uid}
+          currentSchedule={{
+            day: form_data.semiPrivateAvailability?.[0],
+            timeSlot: form_data.privateTimeSlot,
+            playerCategory: form_data.playerCategory || ''
+          }}
+          onSuccess={handleRescheduleSuccess}
+        />
+      )}
+    </>
   );
 };
 
