@@ -518,52 +518,62 @@ const SchedulePage: React.FC = () => {
                         <div className="space-y-1">
                           {day.sessions.slice(0, 2).map((session, idx) => (
                             <div key={idx}>
-                              {session.type === 'real-ice' && sundayStatus ? (
-                                // Enhanced Sunday display
+                              {session.type === 'real-ice' ? (
+                                // Enhanced Sunday display - ALWAYS show booking status
                                 <div className="space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <div className={`text-xs p-1 rounded flex items-center gap-1 ${
-                                      sundayStatus.booked
-                                        ? 'bg-green-100 text-green-700'
-                                        : sundayStatus.availableSpots === 0
-                                        ? 'bg-red-100 text-red-700'
-                                        : sundayStatus.availableSpots <= 2
-                                        ? 'bg-yellow-100 text-yellow-700'
-                                        : 'bg-blue-100 text-blue-700'
-                                    }`}>
-                                      {sundayStatus.booked ? (
-                                        <>
-                                          <CheckCircle className="h-3 w-3" />
-                                          <span>Booked</span>
-                                        </>
-                                      ) : sundayStatus.availableSpots === 0 ? (
-                                        <>
-                                          <XCircle className="h-3 w-3" />
-                                          <span>Full</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          🧊 Ice
-                                        </>
-                                      )}
-                                    </div>
+                                  <div className="flex flex-col gap-0.5">
+                                    {sundayStatus ? (
+                                      <>
+                                        <div className={`text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-1 ${
+                                          sundayStatus.booked
+                                            ? 'bg-green-500/20 text-green-700 dark:text-green-400'
+                                            : sundayStatus.availableSpots === 0
+                                            ? 'bg-red-500/20 text-red-700 dark:text-red-400'
+                                            : sundayStatus.availableSpots <= 2
+                                            ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400'
+                                            : 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
+                                        }`}>
+                                          {sundayStatus.booked ? (
+                                            <>
+                                              <CheckCircle className="h-3 w-3" />
+                                              <span className="font-semibold">Booked</span>
+                                            </>
+                                          ) : sundayStatus.availableSpots === 0 ? (
+                                            <>
+                                              <XCircle className="h-3 w-3" />
+                                              <span className="font-semibold">Full</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              🧊 <span className="font-semibold">Ice</span>
+                                            </>
+                                          )}
+                                        </div>
+                                        {!sundayStatus.booked && sundayStatus.availableSpots > 0 && (
+                                          <div className="text-[10px] text-muted-foreground pl-1">
+                                            {sundayStatus.availableSpots} spot{sundayStatus.availableSpots !== 1 ? 's' : ''} left
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      // Loading or no status available
+                                      <div className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                        🧊 Ice
+                                      </div>
+                                    )}
                                   </div>
-                                  {!sundayStatus.booked && sundayStatus.availableSpots > 0 && (
-                                    <div className="text-xs text-muted-foreground">
-                                      {sundayStatus.availableSpots} {sundayStatus.availableSpots === 1 ? 'spot' : 'spots'} left
-                                    </div>
-                                  )}
                                 </div>
                               ) : (
                                 // Regular session display
                                 <div
-                                  className={`text-xs p-1 rounded ${
+                                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                                     session.type === 'real-ice'
                                       ? 'bg-primary/20 text-primary'
                                       : 'bg-secondary/50 text-secondary-foreground'
                                   }`}
                                 >
                                   {session.type === 'real-ice' ? '🧊 Ice' : '🏒 Training'}
+                                  {session.time && <div className="text-[10px] mt-0.5">{session.time}</div>}
                                 </div>
                               )}
                             </div>
@@ -580,15 +590,38 @@ const SchedulePage: React.FC = () => {
                 </div>
               </CardContent>
               <CardFooter>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-secondary/50"></div>
-                    <span className="text-muted-foreground">Synthetic Ice</span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4 text-sm flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-secondary/50"></div>
+                      <span className="text-muted-foreground">Synthetic Ice</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-primary/20"></div>
+                      <span className="text-muted-foreground">Real Ice</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-primary/20"></div>
-                    <span className="text-muted-foreground">Real Ice</span>
-                  </div>
+                  {registration.form_data.programType === 'group' && (
+                    <div className="flex items-center gap-4 text-xs flex-wrap">
+                      <span className="font-medium text-muted-foreground">Sunday Ice Status:</span>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle className="h-3 w-3 text-green-600" />
+                        <span className="text-muted-foreground">Booked</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded bg-blue-500/20"></div>
+                        <span className="text-muted-foreground">Available</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded bg-yellow-500/20"></div>
+                        <span className="text-muted-foreground">Low Availability</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <XCircle className="h-3 w-3 text-red-600" />
+                        <span className="text-muted-foreground">Full</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardFooter>
             </Card>
