@@ -152,10 +152,11 @@ export default async function handler(
       // Get the payment status from the latest invoice
       const invoice = subscription.latest_invoice as Stripe.Invoice;
       const paymentIntent = invoice?.payment_intent as Stripe.PaymentIntent;
+      // FIXED: Use 'succeeded' instead of 'active' to match expected payment statuses
       const paymentStatus = paymentIntent?.status === 'succeeded'
-        ? 'active'
+        ? 'succeeded'
         : subscription.status === 'active'
-        ? 'active'
+        ? 'succeeded'
         : 'pending';
 
       // Update Supabase with subscription info
@@ -168,6 +169,36 @@ export default async function handler(
           updated_at: new Date().toISOString(),
         })
         .eq('id', registrationId);
+
+      // For semi-private, add player to unpaired list for matching
+      if (programType === 'semi-private' && paymentStatus === 'succeeded') {
+        // Get registration details for unpaired entry
+        const { data: registration } = await supabase
+          .from('registrations')
+          .select('form_data')
+          .eq('id', registrationId)
+          .single();
+
+        if (registration?.form_data) {
+          const formData = registration.form_data;
+          await supabase
+            .from('unpaired_semi_private')
+            .upsert({
+              registration_id: registrationId,
+              player_name: formData.playerFullName,
+              player_category: formData.playerCategory,
+              age_category: formData.playerCategory,
+              preferred_days: formData.semiPrivateAvailability || [],
+              preferred_time_slots: formData.semiPrivateTimeSlot ? [formData.semiPrivateTimeSlot] : [],
+              parent_email: formData.parentEmail,
+              parent_name: formData.parentFullName,
+              status: 'waiting',
+              unpaired_since_date: new Date().toISOString().split('T')[0]
+            }, {
+              onConflict: 'registration_id'
+            });
+        }
+      }
 
       return res.status(200).json({
         success: true,

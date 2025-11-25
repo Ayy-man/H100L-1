@@ -175,10 +175,11 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   if (!subscriptionId) return;
 
   // Update all registrations with this subscription
+  // FIXED: Use 'succeeded' instead of 'active'
   await supabase
     .from('registrations')
     .update({
-      payment_status: 'active',
+      payment_status: 'succeeded',
       updated_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', subscriptionId);
@@ -199,6 +200,27 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     .eq('stripe_subscription_id', subscriptionId);
 }
 
+// Helper to map Stripe subscription status to our payment status
+function mapStripeStatusToPaymentStatus(stripeStatus: string): string {
+  // Our valid statuses: pending, succeeded, failed, canceled, verified
+  // Stripe statuses: active, past_due, canceled, unpaid, trialing, incomplete, incomplete_expired
+  switch (stripeStatus) {
+    case 'active':
+    case 'trialing':
+      return 'succeeded';
+    case 'past_due':
+    case 'unpaid':
+      return 'pending';
+    case 'canceled':
+    case 'incomplete_expired':
+      return 'canceled';
+    case 'incomplete':
+      return 'pending';
+    default:
+      return 'pending';
+  }
+}
+
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('Subscription created:', subscription.id);
 
@@ -209,7 +231,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     .from('registrations')
     .update({
       stripe_subscription_id: subscription.id,
-      payment_status: subscription.status,
+      payment_status: mapStripeStatusToPaymentStatus(subscription.status),
       updated_at: new Date().toISOString(),
     })
     .eq('id', registrationId);
@@ -221,7 +243,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   await supabase
     .from('registrations')
     .update({
-      payment_status: subscription.status,
+      payment_status: mapStripeStatusToPaymentStatus(subscription.status),
       updated_at: new Date().toISOString(),
     })
     .eq('stripe_subscription_id', subscription.id);

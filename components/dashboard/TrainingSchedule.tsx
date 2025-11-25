@@ -121,11 +121,13 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
       }
     } else if (form_data.programType === 'private' && form_data.privateSelectedDays) {
       const dayMap: { [key: string]: number } = {
+        sunday: 0,
         monday: 1,
         tuesday: 2,
         wednesday: 3,
         thursday: 4,
         friday: 5,
+        saturday: 6,
       };
 
       for (let week = 0; week < weeksToShow; week++) {
@@ -559,7 +561,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         firebaseUid={firebase_uid}
         currentSchedule={{
           day: form_data.semiPrivateAvailability?.[0],
-          timeSlot: form_data.privateTimeSlot,
+          timeSlot: form_data.semiPrivateTimeSlot,
           playerCategory: form_data.playerCategory || ''
         }}
         onSuccess={handleRescheduleSuccess}
