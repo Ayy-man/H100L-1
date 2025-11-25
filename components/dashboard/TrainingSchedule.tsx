@@ -50,6 +50,14 @@ interface SundayBookingStatus {
  * - Sunday real ice practice (INTERACTIVE - can book next Sunday)
  * - Location details
  */
+interface ScheduleException {
+  exception_date: string;
+  exception_type: string;
+  replacement_day: string;
+  replacement_time?: string;
+  status: string;
+}
+
 const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => {
   const { form_data, firebase_uid, id } = registration;
   const [sundayStatus, setSundayStatus] = useState<SundayBookingStatus | null>(null);
@@ -57,6 +65,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   const [bookingInProgress, setBookingInProgress] = useState(false);
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
 
   // Helper function to check Sunday eligibility
   const isSundayEligible = () => {
@@ -84,10 +93,21 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
       day: string;
       type: 'synthetic' | 'real-ice';
       time?: string;
+      isException?: boolean;
     }> = [];
 
     const today = new Date();
     const weeksToShow = 4;
+
+    // Helper to format date as YYYY-MM-DD for comparison
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+    // Helper to check if there's an exception for a given date
+    const getExceptionForDate = (dateStr: string) => {
+      return scheduleExceptions.find(
+        (exc) => exc.exception_date === dateStr && exc.status === 'applied'
+      );
+    };
 
     // Add weekday sessions based on program type
     if (form_data.programType === 'group' && form_data.groupSelectedDays) {
@@ -100,6 +120,10 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         friday: 5,
         saturday: 6,
       };
+      const reverseDayMap: { [key: number]: string } = {
+        0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday',
+        4: 'Thursday', 5: 'Friday', 6: 'Saturday',
+      };
 
       for (let week = 0; week < weeksToShow; week++) {
         form_data.groupSelectedDays.forEach((day) => {
@@ -110,11 +134,33 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
             // Only add future dates
             if (date >= today) {
-              sessions.push({
-                date,
-                day: day.charAt(0).toUpperCase() + day.slice(1),
-                type: 'synthetic',
-              });
+              const dateStr = formatDate(date);
+              const exception = getExceptionForDate(dateStr);
+
+              if (exception && exception.exception_type === 'swap') {
+                // Replace with the exception day
+                const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
+                if (replacementDayNum !== undefined) {
+                  const replacementDate = new Date(date);
+                  // Calculate the replacement date in the same week
+                  const dayDiff = replacementDayNum - date.getDay();
+                  replacementDate.setDate(date.getDate() + dayDiff);
+
+                  sessions.push({
+                    date: replacementDate,
+                    day: reverseDayMap[replacementDayNum] || exception.replacement_day,
+                    type: 'synthetic',
+                    isException: true,
+                  });
+                }
+              } else {
+                // Normal session
+                sessions.push({
+                  date,
+                  day: day.charAt(0).toUpperCase() + day.slice(1),
+                  type: 'synthetic',
+                });
+              }
             }
           }
         });
@@ -203,6 +249,28 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   };
 
   const upcomingSessions = getUpcomingSessions();
+
+  // Fetch schedule exceptions for one-time changes
+  useEffect(() => {
+    const fetchScheduleExceptions = async () => {
+      if (!id) return;
+      try {
+        const response = await fetch(
+          `/api/schedule-exceptions?registrationId=${id}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.exceptions) {
+            setScheduleExceptions(data.exceptions);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch schedule exceptions:', error);
+      }
+    };
+
+    fetchScheduleExceptions();
+  }, [id, refreshKey]);
 
   // Fetch Sunday booking status
   useEffect(() => {
@@ -449,6 +517,11 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                           {session.type === 'real-ice' && (
                             <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/50">
                               Free Included
+                            </Badge>
+                          )}
+                          {session.isException && (
+                            <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/50">
+                              One-time Change
                             </Badge>
                           )}
                           {statusBadge && (

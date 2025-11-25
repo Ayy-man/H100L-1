@@ -131,6 +131,30 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
     setError(null);
 
     try {
+      // For one-time changes, we need to specify the date(s) that will be swapped
+      // For permanent changes, we use effectiveDate for when the change takes effect
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
+      // For one-time changes, calculate the next occurrence of the original day(s)
+      // This is the date that will be "swapped" to the new day
+      let specificDate = todayStr;
+      if (changeType === 'one_time' && currentSchedule.days.length > 0) {
+        const dayMap: { [key: string]: number } = {
+          sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+          thursday: 4, friday: 5, saturday: 6,
+        };
+        // Find the next occurrence of the first original day
+        const originalDay = currentSchedule.days[0].toLowerCase();
+        const targetDayNum = dayMap[originalDay];
+        if (targetDayNum !== undefined) {
+          const daysUntil = (targetDayNum - today.getDay() + 7) % 7 || 7;
+          const nextOccurrence = new Date(today);
+          nextOccurrence.setDate(today.getDate() + daysUntil);
+          specificDate = nextOccurrence.toISOString().split('T')[0];
+        }
+      }
+
       const response = await fetch('/api/reschedule-group', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -141,7 +165,10 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
           changeType,
           originalDays: currentSchedule.days,
           newDays: selectedDays,
-          effectiveDate: new Date().toISOString().split('T')[0]
+          // Send specificDate for one-time changes, effectiveDate for permanent
+          ...(changeType === 'one_time'
+            ? { specificDate }
+            : { effectiveDate: todayStr })
         })
       });
 
