@@ -148,9 +148,13 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
       }
     } else if (form_data.programType === 'semi-private' && form_data.semiPrivateAvailability) {
       const dayMap: { [key: string]: number } = {
+        sunday: 0,
         monday: 1,
+        tuesday: 2,
         wednesday: 3,
         thursday: 4,
+        friday: 5,
+        saturday: 6,
       };
 
       for (let week = 0; week < weeksToShow; week++) {
@@ -165,6 +169,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                 date,
                 day: day.charAt(0).toUpperCase() + day.slice(1),
                 type: 'synthetic',
+                time: form_data.semiPrivateTimeSlot,
               });
             }
           }

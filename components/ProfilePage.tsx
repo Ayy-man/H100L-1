@@ -481,8 +481,8 @@ const ProfilePage: React.FC = () => {
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    To change your program type or training schedule, please use the "Request
-                    Schedule Change" feature on the Schedule page.
+                    To change your program type or training schedule, please use the "Reschedule"
+                    button on the Schedule page.
                   </AlertDescription>
                 </Alert>
               </CardContent>

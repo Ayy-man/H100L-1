@@ -71,16 +71,32 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
         })
       });
 
+      // Check if response is OK
+      if (!response.ok) {
+        // Try to parse error message
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to check availability');
+        } else {
+          // Non-JSON response (e.g., server error page)
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+          throw new Error('Server error occurred. Please try again later.');
+        }
+      }
+
       const result = await response.json();
 
       if (result.success) {
         setAvailability(result.slots || []);
       } else {
-        setAvailabilityError('Failed to check availability');
+        setAvailabilityError(result.error || 'Failed to check availability');
       }
     } catch (error) {
       console.error('Availability check error:', error);
-      setAvailabilityError('Could not connect to availability service');
+      const errorMessage = error instanceof Error ? error.message : 'Could not connect to availability service';
+      setAvailabilityError(errorMessage);
     } finally {
       setIsCheckingAvailability(false);
     }
@@ -398,11 +414,18 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                   <p className="text-xs text-gray-400 mt-1">
                     Time slots: 8:00 AM - 3:00 PM (2-3 players per session, matched by skill level and availability)
                   </p>
+                  <p className="text-xs text-yellow-300 font-semibold mt-2">
+                    ⚠️ Sessions are 1x per week only - Choose your preferred day
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Available Days <span className="text-red-500">*</span></label>
-                  <p className="text-xs text-gray-400 mb-3">Available all 7 days a week - Select all days you're available</p>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Select Your Preferred Training Day <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Available all 7 days a week - Select all days you're available (we'll match you with players with similar availability)
+                  </p>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
@@ -438,17 +461,25 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                       );
                     })}
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">Select all days you're available (we'll match you with players with similar availability)</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Time Windows <span className="text-red-500">*</span></label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    {['Morning (6 AM - 12 PM)', 'Afternoon (12 PM - 5 PM)', 'Evening (5 PM - 9 PM)'].map(timeWindow => (
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Preferred Time Slots <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Select all hourly time slots you're available for (the more flexible you are, the faster we can match you)
+                  </p>
+                  <p className="text-xs text-green-300 mb-3">
+                    💡 <strong>Suggested times:</strong> 8:00 AM, 10:00 AM, 12:00 PM, 2:00 PM
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'].map(timeSlot => (
                       <label
-                        key={timeWindow}
+                        key={timeSlot}
                         className={`p-3 border rounded-lg cursor-pointer text-center text-sm ${
-                          (data.semiPrivateTimeWindows || []).includes(timeWindow)
+                          (data.semiPrivateTimeWindows || []).includes(timeSlot)
                             ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF]'
                             : 'border-white/20 text-gray-300 hover:border-white/40'
                         }`}
@@ -456,21 +487,17 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                         <input
                           type="checkbox"
                           className="sr-only"
-                          checked={(data.semiPrivateTimeWindows || []).includes(timeWindow)}
-                          onChange={() => handleMultiSelectChange('semiPrivateTimeWindows', timeWindow)}
+                          checked={(data.semiPrivateTimeWindows || []).includes(timeSlot)}
+                          onChange={() => handleMultiSelectChange('semiPrivateTimeWindows', timeSlot)}
                         />
-                        {timeWindow}
+                        {timeSlot}
                       </label>
                     ))}
                   </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Selected: {(data.semiPrivateTimeWindows || []).length} time slot{(data.semiPrivateTimeWindows || []).length !== 1 ? 's' : ''}
+                  </p>
                 </div>
-
-                <FormSelect label="Matching Preference" name="semiPrivateMatchingPreference" value={data.semiPrivateMatchingPreference} handleChange={handleChange}>
-                  <option value="">-- Select Preference --</option>
-                  <option value="same-level">Same skill level</option>
-                  <option value="flexible">Flexible - any skill level</option>
-                  <option value="higher-level">Train with higher skill level</option>
-                </FormSelect>
 
                 <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
                   <p className="text-sm font-medium text-purple-300 mb-2">🤝 How Semi-Private Works</p>

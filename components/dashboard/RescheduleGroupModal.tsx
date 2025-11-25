@@ -76,15 +76,31 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
         })
       });
 
+      // Check if response is OK
+      if (!response.ok) {
+        // Try to parse error message
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to check availability');
+        } else {
+          // Non-JSON response (e.g., server error page)
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+          throw new Error('Server error occurred. Please try again later.');
+        }
+      }
+
       const data = await response.json();
       if (data.success) {
         setAvailability(data.availability);
       } else {
-        setError('Failed to check availability');
+        setError(data.error || 'Failed to check availability');
       }
     } catch (err) {
       console.error('Error checking availability:', err);
-      setError('Failed to check availability');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to check availability';
+      setError(errorMessage);
     } finally {
       setIsCheckingAvailability(false);
     }
@@ -129,6 +145,21 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
         })
       });
 
+      // Check if response is OK
+      if (!response.ok) {
+        // Try to parse error message
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to reschedule');
+        } else {
+          // Non-JSON response (e.g., server error page)
+          const errorText = await response.text();
+          console.error('Non-JSON error response:', errorText);
+          throw new Error('Server error occurred. Please try again later.');
+        }
+      }
+
       const data = await response.json();
       if (data.success) {
         setSuccess(true);
@@ -144,7 +175,7 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
       }
     } catch (err) {
       console.error('Error rescheduling:', err);
-      const errorMsg = 'Failed to reschedule. Please try again.';
+      const errorMsg = err instanceof Error ? err.message : 'Failed to reschedule. Please try again.';
       setError(errorMsg);
       toast.error('Error', errorMsg);
     } finally {

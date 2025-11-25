@@ -1,6 +1,42 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { generateMonthlyDates } from '../lib/dateUtils';
+
+// Inline date generation to avoid import issues in serverless
+function generateMonthlyDates(selectedDays: string[]): string[] {
+  if (selectedDays.length === 0) return [];
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+  const dayNameToNumber: Record<string, number> = {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+  };
+
+  const selectedDayNumbers = selectedDays.map(day => dayNameToNumber[day.toLowerCase()]);
+  const dates: string[] = [];
+
+  for (let date = new Date(firstDayOfMonth); date <= lastDayOfMonth; date.setDate(date.getDate() + 1)) {
+    const dayOfWeek = date.getDay();
+    if (selectedDayNumbers.includes(dayOfWeek)) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
+    }
+  }
+
+  return dates;
+}
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -208,10 +244,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // For permanent changes, update the registration's form_data
       if (changeType === 'permanent') {
+        // Convert newDays to lowercase to ensure compatibility
+        const normalizedDays = newDays.map(day => day.toLowerCase());
+
         const updatedFormData = {
           ...registration.form_data,
-          groupSelectedDays: newDays,
-          groupMonthlyDates: generateMonthlyDates(newDays as any[])
+          groupSelectedDays: normalizedDays,
+          groupMonthlyDates: generateMonthlyDates(normalizedDays)
         };
 
         const { error: updateError } = await supabase
@@ -268,6 +307,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error('Error in reschedule-group:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return res.status(500).json({
       success: false,
       error: 'Internal server error',
