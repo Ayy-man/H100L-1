@@ -58,6 +58,14 @@ interface ScheduleException {
   status: string;
 }
 
+interface DayCapacity {
+  day: string;
+  spotsUsed: number;
+  spotsRemaining: number;
+  totalCapacity: number;
+  isFull: boolean;
+}
+
 const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => {
   const { form_data, firebase_uid, id } = registration;
   const [sundayStatus, setSundayStatus] = useState<SundayBookingStatus | null>(null);
@@ -66,6 +74,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
+  const [dayCapacity, setDayCapacity] = useState<Record<string, DayCapacity>>({});
 
   // Helper function to check Sunday eligibility
   const isSundayEligible = () => {
@@ -276,6 +285,28 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
     fetchScheduleExceptions();
   }, [id, refreshKey]);
+
+  // Fetch capacity for group training days
+  useEffect(() => {
+    const fetchCapacity = async () => {
+      if (form_data.programType !== 'group' || !form_data.groupSelectedDays) return;
+
+      try {
+        const days = form_data.groupSelectedDays.join(',');
+        const response = await fetch(`/api/group-capacity?days=${days}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.capacity) {
+            setDayCapacity(data.capacity);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch capacity:', error);
+      }
+    };
+
+    fetchCapacity();
+  }, [form_data.programType, form_data.groupSelectedDays, refreshKey]);
 
   // Fetch Sunday booking status
   useEffect(() => {
@@ -570,11 +601,22 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                       </Button>
                     )}
 
-                    {/* Max players indicator for group synthetic sessions */}
+                    {/* Live capacity indicator for group synthetic sessions */}
                     {form_data.programType === 'group' && session.type === 'synthetic' && (
                       <div className="text-right ml-2">
                         <Users className="h-4 w-4 text-muted-foreground mb-1" />
-                        <p className="text-xs text-muted-foreground">Max 6 players</p>
+                        {(() => {
+                          const capacity = dayCapacity[session.day.toLowerCase()];
+                          if (capacity) {
+                            const { spotsUsed, spotsRemaining, isFull } = capacity;
+                            return (
+                              <p className={`text-xs ${isFull ? 'text-red-400' : spotsRemaining <= 2 ? 'text-yellow-400' : 'text-muted-foreground'}`}>
+                                {isFull ? 'Full (6/6)' : `${spotsUsed}/6 spots filled`}
+                              </p>
+                            );
+                          }
+                          return <p className="text-xs text-muted-foreground">Loading...</p>;
+                        })()}
                       </div>
                     )}
                   </div>
