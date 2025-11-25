@@ -167,7 +167,7 @@ const BillingPage: React.FC = () => {
       currentDate.setMonth(currentDate.getMonth() + 1);
     }
 
-    return history.reverse(); // Most recent first
+    return [...history].reverse(); // Most recent first (non-mutating)
   };
 
   const billingHistory = generateBillingHistory();

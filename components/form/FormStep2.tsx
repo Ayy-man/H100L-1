@@ -415,16 +415,16 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                     Time slots: 8:00 AM - 3:00 PM (2-3 players per session, matched by skill level and availability)
                   </p>
                   <p className="text-xs text-yellow-300 font-semibold mt-2">
-                    ⚠️ Sessions are 1x per week only - Choose your preferred day
+                    ⚠️ Sessions are <strong>1x per week ONLY</strong> - Choose ONE preferred day
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Select Your Preferred Training Day <span className="text-red-500">*</span>
+                    Select Your Preferred Training Day (1x Week) <span className="text-red-500">*</span>
                   </label>
                   <p className="text-xs text-gray-400 mb-3">
-                    Available all 7 days a week - Select all days you're available (we'll match you with players with similar availability)
+                    Available all 7 days a week - <strong>Select ONE day only</strong> (we'll match you with players available on the same day)
                   </p>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -445,11 +445,23 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                           }`}
                         >
                           <input
-                            type="checkbox"
+                            type="radio"
+                            name="semiPrivateDay"
                             className="sr-only"
                             checked={isChecked}
                             disabled={!isAllowed}
-                            onChange={() => isAllowed && handleMultiSelectChange('semiPrivateAvailability', day)}
+                            onChange={() => {
+                              if (isAllowed) {
+                                // For semi-private, replace the array with single selection
+                                const event = {
+                                  target: {
+                                    name: 'semiPrivateAvailability',
+                                    value: [day]
+                                  }
+                                } as any;
+                                handleChange(event);
+                              }
+                            }}
                           />
                           {day}
                           {!isAllowed && (
@@ -461,6 +473,11 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                       );
                     })}
                   </div>
+                  {(data.semiPrivateAvailability || []).length > 0 && (
+                    <p className="text-xs text-green-300 mt-2">
+                      ✓ Selected: {(data.semiPrivateAvailability || []).join('')} (1x per week)
+                    </p>
+                  )}
                 </div>
 
                 <div>
