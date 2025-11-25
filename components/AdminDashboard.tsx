@@ -422,17 +422,32 @@ const AdminDashboard: React.FC = () => {
 
   const fetchMatchingData = async () => {
     try {
-      const [unmatchedRes, groupsRes] = await Promise.all([
-        supabase.from('unmatched_semi_private').select('*'),
-        supabase.from('semi_private_groups_detail').select('*')
-      ]);
+      // Fetch unpaired semi-private players
+      const unmatchedRes = await supabase
+        .from('unpaired_semi_private')
+        .select('*')
+        .eq('status', 'waiting');
+
+      // Fetch active semi-private pairings with player details
+      const groupsRes = await supabase
+        .from('semi_private_pairings')
+        .select(`
+          id,
+          scheduled_day,
+          scheduled_time,
+          status,
+          paired_date,
+          player_1:player_1_registration_id(id, form_data),
+          player_2:player_2_registration_id(id, form_data)
+        `)
+        .eq('status', 'active');
 
       if (unmatchedRes.data) {
-        // Parse JSON strings back to arrays
+        // Map unpaired_semi_private data to match expected format
         const parsedData = unmatchedRes.data.map((player: any) => ({
           ...player,
-          availability: typeof player.availability === 'string' ? JSON.parse(player.availability) : player.availability,
-          time_windows: typeof player.time_windows === 'string' ? JSON.parse(player.time_windows) : player.time_windows
+          availability: player.preferred_days || [],
+          time_windows: player.preferred_time_slots || []
         }));
         setUnmatchedPlayers(parsedData);
 
@@ -440,7 +455,21 @@ const AdminDashboard: React.FC = () => {
         calculateCompatibility(parsedData);
       }
 
-      if (groupsRes.data) setSemiPrivateGroups(groupsRes.data);
+      if (groupsRes.data) {
+        // Transform pairing data to match expected group format
+        const transformedGroups = groupsRes.data.map((pairing: any) => ({
+          id: pairing.id,
+          scheduled_day: pairing.scheduled_day,
+          scheduled_time: pairing.scheduled_time,
+          status: pairing.status,
+          paired_date: pairing.paired_date,
+          player_1_name: pairing.player_1?.form_data?.playerFullName || 'Unknown',
+          player_1_category: pairing.player_1?.form_data?.playerCategory || 'Unknown',
+          player_2_name: pairing.player_2?.form_data?.playerFullName || 'Unknown',
+          player_2_category: pairing.player_2?.form_data?.playerCategory || 'Unknown',
+        }));
+        setSemiPrivateGroups(transformedGroups);
+      }
     } catch (err: any) {
       console.error('Error fetching matching data:', err);
     }
@@ -1369,7 +1398,7 @@ const AdminDashboard: React.FC = () => {
                 </h3>
                 {dailyRegistrations.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={dailyRegistrations.reverse()}>
+                    <LineChart data={[...dailyRegistrations].reverse()}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                       <XAxis
                         dataKey="date"

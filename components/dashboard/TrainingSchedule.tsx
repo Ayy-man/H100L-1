@@ -444,11 +444,6 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                       <Separator orientation="vertical" className="h-12" />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge
-                            variant={session.type === 'real-ice' ? 'default' : 'secondary'}
-                          >
-                            {session.type === 'real-ice' ? 'Real Ice' : 'Synthetic Ice'}
-                          </Badge>
                           {session.type === 'real-ice' && (
                             <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/50">
                               Free Included

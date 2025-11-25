@@ -67,7 +67,7 @@ const SchedulePage: React.FC = () => {
 
     try {
       const response = await fetch(
-        `/api/sunday-upcoming-slots?registrationId=${registration.id}&firebaseUid=${registration.firebase_uid}&weeks=8`,
+        `/api/sunday-upcoming-slots?registrationId=${registration.id}&firebaseUid=${registration.firebase_uid}&weeks=4`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },

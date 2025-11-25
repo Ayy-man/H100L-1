@@ -129,18 +129,47 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
     setError(null);
 
     try {
+      // Calculate next occurrence of selected day for one-time changes
+      const getNextOccurrence = (dayName: string): string => {
+        const daysMap: { [key: string]: number } = {
+          'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+          'thursday': 4, 'friday': 5, 'saturday': 6
+        };
+
+        const today = new Date();
+        const targetDay = daysMap[dayName.toLowerCase()];
+        const currentDay = today.getDay();
+
+        let daysUntilTarget = targetDay - currentDay;
+        if (daysUntilTarget <= 0) {
+          daysUntilTarget += 7; // Next week
+        }
+
+        const nextDate = new Date(today);
+        nextDate.setDate(today.getDate() + daysUntilTarget);
+        return nextDate.toISOString().split('T')[0];
+      };
+
+      const requestBody: any = {
+        action: 'reschedule',
+        registrationId,
+        firebaseUid,
+        changeType,
+        newDay: selectedDay,
+        newTime: selectedTime,
+      };
+
+      // Add appropriate date field based on change type
+      if (changeType === 'one_time') {
+        requestBody.specificDate = getNextOccurrence(selectedDay);
+      } else {
+        requestBody.effectiveDate = new Date().toISOString().split('T')[0];
+      }
+
       const response = await fetch('/api/reschedule-private', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'reschedule',
-          registrationId,
-          firebaseUid,
-          changeType,
-          newDay: selectedDay,
-          newTime: selectedTime,
-          effectiveDate: new Date().toISOString().split('T')[0]
-        })
+        body: JSON.stringify(requestBody)
       });
 
       // Check if response is OK
