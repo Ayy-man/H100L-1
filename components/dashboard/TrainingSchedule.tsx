@@ -205,6 +205,11 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         saturday: 6,
       };
 
+      // Get the time slot - could be semiPrivateTimeSlot (string) or semiPrivateTimeWindows (array)
+      const semiPrivateTime = form_data.semiPrivateTimeSlot ||
+        (form_data.semiPrivateTimeWindows && form_data.semiPrivateTimeWindows[0]) ||
+        null;
+
       for (let week = 0; week < weeksToShow; week++) {
         form_data.semiPrivateAvailability.forEach((day) => {
           const targetDay = dayMap[day.toLowerCase()];
@@ -217,7 +222,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                 date,
                 day: day.charAt(0).toUpperCase() + day.slice(1),
                 type: 'synthetic',
-                time: form_data.semiPrivateTimeSlot,
+                time: semiPrivateTime,
               });
             }
           }
@@ -634,7 +639,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         firebaseUid={firebase_uid}
         currentSchedule={{
           day: form_data.semiPrivateAvailability?.[0],
-          timeSlot: form_data.semiPrivateTimeSlot,
+          timeSlot: form_data.semiPrivateTimeSlot || form_data.semiPrivateTimeWindows?.[0],
           playerCategory: form_data.playerCategory || ''
         }}
         onSuccess={handleRescheduleSuccess}
