@@ -136,23 +136,38 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
 
-      // For one-time changes, calculate the next occurrence of the original day(s)
-      // This is the date that will be "swapped" to the new day
-      let specificDate = todayStr;
+      const dayMap: { [key: string]: number } = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+        thursday: 4, friday: 5, saturday: 6,
+      };
+
+      // For one-time changes, calculate the next occurrence of ALL original days
+      // and map each to its corresponding new day
+      let daySwaps: Array<{ originalDay: string; originalDate: string; newDay: string }> = [];
+
       if (changeType === 'one_time' && currentSchedule.days.length > 0) {
-        const dayMap: { [key: string]: number } = {
-          sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-          thursday: 4, friday: 5, saturday: 6,
-        };
-        // Find the next occurrence of the first original day
-        const originalDay = currentSchedule.days[0].toLowerCase();
-        const targetDayNum = dayMap[originalDay];
-        if (targetDayNum !== undefined) {
-          const daysUntil = (targetDayNum - today.getDay() + 7) % 7 || 7;
-          const nextOccurrence = new Date(today);
-          nextOccurrence.setDate(today.getDate() + daysUntil);
-          specificDate = nextOccurrence.toISOString().split('T')[0];
-        }
+        // Create a swap entry for each original day -> new day
+        currentSchedule.days.forEach((originalDay, index) => {
+          const originalDayLower = originalDay.toLowerCase();
+          const targetDayNum = dayMap[originalDayLower];
+
+          if (targetDayNum !== undefined) {
+            // Calculate next occurrence of this original day
+            const daysUntil = (targetDayNum - today.getDay() + 7) % 7 || 7;
+            const nextOccurrence = new Date(today);
+            nextOccurrence.setDate(today.getDate() + daysUntil);
+            const originalDate = nextOccurrence.toISOString().split('T')[0];
+
+            // Map to corresponding new day (by index)
+            const newDay = selectedDays[index] || selectedDays[0];
+
+            daySwaps.push({
+              originalDay: originalDayLower,
+              originalDate,
+              newDay: newDay.toLowerCase()
+            });
+          }
+        });
       }
 
       const response = await fetch('/api/reschedule-group', {
@@ -165,9 +180,9 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
           changeType,
           originalDays: currentSchedule.days,
           newDays: selectedDays,
-          // Send specificDate for one-time changes, effectiveDate for permanent
+          // Send daySwaps array for one-time changes, effectiveDate for permanent
           ...(changeType === 'one_time'
-            ? { specificDate }
+            ? { daySwaps }
             : { effectiveDate: todayStr })
         })
       });
