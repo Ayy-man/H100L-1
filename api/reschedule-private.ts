@@ -86,8 +86,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               // Check if this specific slot is booked
               const { data: bookings, error } = await supabase
                 .from('registrations')
-                .select('form_data')
-                .eq('payment_status', 'active')
+                .select('form_data, id')
+                .in('payment_status', ['succeeded', 'verified'])
                 .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
 
               if (error) {
@@ -170,8 +170,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Check if slot is available
       const { data: bookings, error } = await supabase
         .from('registrations')
-        .select('form_data')
-        .eq('payment_status', 'active')
+        .select('form_data, id')
+        .in('payment_status', ['succeeded', 'verified'])
         .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
 
       if (error) {
@@ -182,7 +182,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // Exclude current registration from conflict check
       const isBooked = bookings?.some(b => {
+        if (b.id === registrationId) return false;
+
         const isPrivate = b.form_data?.programType === 'private';
         const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
@@ -235,13 +238,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Check if slot is available
       const { data: bookings } = await supabase
         .from('registrations')
-        .select('form_data')
-        .eq('payment_status', 'active')
+        .select('form_data, id')
+        .in('payment_status', ['succeeded', 'verified'])
         .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
 
       const isBooked = bookings?.some(b => {
         // Exclude current registration from conflict check
-        if (b.form_data?.registrationId === registrationId) return false;
+        if (b.id === registrationId) return false;
 
         const isPrivate = b.form_data?.programType === 'private';
         const isSemiPrivate = b.form_data?.programType === 'semi-private';
