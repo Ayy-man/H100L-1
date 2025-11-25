@@ -40,7 +40,7 @@ import { toast } from 'sonner';
  * Full calendar view of training sessions with schedule management:
  * - Monthly calendar view
  * - All training sessions displayed
- * - Request schedule changes
+ * - Reschedule training sessions
  * - View session details
  */
 interface SundaySlotStatus {
