@@ -125,10 +125,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const availabilityResults = await Promise.all(
         newDays.map(async (day) => {
           // Count current registrations for this day
+          // FIXED: Use 'succeeded' and 'verified' instead of 'active'
           const { data: bookings, error } = await supabase
             .from('registrations')
-            .select('form_data')
-            .eq('payment_status', 'active')
+            .select('form_data, id')
+            .in('payment_status', ['succeeded', 'verified'])
             .contains('form_data->groupSelectedDays', [day.toLowerCase()]);
 
           if (error) {
@@ -183,12 +184,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Check capacity for all new days
+      // FIXED: Use 'succeeded' and 'verified' instead of 'active'
       const capacityChecks = await Promise.all(
         newDays.map(async (day) => {
           const { data: bookings } = await supabase
             .from('registrations')
-            .select('form_data')
-            .eq('payment_status', 'active')
+            .select('form_data, id')
+            .in('payment_status', ['succeeded', 'verified'])
             .contains('form_data->groupSelectedDays', [day.toLowerCase()]);
 
           const currentBookings = bookings?.filter(
