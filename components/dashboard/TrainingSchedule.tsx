@@ -119,9 +119,16 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
     // Helper to check if there's an exception for a given date
     const getExceptionForDate = (dateStr: string) => {
-      return scheduleExceptions.find(
+      const exception = scheduleExceptions.find(
         (exc) => exc.exception_date === dateStr && exc.status === 'applied'
       );
+      if (scheduleExceptions.length > 0) {
+        console.log(`TrainingSchedule - Checking date ${dateStr} against ${scheduleExceptions.length} exceptions:`,
+          scheduleExceptions.map(e => ({ date: e.exception_date, status: e.status })),
+          'Match:', exception ? 'YES' : 'NO'
+        );
+      }
+      return exception;
     };
 
     // Add weekday sessions based on program type
@@ -275,14 +282,19 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
     const fetchScheduleExceptions = async () => {
       if (!id) return;
       try {
+        console.log('TrainingSchedule - Fetching exceptions for registration:', id);
         const response = await fetch(
           `/api/schedule-exceptions?registrationId=${id}`
         );
         if (response.ok) {
           const data = await response.json();
+          console.log('TrainingSchedule - Received exceptions:', data);
           if (data.success && data.exceptions) {
             setScheduleExceptions(data.exceptions);
+            console.log('TrainingSchedule - Set exceptions state:', data.exceptions);
           }
+        } else {
+          console.error('TrainingSchedule - Failed to fetch exceptions, status:', response.status);
         }
       } catch (error) {
         console.error('Failed to fetch schedule exceptions:', error);

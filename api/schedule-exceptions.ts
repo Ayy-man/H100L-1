@@ -33,6 +33,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
+    console.log('schedule-exceptions API:', { registrationId, today });
+
     const { data: exceptions, error } = await supabase
       .from('schedule_exceptions')
       .select('*')
@@ -48,6 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         error: 'Failed to fetch schedule exceptions'
       });
     }
+
+    console.log('schedule-exceptions API - Found:', exceptions?.length || 0, 'exceptions:', exceptions);
 
     return res.status(200).json({
       success: true,

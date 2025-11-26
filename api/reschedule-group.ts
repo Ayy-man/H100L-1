@@ -284,8 +284,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // For one-time changes, create schedule exception(s)
       if (changeType === 'one_time') {
+        console.log('Processing one-time change:', { daySwaps, specificDate, newDays });
+
         // Handle new daySwaps array (for 2x/week users)
         if (daySwaps && daySwaps.length > 0) {
+          console.log('Creating exceptions from daySwaps:', daySwaps);
+
           const exceptionsToInsert = daySwaps.map(swap => ({
             registration_id: registrationId,
             exception_date: swap.originalDate,
@@ -297,17 +301,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             applied_at: new Date().toISOString()
           }));
 
-          const { error: exceptionError } = await supabase
+          console.log('Exceptions to insert:', exceptionsToInsert);
+
+          const { data: insertedExceptions, error: exceptionError } = await supabase
             .from('schedule_exceptions')
-            .insert(exceptionsToInsert);
+            .insert(exceptionsToInsert)
+            .select();
 
           if (exceptionError) {
             console.error('Error creating exceptions:', exceptionError);
+            // Return error instead of silently continuing
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to create schedule exception',
+              details: exceptionError.message
+            });
           }
+
+          console.log('Successfully created exceptions:', insertedExceptions);
         }
         // Legacy support for single specificDate
         else if (specificDate) {
-          const { error: exceptionError } = await supabase
+          console.log('Creating exception from specificDate:', specificDate);
+
+          const { data: insertedException, error: exceptionError } = await supabase
             .from('schedule_exceptions')
             .insert({
               registration_id: registrationId,
@@ -318,11 +335,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               reason,
               created_by: firebaseUid,
               applied_at: new Date().toISOString()
-            });
+            })
+            .select();
 
           if (exceptionError) {
             console.error('Error creating exception:', exceptionError);
+            return res.status(500).json({
+              success: false,
+              error: 'Failed to create schedule exception',
+              details: exceptionError.message
+            });
           }
+
+          console.log('Successfully created exception:', insertedException);
+        } else {
+          // Neither daySwaps nor specificDate provided - this is a bug
+          console.error('One-time change requested but no daySwaps or specificDate provided!');
+          console.error('Request body:', { changeType, daySwaps, specificDate, originalDays, newDays });
+          return res.status(400).json({
+            success: false,
+            error: 'One-time change requires daySwaps or specificDate'
+          });
         }
       }
 
@@ -351,3 +384,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
+
