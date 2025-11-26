@@ -385,7 +385,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Add partner to unpaired list
           await supabase
             .from('unpaired_semi_private')
-            .insert({
+            .upsert({
               registration_id: partnerId,
               player_name: partnerReg.form_data?.playerFullName,
               player_category: partnerReg.form_data?.playerCategory,
@@ -394,10 +394,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               preferred_time_slots: [existingPairing.scheduled_time],
               parent_email: partnerReg.form_data?.parentEmail,
               parent_name: partnerReg.form_data?.parentFullName,
-              status: 'waiting'
-            })
-            .onConflict('registration_id')
-            .ignoreDuplicates();
+              status: 'waiting',
+              unpaired_since_date: new Date().toISOString().split('T')[0]
+            }, {
+              onConflict: 'registration_id'
+            });
         }
       }
 
@@ -447,7 +448,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // No partner found, add to unpaired list
         await supabase
           .from('unpaired_semi_private')
-          .insert({
+          .upsert({
             registration_id: registrationId,
             player_name: playerName,
             player_category: playerCategory,
@@ -456,10 +457,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             preferred_time_slots: [newTime],
             parent_email: registration.form_data?.parentEmail,
             parent_name: registration.form_data?.parentFullName,
-            status: 'waiting'
-          })
-          .onConflict('registration_id')
-          .merge();
+            status: 'waiting',
+            unpaired_since_date: new Date().toISOString().split('T')[0]
+          }, {
+            onConflict: 'registration_id'
+          });
       }
 
       // Step 3: Create schedule change record

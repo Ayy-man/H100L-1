@@ -189,7 +189,9 @@ export default async function handler(
               player_category: formData.playerCategory,
               age_category: formData.playerCategory,
               preferred_days: formData.semiPrivateAvailability || [],
-              preferred_time_slots: formData.semiPrivateTimeSlot ? [formData.semiPrivateTimeSlot] : [],
+              preferred_time_slots: formData.semiPrivateTimeSlot
+                ? [formData.semiPrivateTimeSlot]
+                : (formData.semiPrivateTimeWindows || []),
               parent_email: formData.parentEmail,
               parent_name: formData.parentFullName,
               status: 'waiting',

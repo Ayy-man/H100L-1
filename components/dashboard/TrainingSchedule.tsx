@@ -50,6 +50,22 @@ interface SundayBookingStatus {
  * - Sunday real ice practice (INTERACTIVE - can book next Sunday)
  * - Location details
  */
+interface ScheduleException {
+  exception_date: string;
+  exception_type: string;
+  replacement_day: string;
+  replacement_time?: string;
+  status: string;
+}
+
+interface DayCapacity {
+  day: string;
+  spotsUsed: number;
+  spotsRemaining: number;
+  totalCapacity: number;
+  isFull: boolean;
+}
+
 const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => {
   const { form_data, firebase_uid, id } = registration;
   const [sundayStatus, setSundayStatus] = useState<SundayBookingStatus | null>(null);
@@ -57,6 +73,8 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   const [bookingInProgress, setBookingInProgress] = useState(false);
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
+  const [dayCapacity, setDayCapacity] = useState<Record<string, DayCapacity>>({});
 
   // Helper function to check Sunday eligibility
   const isSundayEligible = () => {
@@ -84,10 +102,27 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
       day: string;
       type: 'synthetic' | 'real-ice';
       time?: string;
+      isException?: boolean;
     }> = [];
 
     const today = new Date();
     const weeksToShow = 4;
+
+    // Helper to format date as YYYY-MM-DD in LOCAL timezone (not UTC)
+    // Using toISOString() can cause off-by-one-day errors due to timezone conversion
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    // Helper to check if there's an exception for a given date
+    const getExceptionForDate = (dateStr: string) => {
+      return scheduleExceptions.find(
+        (exc) => exc.exception_date === dateStr && exc.status === 'applied'
+      );
+    };
 
     // Add weekday sessions based on program type
     if (form_data.programType === 'group' && form_data.groupSelectedDays) {
@@ -100,6 +135,10 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         friday: 5,
         saturday: 6,
       };
+      const reverseDayMap: { [key: number]: string } = {
+        0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday',
+        4: 'Thursday', 5: 'Friday', 6: 'Saturday',
+      };
 
       for (let week = 0; week < weeksToShow; week++) {
         form_data.groupSelectedDays.forEach((day) => {
@@ -110,11 +149,33 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
             // Only add future dates
             if (date >= today) {
-              sessions.push({
-                date,
-                day: day.charAt(0).toUpperCase() + day.slice(1),
-                type: 'synthetic',
-              });
+              const dateStr = formatDate(date);
+              const exception = getExceptionForDate(dateStr);
+
+              if (exception && exception.exception_type === 'swap') {
+                // Replace with the exception day
+                const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
+                if (replacementDayNum !== undefined) {
+                  const replacementDate = new Date(date);
+                  // Calculate the replacement date in the same week
+                  const dayDiff = replacementDayNum - date.getDay();
+                  replacementDate.setDate(date.getDate() + dayDiff);
+
+                  sessions.push({
+                    date: replacementDate,
+                    day: reverseDayMap[replacementDayNum] || exception.replacement_day,
+                    type: 'synthetic',
+                    isException: true,
+                  });
+                }
+              } else {
+                // Normal session
+                sessions.push({
+                  date,
+                  day: day.charAt(0).toUpperCase() + day.slice(1),
+                  type: 'synthetic',
+                });
+              }
             }
           }
         });
@@ -159,6 +220,11 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         saturday: 6,
       };
 
+      // Get the time slot - could be semiPrivateTimeSlot (string) or semiPrivateTimeWindows (array)
+      const semiPrivateTime = form_data.semiPrivateTimeSlot ||
+        (form_data.semiPrivateTimeWindows && form_data.semiPrivateTimeWindows[0]) ||
+        null;
+
       for (let week = 0; week < weeksToShow; week++) {
         form_data.semiPrivateAvailability.forEach((day) => {
           const targetDay = dayMap[day.toLowerCase()];
@@ -171,7 +237,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                 date,
                 day: day.charAt(0).toUpperCase() + day.slice(1),
                 type: 'synthetic',
-                time: form_data.semiPrivateTimeSlot,
+                time: semiPrivateTime,
               });
             }
           }
@@ -203,6 +269,50 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   };
 
   const upcomingSessions = getUpcomingSessions();
+
+  // Fetch schedule exceptions for one-time changes
+  useEffect(() => {
+    const fetchScheduleExceptions = async () => {
+      if (!id) return;
+      try {
+        const response = await fetch(
+          `/api/schedule-exceptions?registrationId=${id}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.exceptions) {
+            setScheduleExceptions(data.exceptions);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch schedule exceptions:', error);
+      }
+    };
+
+    fetchScheduleExceptions();
+  }, [id, refreshKey]);
+
+  // Fetch capacity for group training days
+  useEffect(() => {
+    const fetchCapacity = async () => {
+      if (form_data.programType !== 'group' || !form_data.groupSelectedDays) return;
+
+      try {
+        const days = form_data.groupSelectedDays.join(',');
+        const response = await fetch(`/api/group-capacity?days=${days}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.capacity) {
+            setDayCapacity(data.capacity);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch capacity:', error);
+      }
+    };
+
+    fetchCapacity();
+  }, [form_data.programType, form_data.groupSelectedDays, refreshKey]);
 
   // Fetch Sunday booking status
   useEffect(() => {
@@ -451,6 +561,11 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                               Free Included
                             </Badge>
                           )}
+                          {session.isException && (
+                            <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/50">
+                              One-time Change
+                            </Badge>
+                          )}
                           {statusBadge && (
                             <Badge variant={statusBadge.variant} className={statusBadge.className}>
                               {statusBadge.label}
@@ -492,11 +607,22 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                       </Button>
                     )}
 
-                    {/* Max players indicator for group synthetic sessions */}
+                    {/* Live capacity indicator for group synthetic sessions */}
                     {form_data.programType === 'group' && session.type === 'synthetic' && (
                       <div className="text-right ml-2">
                         <Users className="h-4 w-4 text-muted-foreground mb-1" />
-                        <p className="text-xs text-muted-foreground">Max 6 players</p>
+                        {(() => {
+                          const capacity = dayCapacity[session.day.toLowerCase()];
+                          if (capacity) {
+                            const { spotsUsed, spotsRemaining, isFull } = capacity;
+                            return (
+                              <p className={`text-xs ${isFull ? 'text-red-400' : spotsRemaining <= 2 ? 'text-yellow-400' : 'text-muted-foreground'}`}>
+                                {isFull ? 'Full (6/6)' : `${spotsUsed}/6 spots filled`}
+                              </p>
+                            );
+                          }
+                          return <p className="text-xs text-muted-foreground">Loading...</p>;
+                        })()}
                       </div>
                     )}
                   </div>
@@ -561,7 +687,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         firebaseUid={firebase_uid}
         currentSchedule={{
           day: form_data.semiPrivateAvailability?.[0],
-          timeSlot: form_data.semiPrivateTimeSlot,
+          timeSlot: form_data.semiPrivateTimeSlot || form_data.semiPrivateTimeWindows?.[0],
           playerCategory: form_data.playerCategory || ''
         }}
         onSuccess={handleRescheduleSuccess}

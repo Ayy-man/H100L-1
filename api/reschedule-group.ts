@@ -57,6 +57,12 @@ const supabase = createClient(
  * - Must check capacity of target day before allowing
  */
 
+interface DaySwap {
+  originalDay: string;
+  originalDate: string;
+  newDay: string;
+}
+
 interface RescheduleRequest {
   action: 'check_availability' | 'reschedule';
   registrationId: string;
@@ -64,7 +70,8 @@ interface RescheduleRequest {
   changeType?: 'one_time' | 'permanent';
   originalDays?: string[];
   newDays?: string[];
-  specificDate?: string; // For one-time changes
+  specificDate?: string; // For one-time changes (legacy, single day)
+  daySwaps?: DaySwap[]; // For one-time changes (multiple days)
   effectiveDate?: string; // For permanent changes
   reason?: string;
 }
@@ -83,6 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       originalDays,
       newDays,
       specificDate,
+      daySwaps,
       effectiveDate,
       reason
     } = req.body as RescheduleRequest;
@@ -224,7 +232,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           program_type: 'group',
           original_days: originalDays || registration.form_data?.groupSelectedDays || [],
           new_days: newDays,
-          specific_date: changeType === 'one_time' ? specificDate : null,
+          specific_date: changeType === 'one_time'
+            ? (daySwaps && daySwaps.length > 0 ? daySwaps[0].originalDate : specificDate)
+            : null,
           effective_date: changeType === 'permanent' ? effectiveDate || new Date().toISOString().split('T')[0] : null,
           status: 'approved', // Auto-approve for now
           reason,
@@ -272,23 +282,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // For one-time changes, create a schedule exception
-      if (changeType === 'one_time' && specificDate) {
-        const { error: exceptionError } = await supabase
-          .from('schedule_exceptions')
-          .insert({
+      // For one-time changes, create schedule exception(s)
+      if (changeType === 'one_time') {
+        // Handle new daySwaps array (for 2x/week users)
+        if (daySwaps && daySwaps.length > 0) {
+          const exceptionsToInsert = daySwaps.map(swap => ({
             registration_id: registrationId,
-            exception_date: specificDate,
+            exception_date: swap.originalDate,
             exception_type: 'swap',
-            replacement_day: newDays[0],
+            replacement_day: swap.newDay,
             status: 'applied',
             reason,
             created_by: firebaseUid,
             applied_at: new Date().toISOString()
-          });
+          }));
 
-        if (exceptionError) {
-          console.error('Error creating exception:', exceptionError);
+          const { error: exceptionError } = await supabase
+            .from('schedule_exceptions')
+            .insert(exceptionsToInsert);
+
+          if (exceptionError) {
+            console.error('Error creating exceptions:', exceptionError);
+          }
+        }
+        // Legacy support for single specificDate
+        else if (specificDate) {
+          const { error: exceptionError } = await supabase
+            .from('schedule_exceptions')
+            .insert({
+              registration_id: registrationId,
+              exception_date: specificDate,
+              exception_type: 'swap',
+              replacement_day: newDays[0],
+              status: 'applied',
+              reason,
+              created_by: firebaseUid,
+              applied_at: new Date().toISOString()
+            });
+
+          if (exceptionError) {
+            console.error('Error creating exception:', exceptionError);
+          }
         }
       }
 

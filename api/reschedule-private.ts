@@ -100,7 +100,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               }
 
               // Count bookings for this specific day and time
+              // FIXED: Exclude current registration from the count
               const bookedCount = bookings?.filter(b => {
+                // Skip current user's registration
+                if (b.id === registrationId) return false;
+
                 const isPrivate = b.form_data?.programType === 'private';
                 const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
