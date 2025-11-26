@@ -108,8 +108,14 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
     const today = new Date();
     const weeksToShow = 4;
 
-    // Helper to format date as YYYY-MM-DD for comparison
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    // Helper to format date as YYYY-MM-DD in LOCAL timezone (not UTC)
+    // Using toISOString() can cause off-by-one-day errors due to timezone conversion
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     // Helper to check if there's an exception for a given date
     const getExceptionForDate = (dateStr: string) => {

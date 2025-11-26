@@ -145,6 +145,14 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
       // and map each to its corresponding new day
       let daySwaps: Array<{ originalDay: string; originalDate: string; newDay: string }> = [];
 
+      // Helper to format date as YYYY-MM-DD in LOCAL timezone (not UTC)
+      const formatLocalDate = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       if (changeType === 'one_time' && currentSchedule.days.length > 0) {
         // Create a swap entry for each original day -> new day
         currentSchedule.days.forEach((originalDay, index) => {
@@ -153,10 +161,14 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
 
           if (targetDayNum !== undefined) {
             // Calculate next occurrence of this original day
-            const daysUntil = (targetDayNum - today.getDay() + 7) % 7 || 7;
+            // Use same formula as TrainingSchedule calendar: (targetDay - today.getDay() + 7) % 7
+            // Do NOT use || 7, so if today IS the training day, we target today (or same-week occurrence)
+            const daysUntil = (targetDayNum - today.getDay() + 7) % 7;
             const nextOccurrence = new Date(today);
             nextOccurrence.setDate(today.getDate() + daysUntil);
-            const originalDate = nextOccurrence.toISOString().split('T')[0];
+
+            // Use local date format to avoid timezone issues
+            const originalDate = formatLocalDate(nextOccurrence);
 
             // Map to corresponding new day (by index)
             const newDay = selectedDays[index] || selectedDays[0];

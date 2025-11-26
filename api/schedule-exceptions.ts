@@ -28,8 +28,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Fetch schedule exceptions for this registration
-    // Only get exceptions that are applied and for future dates
-    const today = new Date().toISOString().split('T')[0];
+    // Only get exceptions that are applied and for future/current dates
+    // Use local date formatting to match how dates are stored
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     const { data: exceptions, error } = await supabase
       .from('schedule_exceptions')
