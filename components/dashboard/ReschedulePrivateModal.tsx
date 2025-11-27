@@ -141,7 +141,9 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
   };
 
   const handleSlotClick = (day: string, time: string, isAvailable: boolean, isCurrent: boolean) => {
-    if (!isAvailable || isCurrent) return;
+    // Allow clicking current slots (so 2x users can keep one day)
+    // But don't allow clicking unavailable (booked by others) slots
+    if (!isAvailable && !isCurrent) return;
 
     setSelectedSlots(prev => {
       // Check if this slot is already selected
@@ -191,6 +193,22 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         console.log('Note: Different times selected. Using time from first slot:', newTime);
       }
 
+      // Helper to get next occurrence of a day
+      const getNextOccurrence = (dayName: string): string => {
+        const daysMap: { [key: string]: number } = {
+          'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+          'thursday': 4, 'friday': 5, 'saturday': 6
+        };
+        const today = new Date();
+        const targetDay = daysMap[dayName.toLowerCase()];
+        const currentDay = today.getDay();
+        let daysUntilTarget = (targetDay - currentDay + 7) % 7;
+        if (daysUntilTarget === 0) daysUntilTarget = 7; // Next week if today
+        const nextDate = new Date(today);
+        nextDate.setDate(today.getDate() + daysUntilTarget);
+        return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+      };
+
       const requestBody: any = {
         action: 'reschedule',
         registrationId,
@@ -198,8 +216,15 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         changeType,
         newDays, // Send array of days
         newTime,
-        effectiveDate: new Date().toISOString().split('T')[0]
       };
+
+      // Add appropriate date field based on change type
+      if (changeType === 'one_time') {
+        // For one-time, send specificDate (first selected day's next occurrence)
+        requestBody.specificDate = getNextOccurrence(newDays[0]);
+      } else {
+        requestBody.effectiveDate = new Date().toISOString().split('T')[0];
+      }
 
       const response = await fetch('/api/reschedule-private', {
         method: 'POST',
@@ -382,18 +407,18 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
                             <button
                               key={`${day.value}-${time}`}
                               onClick={() => handleSlotClick(day.value, time, isAvailable, isCurrent)}
-                              disabled={!isAvailable || isCurrent}
+                              disabled={!isAvailable && !isCurrent}
                               className={`h-12 rounded border-2 transition-all relative ${
-                                isCurrent
-                                  ? 'border-purple-500 bg-purple-500/20 text-purple-400 cursor-default'
-                                  : isSelected
+                                isSelected
                                   ? 'border-blue-500 bg-blue-500/20 text-blue-400'
+                                  : isCurrent
+                                  ? 'border-purple-500 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 cursor-pointer'
                                   : isAvailable
                                   ? 'border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:border-green-500 cursor-pointer'
                                   : 'border-red-500/50 bg-red-500/10 text-red-400 cursor-not-allowed opacity-50'
                               }`}
                             >
-                              {isCurrent && (
+                              {isCurrent && !isSelected && (
                                 <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium">
                                   Current
                                 </span>
