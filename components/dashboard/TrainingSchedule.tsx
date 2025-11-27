@@ -251,7 +251,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
           }
         });
       }
-    } else if (form_data.programType === 'semi-private' && form_data.semiPrivateAvailability) {
+    } else if (form_data.programType === 'semi-private' && form_data.semiPrivateAvailability && form_data.semiPrivateAvailability.length > 0) {
       const dayMap: { [key: string]: number } = {
         sunday: 0,
         monday: 1,
@@ -271,45 +271,46 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         (form_data.semiPrivateTimeWindows && form_data.semiPrivateTimeWindows[0]) ||
         null;
 
+      // Semi-private is ONLY 1x per week - use only the first/scheduled day
+      const day = form_data.semiPrivateAvailability[0];
+
       for (let week = 0; week < weeksToShow; week++) {
-        form_data.semiPrivateAvailability.forEach((day) => {
-          const targetDay = dayMap[day.toLowerCase()];
-          if (targetDay !== undefined) {
-            const date = new Date(today);
-            date.setDate(today.getDate() + (7 * week) + (targetDay - today.getDay() + 7) % 7);
+        const targetDay = dayMap[day.toLowerCase()];
+        if (targetDay !== undefined) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + (7 * week) + (targetDay - today.getDay() + 7) % 7);
 
-            if (date >= today) {
-              const dateStr = formatDate(date);
-              const exception = getExceptionForDate(dateStr);
+          if (date >= today) {
+            const dateStr = formatDate(date);
+            const exception = getExceptionForDate(dateStr);
 
-              if (exception && exception.exception_type === 'swap') {
-                // Replace with the exception day
-                const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
-                if (replacementDayNum !== undefined) {
-                  const replacementDate = new Date(date);
-                  const dayDiff = replacementDayNum - date.getDay();
-                  replacementDate.setDate(date.getDate() + dayDiff);
+            if (exception && exception.exception_type === 'swap') {
+              // Replace with the exception day
+              const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
+              if (replacementDayNum !== undefined) {
+                const replacementDate = new Date(date);
+                const dayDiff = replacementDayNum - date.getDay();
+                replacementDate.setDate(date.getDate() + dayDiff);
 
-                  sessions.push({
-                    date: replacementDate,
-                    day: reverseDayMap[replacementDayNum] || exception.replacement_day,
-                    type: 'synthetic',
-                    time: exception.replacement_time || semiPrivateTime,
-                    isException: true,
-                  });
-                }
-              } else {
-                // Normal session
                 sessions.push({
-                  date,
-                  day: day.charAt(0).toUpperCase() + day.slice(1),
+                  date: replacementDate,
+                  day: reverseDayMap[replacementDayNum] || exception.replacement_day,
                   type: 'synthetic',
-                  time: semiPrivateTime,
+                  time: exception.replacement_time || semiPrivateTime,
+                  isException: true,
                 });
               }
+            } else {
+              // Normal session
+              sessions.push({
+                date,
+                day: day.charAt(0).toUpperCase() + day.slice(1),
+                type: 'synthetic',
+                time: semiPrivateTime,
+              });
             }
           }
-        });
+        }
       }
     }
 
