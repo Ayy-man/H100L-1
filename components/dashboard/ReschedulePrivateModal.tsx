@@ -121,9 +121,13 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         const apiDays = data.currentSchedule?.days || [];
         setCurrentDays(apiDays);
         setCurrentTimeSlot(data.currentSchedule?.timeSlot || null);
-        setPrivateFrequency(data.currentSchedule?.frequency || '1x');
 
-        console.log('ReschedulePrivateModal: Current days:', apiDays, 'Time:', data.currentSchedule?.timeSlot, 'Frequency:', data.currentSchedule?.frequency);
+        // Determine frequency: use explicit field OR infer from number of days
+        const freq = data.currentSchedule?.frequency ||
+          (apiDays.length >= 2 ? '2x' : '1x');
+        setPrivateFrequency(freq);
+
+        console.log('ReschedulePrivateModal: Current days:', apiDays, 'Time:', data.currentSchedule?.timeSlot, 'Frequency:', freq);
       } else {
         setError(data.error || 'Failed to load availability');
       }
