@@ -153,21 +153,11 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
         return `${year}-${month}-${day}`;
       };
 
-      console.log('RescheduleGroupModal - Processing:', {
-        changeType,
-        currentScheduleDays: currentSchedule.days,
-        selectedDays,
-        today: formatLocalDate(today),
-        todayDayOfWeek: today.getDay()
-      });
-
       if (changeType === 'one_time' && currentSchedule.days.length > 0) {
         // Create a swap entry for each original day -> new day
         currentSchedule.days.forEach((originalDay, index) => {
           const originalDayLower = originalDay.toLowerCase();
           const targetDayNum = dayMap[originalDayLower];
-
-          console.log(`Processing day: ${originalDay} -> lowercase: ${originalDayLower} -> dayNum: ${targetDayNum}`);
 
           if (targetDayNum !== undefined) {
             // Calculate next occurrence of this original day
@@ -183,20 +173,14 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
             // Map to corresponding new day (by index)
             const newDay = selectedDays[index] || selectedDays[0];
 
-            console.log(`Day swap: ${originalDayLower} (${originalDate}) -> ${newDay.toLowerCase()}`);
-
             daySwaps.push({
               originalDay: originalDayLower,
               originalDate,
               newDay: newDay.toLowerCase()
             });
-          } else {
-            console.error(`Day "${originalDayLower}" not found in dayMap!`);
           }
         });
       }
-
-      console.log('Final daySwaps array:', daySwaps);
 
       const response = await fetch('/api/reschedule-group', {
         method: 'POST',
@@ -237,7 +221,7 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
         setTimeout(() => {
           onSuccess();
           onClose();
-        }, 2000);
+        }, 1500);
       } else {
         const errorMsg = data.error || 'Failed to reschedule';
         setError(errorMsg);
