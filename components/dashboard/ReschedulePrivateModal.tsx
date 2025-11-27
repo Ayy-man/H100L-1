@@ -70,6 +70,7 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
 
   const loadAvailability = async () => {
     setIsLoadingAvailability(true);
+    console.log('ReschedulePrivateModal: Loading availability for registration:', registrationId);
     try {
       const response = await fetch('/api/reschedule-private', {
         method: 'POST',
@@ -81,29 +82,39 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         })
       });
 
+      console.log('ReschedulePrivateModal: Response status:', response.status);
+
       // Check if response is OK
       if (!response.ok) {
         // Try to parse error message
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
+          console.error('ReschedulePrivateModal: API error:', errorData);
           throw new Error(errorData.error || 'Failed to load availability');
         } else {
           // Non-JSON response (e.g., server error page)
           const errorText = await response.text();
-          console.error('Non-JSON error response:', errorText);
+          console.error('ReschedulePrivateModal: Non-JSON error response:', errorText);
           throw new Error('Server error occurred. Please try again later.');
         }
       }
 
       const data = await response.json();
+      console.log('ReschedulePrivateModal: API response:', data);
+      console.log('ReschedulePrivateModal: Current schedule from API:', data.currentSchedule);
+
       if (data.success) {
+        // Log sample availability
+        const mondayData = data.availability?.find((d: DayAvailability) => d.day === 'monday');
+        console.log('ReschedulePrivateModal: Monday slots:', mondayData?.slots);
+
         setWeekAvailability(data.availability);
       } else {
         setError(data.error || 'Failed to load availability');
       }
     } catch (err) {
-      console.error('Error loading availability:', err);
+      console.error('ReschedulePrivateModal: Error loading availability:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load availability';
       setError(errorMessage);
     } finally {
