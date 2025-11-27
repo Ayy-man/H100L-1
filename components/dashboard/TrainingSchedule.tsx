@@ -197,6 +197,10 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         friday: 5,
         saturday: 6,
       };
+      const reverseDayMap: { [key: number]: string } = {
+        0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday',
+        4: 'Thursday', 5: 'Friday', 6: 'Saturday',
+      };
 
       for (let week = 0; week < weeksToShow; week++) {
         form_data.privateSelectedDays.forEach((day) => {
@@ -206,12 +210,34 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
             date.setDate(today.getDate() + (7 * week) + (targetDay - today.getDay() + 7) % 7);
 
             if (date >= today) {
-              sessions.push({
-                date,
-                day: day.charAt(0).toUpperCase() + day.slice(1),
-                type: 'synthetic',
-                time: form_data.privateTimeSlot,
-              });
+              const dateStr = formatDate(date);
+              const exception = getExceptionForDate(dateStr);
+
+              if (exception && exception.exception_type === 'swap') {
+                // Replace with the exception day
+                const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
+                if (replacementDayNum !== undefined) {
+                  const replacementDate = new Date(date);
+                  const dayDiff = replacementDayNum - date.getDay();
+                  replacementDate.setDate(date.getDate() + dayDiff);
+
+                  sessions.push({
+                    date: replacementDate,
+                    day: reverseDayMap[replacementDayNum] || exception.replacement_day,
+                    type: 'synthetic',
+                    time: exception.replacement_time || form_data.privateTimeSlot,
+                    isException: true,
+                  });
+                }
+              } else {
+                // Normal session
+                sessions.push({
+                  date,
+                  day: day.charAt(0).toUpperCase() + day.slice(1),
+                  type: 'synthetic',
+                  time: form_data.privateTimeSlot,
+                });
+              }
             }
           }
         });

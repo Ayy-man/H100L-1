@@ -284,12 +284,34 @@ const SchedulePage: React.FC = () => {
           }
 
           while (currentDate <= lastDay) {
-            sessions.push({
-              date: new Date(currentDate),
-              day: day.charAt(0).toUpperCase() + day.slice(1),
-              type: 'synthetic',
-              time: form_data.privateTimeSlot,
-            });
+            const dateStr = formatDate(currentDate);
+            const exception = getExceptionForDate(dateStr);
+
+            if (exception && exception.exception_type === 'swap') {
+              // Replace with the exception day
+              const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
+              if (replacementDayNum !== undefined) {
+                const replacementDate = new Date(currentDate);
+                const dayDiff = replacementDayNum - currentDate.getDay();
+                replacementDate.setDate(currentDate.getDate() + dayDiff);
+
+                sessions.push({
+                  date: replacementDate,
+                  day: reverseDayMap[replacementDayNum] || exception.replacement_day,
+                  type: 'synthetic',
+                  time: exception.replacement_time || form_data.privateTimeSlot,
+                  isException: true,
+                });
+              }
+            } else {
+              // Normal session
+              sessions.push({
+                date: new Date(currentDate),
+                day: day.charAt(0).toUpperCase() + day.slice(1),
+                type: 'synthetic',
+                time: form_data.privateTimeSlot,
+              });
+            }
             currentDate.setDate(currentDate.getDate() + 7);
           }
         }
