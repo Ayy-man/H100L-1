@@ -191,8 +191,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
 
                 if (isSemiPrivate) {
-                  return b.form_data?.semiPrivateAvailability?.includes(day) &&
-                         b.form_data?.semiPrivateTimeSlot === time;
+                  // Check both semiPrivateTimeSlot (string) and semiPrivateTimeWindows (array)
+                  const semiTime = b.form_data?.semiPrivateTimeSlot ||
+                    (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
+                  const semiDays = b.form_data?.semiPrivateAvailability || [];
+                  return semiDays.includes(day) && semiTime === time;
                 }
 
                 return false;
@@ -207,13 +210,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 p.preferred_days?.includes(day) && p.preferred_time_slots?.includes(time)
               );
 
+              // Check if this is the current slot
+              const currentSemiTime = registration.form_data?.semiPrivateTimeSlot ||
+                (registration.form_data?.semiPrivateTimeWindows && registration.form_data?.semiPrivateTimeWindows[0]);
+              const currentSemiDays = registration.form_data?.semiPrivateAvailability || [];
+
               return {
                 time,
                 available: bookedCount === 0,
                 hasUnpairedPartner,
                 partnerName: partner?.player_name,
-                isCurrent: registration.form_data?.semiPrivateAvailability?.includes(day) &&
-                          registration.form_data?.semiPrivateTimeSlot === time,
+                isCurrent: currentSemiDays.includes(day) && currentSemiTime === time,
                 priority: hasUnpairedPartner ? 'high' : 'normal' // Prioritize slots with partners
               };
             })
@@ -226,12 +233,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
       );
 
+      // Get current time slot (handle both field names)
+      const currentTimeSlot = registration.form_data?.semiPrivateTimeSlot ||
+        (registration.form_data?.semiPrivateTimeWindows && registration.form_data?.semiPrivateTimeWindows[0]) ||
+        null;
+
       return res.status(200).json({
         success: true,
         availability: weekAvailability,
         currentSchedule: {
           days: registration.form_data?.semiPrivateAvailability || [],
-          timeSlot: registration.form_data?.semiPrivateTimeSlot || null
+          timeSlot: currentTimeSlot
         }
       });
     }
@@ -264,8 +276,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (isSemiPrivate) {
-          return b.form_data?.semiPrivateAvailability?.includes(newDay.toLowerCase()) &&
-                 b.form_data?.semiPrivateTimeSlot === newTime;
+          // Check both semiPrivateTimeSlot (string) and semiPrivateTimeWindows (array)
+          const semiTime = b.form_data?.semiPrivateTimeSlot ||
+            (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
+          const semiDays = b.form_data?.semiPrivateAvailability || [];
+          return semiDays.includes(newDay.toLowerCase()) && semiTime === newTime;
         }
 
         return false;
@@ -328,8 +343,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (isSemiPrivate) {
-          return b.form_data?.semiPrivateAvailability?.includes(newDay.toLowerCase()) &&
-                 b.form_data?.semiPrivateTimeSlot === newTime;
+          // Check both semiPrivateTimeSlot (string) and semiPrivateTimeWindows (array)
+          const semiTime = b.form_data?.semiPrivateTimeSlot ||
+            (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
+          const semiDays = b.form_data?.semiPrivateAvailability || [];
+          return semiDays.includes(newDay.toLowerCase()) && semiTime === newTime;
         }
 
         return false;
@@ -464,6 +482,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
       }
 
+      // Get original time (handle both field names)
+      const originalTime = registration.form_data?.semiPrivateTimeSlot ||
+        (registration.form_data?.semiPrivateTimeWindows && registration.form_data?.semiPrivateTimeWindows[0]) ||
+        null;
+
       // Step 3: Create schedule change record
       const { data: scheduleChange } = await supabase
         .from('schedule_changes')
@@ -472,7 +495,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           change_type: changeType,
           program_type: 'semi_private',
           original_days: registration.form_data?.semiPrivateAvailability || [],
-          original_time: registration.form_data?.semiPrivateTimeSlot,
+          original_time: originalTime,
           new_days: [newDay.toLowerCase()],
           new_time: newTime,
           specific_date: changeType === 'one_time' ? specificDate : null,

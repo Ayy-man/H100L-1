@@ -150,7 +150,9 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
   };
 
   const handleSlotClick = (day: string, time: string, slot: TimeSlot) => {
-    if (!slot.available || slot.isCurrent) return;
+    // Allow clicking current slots (so users can keep their slot but change time)
+    // But don't allow clicking unavailable (booked by others) slots
+    if (!slot.available && !slot.isCurrent) return;
 
     setSelectedDay(day);
     setSelectedTime(time);
@@ -218,7 +220,23 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
 
       // Add appropriate date field based on change type
       if (changeType === 'one_time') {
-        requestBody.specificDate = getNextOccurrence(selectedDay);
+        // For one-time changes, the exception_date should be the ORIGINAL day's date
+        // so the calendar can find the exception when generating the original day's session
+        const originalDay = currentSchedule.day?.toLowerCase() || currentPairing?.scheduledDay?.toLowerCase();
+
+        console.log('SEMI-PRIVATE ONE-TIME DEBUG:');
+        console.log('- Original day:', originalDay);
+        console.log('- New day:', selectedDay);
+
+        if (originalDay && originalDay !== selectedDay.toLowerCase()) {
+          // Day is changing - use original day's date for exception
+          requestBody.specificDate = getNextOccurrence(originalDay);
+          console.log('- Using original day date:', requestBody.specificDate);
+        } else {
+          // Only time is changing, or same day - use the selected day
+          requestBody.specificDate = getNextOccurrence(selectedDay);
+          console.log('- Using selected day date:', requestBody.specificDate);
+        }
       } else {
         requestBody.effectiveDate = new Date().toISOString().split('T')[0];
       }
@@ -486,12 +504,12 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
                               <button
                                 key={`${day.value}-${time}`}
                                 onClick={() => handleSlotClick(day.value, time, slot)}
-                                disabled={!slot.available || slot.isCurrent}
+                                disabled={!slot.available && !slot.isCurrent}
                                 className={`h-12 rounded border-2 transition-all relative ${
-                                  slot.isCurrent
-                                    ? 'border-purple-500 bg-purple-500/20 text-purple-400 cursor-default'
-                                    : isSelected
+                                  isSelected
                                     ? 'border-blue-500 bg-blue-500/20 text-blue-400'
+                                    : slot.isCurrent
+                                    ? 'border-purple-500 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 cursor-pointer'
                                     : hasPartner
                                     ? 'border-yellow-500/70 bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25 hover:border-yellow-400 cursor-pointer'
                                     : slot.available

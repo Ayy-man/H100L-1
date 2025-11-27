@@ -331,6 +331,61 @@ const SchedulePage: React.FC = () => {
           }
         }
       });
+    } else if (form_data.programType === 'semi-private' && form_data.semiPrivateAvailability) {
+      console.log('=== SchedulePage: Generating SEMI-PRIVATE sessions ===');
+      console.log('Semi-private availability:', form_data.semiPrivateAvailability);
+      console.log('Schedule exceptions available:', scheduleExceptions.length);
+
+      // Get the time slot - could be semiPrivateTimeSlot (string) or semiPrivateTimeWindows (array)
+      const semiPrivateTime = form_data.semiPrivateTimeSlot ||
+        (form_data.semiPrivateTimeWindows && form_data.semiPrivateTimeWindows[0]) ||
+        null;
+
+      form_data.semiPrivateAvailability.forEach((day) => {
+        const targetDay = dayMap[day.toLowerCase()];
+        if (targetDay !== undefined) {
+          let currentDate = new Date(firstDay);
+          currentDate.setDate(1);
+
+          while (currentDate.getDay() !== targetDay) {
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+
+          while (currentDate <= lastDay) {
+            const dateStr = formatDate(currentDate);
+            console.log(`[SchedulePage] Checking semi-private date ${dateStr} for day ${day}`);
+            const exception = getExceptionForDate(dateStr);
+
+            if (exception && exception.exception_type === 'swap') {
+              // Replace with the exception day
+              console.log(`[SchedulePage] FOUND SEMI-PRIVATE EXCEPTION: ${dateStr} -> ${exception.replacement_day}`);
+              const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
+              if (replacementDayNum !== undefined) {
+                const replacementDate = new Date(currentDate);
+                const dayDiff = replacementDayNum - currentDate.getDay();
+                replacementDate.setDate(currentDate.getDate() + dayDiff);
+
+                sessions.push({
+                  date: replacementDate,
+                  day: reverseDayMap[replacementDayNum] || exception.replacement_day,
+                  type: 'synthetic',
+                  time: exception.replacement_time || semiPrivateTime,
+                  isException: true,
+                });
+              }
+            } else {
+              // Normal session
+              sessions.push({
+                date: new Date(currentDate),
+                day: day.charAt(0).toUpperCase() + day.slice(1),
+                type: 'synthetic',
+                time: semiPrivateTime,
+              });
+            }
+            currentDate.setDate(currentDate.getDate() + 7);
+          }
+        }
+      });
     }
 
     // Add all Sundays for real ice (Group Training only)
