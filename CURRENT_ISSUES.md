@@ -15,11 +15,12 @@
 ### 3. [x] Group One-Time Reschedule - Doesn't Actually Change Anything
 - **Status:** FIXED
 - **Fix:**
-  - Modal now sends `specificDate` instead of `effectiveDate` for one-time changes
+  - Modal now sends `daySwaps` array for one-time changes (supports 1x and 2x/week)
   - Created `/api/schedule-exceptions` endpoint
-  - TrainingSchedule now fetches and applies schedule exceptions
+  - TrainingSchedule and SchedulePage now fetch and apply schedule exceptions
   - Added "One-time Change" badge for exception sessions
-- **Commit:** Fixed in RescheduleGroupModal.tsx, TrainingSchedule.tsx, api/schedule-exceptions.ts
+  - Uses upsert to allow re-changing an already-changed day (e.g., Sat→Fri, then Fri→Thu)
+- **Commit:** Fixed in RescheduleGroupModal.tsx, TrainingSchedule.tsx, SchedulePage.tsx, api/schedule-exceptions.ts, api/reschedule-group.ts
 
 ### 4. [x] Semi-Private Calendar - Can't See Booked Dates
 - **Status:** FIXED
