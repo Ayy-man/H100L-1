@@ -873,7 +873,7 @@ const SchedulePage: React.FC = () => {
                 firebaseUid={registration.firebase_uid}
                 currentSchedule={{
                   day: registration.form_data.semiPrivateAvailability?.[0],
-                  timeSlot: registration.form_data.privateTimeSlot,
+                  timeSlot: registration.form_data.semiPrivateTimeSlot || registration.form_data.semiPrivateTimeWindows?.[0],
                   playerCategory: registration.form_data.playerCategory || ''
                 }}
                 onSuccess={() => window.location.reload()}
