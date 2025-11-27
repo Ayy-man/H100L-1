@@ -31,6 +31,7 @@ interface RescheduleRequest {
   changeType?: 'one_time' | 'permanent';
   newDay?: string;
   newTime?: string; // e.g., '9:00 AM'
+  originalDay?: string; // For 2x/week users: which day to replace
   specificDate?: string; // For one-time changes
   effectiveDate?: string; // For permanent changes
   reason?: string;
@@ -49,6 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       changeType,
       newDay,
       newTime,
+      originalDay,
       specificDate,
       effectiveDate,
       reason
@@ -327,9 +329,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // For permanent changes, update the registration's form_data
       if (changeType === 'permanent') {
+        // Get current days array
+        const currentDays: string[] = registration.form_data?.privateSelectedDays || [];
+
+        // For 2x/week users, only replace the specific day being rescheduled
+        let updatedDays: string[];
+        if (originalDay && currentDays.length > 1) {
+          // Replace only the originalDay with newDay
+          updatedDays = currentDays.map((d: string) =>
+            d.toLowerCase() === originalDay.toLowerCase() ? newDay.toLowerCase() : d.toLowerCase()
+          );
+          console.log(`Replacing ${originalDay} with ${newDay}. Days: ${currentDays.join(',')} -> ${updatedDays.join(',')}`);
+        } else {
+          // Single day user or no originalDay specified - replace all
+          updatedDays = [newDay.toLowerCase()];
+        }
+
         const updatedFormData = {
           ...registration.form_data,
-          privateSelectedDays: [newDay.toLowerCase()],
+          privateSelectedDays: updatedDays,
           privateTimeSlot: newTime
         };
 

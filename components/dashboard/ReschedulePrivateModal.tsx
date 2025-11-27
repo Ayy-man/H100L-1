@@ -10,6 +10,7 @@ interface ReschedulePrivateModalProps {
   firebaseUid: string;
   currentSchedule: {
     day: string;
+    days?: string[]; // Support for multiple days (2x/week)
     timeSlot: string;
     playerCategory: string;
   };
@@ -57,6 +58,10 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // For 2x/week users: which day are they rescheduling?
+  const [dayToReschedule, setDayToReschedule] = useState<string | null>(null);
+  const [currentDays, setCurrentDays] = useState<string[]>([]);
+  const [currentTimeSlot, setCurrentTimeSlot] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +69,7 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
       setSelectedTime(null);
       setError(null);
       setSuccess(false);
+      setDayToReschedule(null);
       loadAvailability();
     }
   }, [isOpen]);
@@ -110,6 +116,18 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         console.log('ReschedulePrivateModal: Monday slots:', mondayData?.slots);
 
         setWeekAvailability(data.availability);
+
+        // Store current days from API (more reliable than props)
+        const apiDays = data.currentSchedule?.days || [];
+        setCurrentDays(apiDays);
+        setCurrentTimeSlot(data.currentSchedule?.timeSlot || null);
+
+        // If only 1 day, auto-select it as the day to reschedule
+        if (apiDays.length === 1) {
+          setDayToReschedule(apiDays[0]);
+        }
+
+        console.log('ReschedulePrivateModal: Current days:', apiDays, 'Time:', data.currentSchedule?.timeSlot);
       } else {
         setError(data.error || 'Failed to load availability');
       }
@@ -133,6 +151,12 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
   const handleSubmit = async () => {
     if (!selectedDay || !selectedTime) {
       setError('Please select a new day and time');
+      return;
+    }
+
+    // For 2x/week users, ensure they've selected which day to reschedule
+    if (currentDays.length > 1 && !dayToReschedule) {
+      setError('Please select which day you want to reschedule');
       return;
     }
 
@@ -168,11 +192,13 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         changeType,
         newDay: selectedDay,
         newTime: selectedTime,
+        // For 2x/week users, tell the API which original day we're replacing
+        originalDay: dayToReschedule || currentDays[0],
       };
 
       // Add appropriate date field based on change type
       if (changeType === 'one_time') {
-        requestBody.specificDate = getNextOccurrence(selectedDay);
+        requestBody.specificDate = getNextOccurrence(dayToReschedule || currentDays[0]);
       } else {
         requestBody.effectiveDate = new Date().toISOString().split('T')[0];
       }
@@ -246,7 +272,10 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
             <div>
               <h2 className="text-2xl font-bold text-white">Reschedule Private Training</h2>
               <p className="text-sm text-gray-400 mt-1">
-                Current: {currentSchedule.day} at {currentSchedule.timeSlot}
+                Current: {currentDays.length > 0
+                  ? currentDays.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(' & ')
+                  : currentSchedule.day
+                } at {currentTimeSlot || currentSchedule.timeSlot}
               </p>
             </div>
             <button
@@ -287,6 +316,35 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Day Selector for 2x/week users */}
+            {currentDays.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Which day do you want to reschedule? <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {currentDays.map((day) => {
+                    const dayLabel = DAYS_OF_WEEK.find(d => d.value === day.toLowerCase())?.label || day;
+                    const fullDayLabel = day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => setDayToReschedule(day.toLowerCase())}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          dayToReschedule === day.toLowerCase()
+                            ? 'border-purple-500 bg-purple-500/10 text-purple-400'
+                            : 'border-white/10 bg-white/5 text-gray-300 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="font-medium">{fullDayLabel}</div>
+                        <div className="text-xs mt-1 opacity-75">{currentTimeSlot}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Weekly Calendar Grid */}
             <div>
