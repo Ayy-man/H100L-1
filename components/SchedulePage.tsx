@@ -52,6 +52,14 @@ interface SundaySlotStatus {
   slotId?: string;
 }
 
+interface ScheduleException {
+  exception_date: string;
+  exception_type: string;
+  replacement_day: string;
+  replacement_time?: string;
+  status: string;
+}
+
 const SchedulePage: React.FC = () => {
   const { user, selectedProfile, selectedProfileId } = useProfile();
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -60,6 +68,7 @@ const SchedulePage: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [sundayStatuses, setSundayStatuses] = useState<Map<string, SundaySlotStatus>>(new Map());
+  const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
 
   // Fetch Sunday slot statuses for the current month
   const fetchSundayStatuses = async () => {
@@ -151,6 +160,28 @@ const SchedulePage: React.FC = () => {
     }
   }, [registration, currentMonth]);
 
+  // Fetch schedule exceptions for one-time changes
+  useEffect(() => {
+    const fetchScheduleExceptions = async () => {
+      if (!registration?.id) return;
+      try {
+        const response = await fetch(
+          `/api/schedule-exceptions?registrationId=${registration.id}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.exceptions) {
+            setScheduleExceptions(data.exceptions);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch schedule exceptions:', error);
+      }
+    };
+
+    fetchScheduleExceptions();
+  }, [registration?.id]);
+
   // Get all sessions for the current month
   const getMonthSessions = () => {
     if (!registration) return [];
@@ -161,6 +192,7 @@ const SchedulePage: React.FC = () => {
       day: string;
       type: 'synthetic' | 'real-ice';
       time?: string;
+      isException?: boolean;
     }> = [];
 
     const year = currentMonth.getFullYear();
@@ -178,6 +210,23 @@ const SchedulePage: React.FC = () => {
       saturday: 6,
     };
 
+    const reverseDayMap: { [key: number]: string } = {
+      0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday',
+      4: 'Thursday', 5: 'Friday', 6: 'Saturday',
+    };
+
+    // Helper to format date as YYYY-MM-DD in local timezone
+    const formatDate = (d: Date) => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    // Helper to check for exception on a specific date
+    const getExceptionForDate = (dateStr: string) => {
+      return scheduleExceptions.find(
+        (exc) => exc.exception_date === dateStr && exc.status === 'applied'
+      );
+    };
+
     // Add weekday sessions
     if (form_data.programType === 'group' && form_data.groupSelectedDays) {
       form_data.groupSelectedDays.forEach((day) => {
@@ -193,11 +242,32 @@ const SchedulePage: React.FC = () => {
 
           // Add all occurrences of this day in the month
           while (currentDate <= lastDay) {
-            sessions.push({
-              date: new Date(currentDate),
-              day: day.charAt(0).toUpperCase() + day.slice(1),
-              type: 'synthetic',
-            });
+            const dateStr = formatDate(currentDate);
+            const exception = getExceptionForDate(dateStr);
+
+            if (exception && exception.exception_type === 'swap') {
+              // Replace with the exception day
+              const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
+              if (replacementDayNum !== undefined) {
+                const replacementDate = new Date(currentDate);
+                const dayDiff = replacementDayNum - currentDate.getDay();
+                replacementDate.setDate(currentDate.getDate() + dayDiff);
+
+                sessions.push({
+                  date: replacementDate,
+                  day: reverseDayMap[replacementDayNum] || exception.replacement_day,
+                  type: 'synthetic',
+                  isException: true,
+                });
+              }
+            } else {
+              // Normal session
+              sessions.push({
+                date: new Date(currentDate),
+                day: day.charAt(0).toUpperCase() + day.slice(1),
+                type: 'synthetic',
+              });
+            }
             currentDate.setDate(currentDate.getDate() + 7);
           }
         }
