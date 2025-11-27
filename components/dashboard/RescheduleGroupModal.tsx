@@ -231,13 +231,15 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
       }
 
       const data = await response.json();
+      console.log('RescheduleGroupModal - API Response:', data);
       if (data.success) {
         setSuccess(true);
         toast.success('Schedule Updated', `Your training days have been successfully changed to ${selectedDays.map(d => getDayLabel(d)).join(', ')}`);
+        console.log('RescheduleGroupModal - Success! Waiting 5 seconds before reload so you can check logs...');
         setTimeout(() => {
           onSuccess();
           onClose();
-        }, 2000);
+        }, 5000); // 5 second delay to read console logs
       } else {
         const errorMsg = data.error || 'Failed to reschedule';
         setError(errorMsg);
