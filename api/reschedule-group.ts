@@ -283,61 +283,119 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // For one-time changes, create/update schedule exception(s)
-      // Using upsert to allow users to change an already-changed day (e.g., Sat→Fri, then Fri→Thu)
+      // Check if exception exists first, then update or insert (since upsert requires unique constraint)
       if (changeType === 'one_time') {
         // Handle new daySwaps array (for 2x/week users)
         if (daySwaps && daySwaps.length > 0) {
-          // Process each day swap - use upsert to allow re-changing
+          // Process each day swap - check for existing, then update or insert
           for (const swap of daySwaps) {
-            const { error: exceptionError } = await supabase
+            // Check if exception already exists for this date
+            const { data: existingException } = await supabase
               .from('schedule_exceptions')
-              .upsert({
-                registration_id: registrationId,
-                exception_date: swap.originalDate,
-                exception_type: 'swap',
-                replacement_day: swap.newDay,
-                status: 'applied',
-                reason,
-                created_by: firebaseUid,
-                applied_at: new Date().toISOString()
-              }, {
-                onConflict: 'registration_id,exception_date'
-              });
+              .select('id')
+              .eq('registration_id', registrationId)
+              .eq('exception_date', swap.originalDate)
+              .single();
 
-            if (exceptionError) {
-              console.error('Error upserting exception:', exceptionError);
-              return res.status(500).json({
-                success: false,
-                error: 'Failed to create schedule exception',
-                details: exceptionError.message
-              });
+            if (existingException) {
+              // Update existing exception
+              const { error: updateError } = await supabase
+                .from('schedule_exceptions')
+                .update({
+                  replacement_day: swap.newDay,
+                  status: 'applied',
+                  reason,
+                  applied_at: new Date().toISOString()
+                })
+                .eq('id', existingException.id);
+
+              if (updateError) {
+                console.error('Error updating exception:', updateError);
+                return res.status(500).json({
+                  success: false,
+                  error: 'Failed to update schedule exception',
+                  details: updateError.message
+                });
+              }
+            } else {
+              // Insert new exception
+              const { error: insertError } = await supabase
+                .from('schedule_exceptions')
+                .insert({
+                  registration_id: registrationId,
+                  exception_date: swap.originalDate,
+                  exception_type: 'swap',
+                  replacement_day: swap.newDay,
+                  status: 'applied',
+                  reason,
+                  created_by: firebaseUid,
+                  applied_at: new Date().toISOString()
+                });
+
+              if (insertError) {
+                console.error('Error inserting exception:', insertError);
+                return res.status(500).json({
+                  success: false,
+                  error: 'Failed to create schedule exception',
+                  details: insertError.message
+                });
+              }
             }
           }
         }
         // Legacy support for single specificDate
         else if (specificDate) {
-          const { error: exceptionError } = await supabase
+          // Check if exception already exists for this date
+          const { data: existingException } = await supabase
             .from('schedule_exceptions')
-            .upsert({
-              registration_id: registrationId,
-              exception_date: specificDate,
-              exception_type: 'swap',
-              replacement_day: newDays[0],
-              status: 'applied',
-              reason,
-              created_by: firebaseUid,
-              applied_at: new Date().toISOString()
-            }, {
-              onConflict: 'registration_id,exception_date'
-            });
+            .select('id')
+            .eq('registration_id', registrationId)
+            .eq('exception_date', specificDate)
+            .single();
 
-          if (exceptionError) {
-            console.error('Error upserting exception:', exceptionError);
-            return res.status(500).json({
-              success: false,
-              error: 'Failed to create schedule exception',
-              details: exceptionError.message
-            });
+          if (existingException) {
+            // Update existing exception
+            const { error: updateError } = await supabase
+              .from('schedule_exceptions')
+              .update({
+                replacement_day: newDays[0],
+                status: 'applied',
+                reason,
+                applied_at: new Date().toISOString()
+              })
+              .eq('id', existingException.id);
+
+            if (updateError) {
+              console.error('Error updating exception:', updateError);
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to update schedule exception',
+                details: updateError.message
+              });
+            }
+          } else {
+            // Insert new exception
+            const { error: insertError } = await supabase
+              .from('schedule_exceptions')
+              .insert({
+                registration_id: registrationId,
+                exception_date: specificDate,
+                exception_type: 'swap',
+                replacement_day: newDays[0],
+                status: 'applied',
+                reason,
+                created_by: firebaseUid,
+                applied_at: new Date().toISOString()
+              });
+
+            if (insertError) {
+              console.error('Error inserting exception:', insertError);
+              return res.status(500).json({
+                success: false,
+                error: 'Failed to create schedule exception',
+                details: insertError.message
+              });
+            }
           }
         } else {
           // Neither daySwaps nor specificDate provided - this is a bug
