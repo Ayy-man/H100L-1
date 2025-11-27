@@ -60,6 +60,12 @@ interface ScheduleException {
   status: string;
 }
 
+interface SemiPrivatePairing {
+  scheduled_day: string;
+  scheduled_time: string;
+  partner_name?: string;
+}
+
 const SchedulePage: React.FC = () => {
   const { user, selectedProfile, selectedProfileId } = useProfile();
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -69,6 +75,7 @@ const SchedulePage: React.FC = () => {
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [sundayStatuses, setSundayStatuses] = useState<Map<string, SundaySlotStatus>>(new Map());
   const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
+  const [semiPrivatePairing, setSemiPrivatePairing] = useState<SemiPrivatePairing | null>(null);
 
   // Fetch Sunday slot statuses for the current month
   const fetchSundayStatuses = async () => {
@@ -190,6 +197,45 @@ const SchedulePage: React.FC = () => {
 
     fetchScheduleExceptions();
   }, [registration?.id]);
+
+  // Fetch semi-private pairing to get the ACTUAL scheduled day (not just preferences)
+  useEffect(() => {
+    const fetchSemiPrivatePairing = async () => {
+      if (!registration || registration.form_data?.programType !== 'semi-private') return;
+
+      try {
+        console.log('=== SchedulePage: FETCHING SEMI-PRIVATE PAIRING ===');
+        const response = await fetch('/api/reschedule-semi-private', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'get_current_pairing',
+            registrationId: registration.id,
+            firebaseUid: registration.firebase_uid
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('SchedulePage pairing response:', data);
+          if (data.success && data.paired && data.pairing) {
+            setSemiPrivatePairing({
+              scheduled_day: data.pairing.scheduledDay,
+              scheduled_time: data.pairing.scheduledTime,
+              partner_name: data.pairing.partnerName
+            });
+            console.log('Set semi-private pairing:', data.pairing.scheduledDay, data.pairing.scheduledTime);
+          } else {
+            console.log('Not paired, using availability preferences');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch semi-private pairing:', error);
+      }
+    };
+
+    fetchSemiPrivatePairing();
+  }, [registration]);
 
   // Get all sessions for the current month
   const getMonthSessions = () => {
@@ -331,19 +377,28 @@ const SchedulePage: React.FC = () => {
           }
         }
       });
-    } else if (form_data.programType === 'semi-private' && form_data.semiPrivateAvailability && form_data.semiPrivateAvailability.length > 0) {
+    } else if (form_data.programType === 'semi-private') {
       console.log('=== SchedulePage: Generating SEMI-PRIVATE sessions ===');
-      console.log('Semi-private availability:', form_data.semiPrivateAvailability);
+      console.log('Semi-private pairing:', semiPrivatePairing);
+      console.log('Semi-private availability (fallback):', form_data.semiPrivateAvailability);
       console.log('Schedule exceptions available:', scheduleExceptions.length);
 
-      // Get the time slot - could be semiPrivateTimeSlot (string) or semiPrivateTimeWindows (array)
-      const semiPrivateTime = form_data.semiPrivateTimeSlot ||
+      // Use pairing's scheduled day/time if paired, otherwise fall back to form data
+      // This is CRITICAL - semiPrivateAvailability is PREFERENCES, not the actual schedule!
+      const semiPrivateTime = semiPrivatePairing?.scheduled_time ||
+        form_data.semiPrivateTimeSlot ||
         (form_data.semiPrivateTimeWindows && form_data.semiPrivateTimeWindows[0]) ||
         null;
 
-      // Semi-private is ONLY 1x per week - use only the first/scheduled day
-      const day = form_data.semiPrivateAvailability[0];
-      console.log('Semi-private scheduled day (1x/week):', day);
+      // Semi-private is ONLY 1x per week - use pairing day or first availability
+      const day = semiPrivatePairing?.scheduled_day || form_data.semiPrivateAvailability?.[0];
+
+      if (!day) {
+        console.log('No semi-private day found (no pairing and no availability)');
+        return sessions;
+      }
+
+      console.log('Semi-private scheduled day (1x/week):', day, 'from pairing:', !!semiPrivatePairing);
 
       const targetDay = dayMap[day.toLowerCase()];
       if (targetDay !== undefined) {
@@ -872,8 +927,9 @@ const SchedulePage: React.FC = () => {
                 registrationId={registration.id}
                 firebaseUid={registration.firebase_uid}
                 currentSchedule={{
-                  day: registration.form_data.semiPrivateAvailability?.[0],
-                  timeSlot: registration.form_data.semiPrivateTimeSlot || registration.form_data.semiPrivateTimeWindows?.[0],
+                  // Use pairing's scheduled day if paired, otherwise fall back to form data
+                  day: semiPrivatePairing?.scheduled_day || registration.form_data.semiPrivateAvailability?.[0],
+                  timeSlot: semiPrivatePairing?.scheduled_time || registration.form_data.semiPrivateTimeSlot || registration.form_data.semiPrivateTimeWindows?.[0],
                   playerCategory: registration.form_data.playerCategory || ''
                 }}
                 onSuccess={() => window.location.reload()}
