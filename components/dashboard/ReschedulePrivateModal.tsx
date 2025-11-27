@@ -122,9 +122,9 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         setCurrentDays(apiDays);
         setCurrentTimeSlot(data.currentSchedule?.timeSlot || null);
 
-        // Determine frequency: use explicit field OR infer from number of days
-        const freq = data.currentSchedule?.frequency ||
-          (apiDays.length >= 2 ? '2x' : '1x');
+        // Determine frequency from number of days (most reliable)
+        // Don't trust the frequency field - infer from actual days count
+        const freq = apiDays.length >= 2 ? '2x' : '1x';
         setPrivateFrequency(freq);
 
         console.log('ReschedulePrivateModal: Current days:', apiDays, 'Time:', data.currentSchedule?.timeSlot, 'Frequency:', freq);
