@@ -78,64 +78,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (action === 'get_availability') {
-      // Get full week availability grid
-      const weekAvailability = await Promise.all(
-        AVAILABLE_DAYS.map(async (day) => {
-          const daySlots = await Promise.all(
-            AVAILABLE_TIME_SLOTS.map(async (time) => {
-              // Check if this specific slot is booked
-              const { data: bookings, error } = await supabase
-                .from('registrations')
-                .select('form_data, id')
-                .in('payment_status', ['succeeded', 'verified'])
-                .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
+      // Get all private and semi-private bookings ONCE (not per slot - more efficient)
+      const { data: allBookings, error: bookingsError } = await supabase
+        .from('registrations')
+        .select('form_data, id')
+        .in('payment_status', ['succeeded', 'verified']);
 
-              if (error) {
-                console.error('Error checking availability:', error);
-                return {
-                  time,
-                  available: false,
-                  error: 'Failed to check availability'
-                };
-              }
+      if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to load availability'
+        });
+      }
 
-              // Count bookings for this specific day and time
-              // FIXED: Exclude current registration from the count
-              const bookedCount = bookings?.filter(b => {
-                // Skip current user's registration
-                if (b.id === registrationId) return false;
+      // Filter to only private and semi-private registrations
+      const relevantBookings = allBookings?.filter(b =>
+        b.form_data?.programType === 'private' ||
+        b.form_data?.programType === 'semi-private'
+      ) || [];
 
-                const isPrivate = b.form_data?.programType === 'private';
-                const isSemiPrivate = b.form_data?.programType === 'semi-private';
+      console.log('Private reschedule - found bookings:', relevantBookings.length);
+      console.log('Current registration form_data:', JSON.stringify(registration.form_data, null, 2));
 
-                if (isPrivate) {
-                  return b.form_data?.privateSelectedDays?.includes(day) &&
-                         b.form_data?.privateTimeSlot === time;
-                }
+      // Build availability grid
+      const weekAvailability = AVAILABLE_DAYS.map(day => {
+        const daySlots = AVAILABLE_TIME_SLOTS.map(time => {
+          // Count bookings for this specific day and time (excluding current registration)
+          const bookedCount = relevantBookings.filter(b => {
+            // Skip current user's registration
+            if (b.id === registrationId) return false;
 
-                if (isSemiPrivate) {
-                  return b.form_data?.semiPrivateAvailability?.includes(day) &&
-                         b.form_data?.semiPrivateTimeSlot === time;
-                }
+            const isPrivate = b.form_data?.programType === 'private';
+            const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
-                return false;
-              }).length || 0;
+            if (isPrivate) {
+              // Check both array format and handle case sensitivity
+              const selectedDays = b.form_data?.privateSelectedDays || [];
+              const dayMatches = Array.isArray(selectedDays)
+                ? selectedDays.some((d: string) => d.toLowerCase() === day.toLowerCase())
+                : String(selectedDays).toLowerCase() === day.toLowerCase();
+              const timeMatches = b.form_data?.privateTimeSlot === time;
+              return dayMatches && timeMatches;
+            }
 
-              return {
-                time,
-                available: bookedCount === 0,
-                isCurrent: registration.form_data?.privateSelectedDays?.includes(day) &&
-                          registration.form_data?.privateTimeSlot === time
-              };
-            })
-          );
+            if (isSemiPrivate) {
+              const availability = b.form_data?.semiPrivateAvailability || [];
+              const dayMatches = Array.isArray(availability)
+                ? availability.some((d: string) => d.toLowerCase() === day.toLowerCase())
+                : String(availability).toLowerCase() === day.toLowerCase();
+              const timeMatches = b.form_data?.semiPrivateTimeSlot === time;
+              return dayMatches && timeMatches;
+            }
+
+            return false;
+          }).length;
+
+          // Check if this is the current user's slot
+          const currentDays = registration.form_data?.privateSelectedDays || [];
+          const currentTime = registration.form_data?.privateTimeSlot;
+          const isCurrent = Array.isArray(currentDays)
+            ? currentDays.some((d: string) => d.toLowerCase() === day.toLowerCase()) && currentTime === time
+            : String(currentDays).toLowerCase() === day.toLowerCase() && currentTime === time;
 
           return {
-            day,
-            slots: daySlots
+            time,
+            available: bookedCount === 0,
+            isCurrent
           };
-        })
-      );
+        });
+
+        return {
+          day,
+          slots: daySlots
+        };
+      });
+
+      // Log sample availability for debugging
+      const mondaySlots = weekAvailability.find(d => d.day === 'monday');
+      console.log('Monday slots sample:', JSON.stringify(mondaySlots, null, 2));
 
       return res.status(200).json({
         success: true,
