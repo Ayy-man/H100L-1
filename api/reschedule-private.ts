@@ -364,24 +364,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // For one-time changes, create a schedule exception
+      // For one-time changes, create schedule exception(s) for each day
       if (changeType === 'one_time' && specificDate) {
-        const { error: exceptionError } = await supabase
-          .from('schedule_exceptions')
-          .insert({
-            registration_id: registrationId,
-            exception_date: specificDate,
-            exception_type: 'swap',
-            replacement_day: newDay.toLowerCase(),
-            replacement_time: newTime,
-            status: 'applied',
-            reason,
-            created_by: firebaseUid,
-            applied_at: new Date().toISOString()
-          });
+        // Create an exception for each day being changed
+        for (const day of daysToSet) {
+          const { error: exceptionError } = await supabase
+            .from('schedule_exceptions')
+            .insert({
+              registration_id: registrationId,
+              exception_date: specificDate,
+              exception_type: 'swap',
+              replacement_day: day.toLowerCase(),
+              replacement_time: newTime,
+              status: 'applied',
+              reason,
+              created_by: firebaseUid,
+              applied_at: new Date().toISOString()
+            });
 
-        if (exceptionError) {
-          console.error('Error creating exception:', exceptionError);
+          if (exceptionError) {
+            console.error('Error creating exception:', exceptionError);
+          }
         }
       }
 
@@ -392,7 +395,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           : 'Your one-time schedule change has been applied',
         scheduleChange,
         newSchedule: {
-          day: newDay,
+          days: daysToSet,
           time: newTime
         }
       });
