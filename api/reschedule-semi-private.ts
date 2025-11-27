@@ -25,6 +25,12 @@ const supabase = createClient(
 const AVAILABLE_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const AVAILABLE_TIME_SLOTS = ['8-9', '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'];
 
+interface ExceptionMapping {
+  originalDay: string;
+  replacementDay: string;
+  date: string; // The date of the original day
+}
+
 interface RescheduleRequest {
   action: 'get_suggested_times' | 'get_availability' | 'check_availability' | 'reschedule' | 'get_current_pairing';
   registrationId: string;
@@ -34,6 +40,7 @@ interface RescheduleRequest {
   newTime?: string;
   specificDate?: string;
   effectiveDate?: string;
+  exceptionMappings?: ExceptionMapping[]; // Detailed mappings for one-time changes
   reason?: string;
 }
 
@@ -52,6 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       newTime,
       specificDate,
       effectiveDate,
+      exceptionMappings,
       reason
     } = req.body as RescheduleRequest;
 
@@ -191,8 +199,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
 
                 if (isSemiPrivate) {
-                  return b.form_data?.semiPrivateAvailability?.includes(day) &&
-                         b.form_data?.semiPrivateTimeSlot === time;
+                  // Check both semiPrivateTimeSlot (string) and semiPrivateTimeWindows (array)
+                  const semiTime = b.form_data?.semiPrivateTimeSlot ||
+                    (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
+                  const semiDays = b.form_data?.semiPrivateAvailability || [];
+                  return semiDays.includes(day) && semiTime === time;
                 }
 
                 return false;
@@ -207,13 +218,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 p.preferred_days?.includes(day) && p.preferred_time_slots?.includes(time)
               );
 
+              // Check if this is the current slot
+              const currentSemiTime = registration.form_data?.semiPrivateTimeSlot ||
+                (registration.form_data?.semiPrivateTimeWindows && registration.form_data?.semiPrivateTimeWindows[0]);
+              const currentSemiDays = registration.form_data?.semiPrivateAvailability || [];
+
               return {
                 time,
                 available: bookedCount === 0,
                 hasUnpairedPartner,
                 partnerName: partner?.player_name,
-                isCurrent: registration.form_data?.semiPrivateAvailability?.includes(day) &&
-                          registration.form_data?.semiPrivateTimeSlot === time,
+                isCurrent: currentSemiDays.includes(day) && currentSemiTime === time,
                 priority: hasUnpairedPartner ? 'high' : 'normal' // Prioritize slots with partners
               };
             })
@@ -226,12 +241,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
       );
 
+      // Get current time slot (handle both field names)
+      const currentTimeSlot = registration.form_data?.semiPrivateTimeSlot ||
+        (registration.form_data?.semiPrivateTimeWindows && registration.form_data?.semiPrivateTimeWindows[0]) ||
+        null;
+
       return res.status(200).json({
         success: true,
         availability: weekAvailability,
         currentSchedule: {
           days: registration.form_data?.semiPrivateAvailability || [],
-          timeSlot: registration.form_data?.semiPrivateTimeSlot || null
+          timeSlot: currentTimeSlot
         }
       });
     }
@@ -264,8 +284,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (isSemiPrivate) {
-          return b.form_data?.semiPrivateAvailability?.includes(newDay.toLowerCase()) &&
-                 b.form_data?.semiPrivateTimeSlot === newTime;
+          // Check both semiPrivateTimeSlot (string) and semiPrivateTimeWindows (array)
+          const semiTime = b.form_data?.semiPrivateTimeSlot ||
+            (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
+          const semiDays = b.form_data?.semiPrivateAvailability || [];
+          return semiDays.includes(newDay.toLowerCase()) && semiTime === newTime;
         }
 
         return false;
@@ -328,8 +351,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (isSemiPrivate) {
-          return b.form_data?.semiPrivateAvailability?.includes(newDay.toLowerCase()) &&
-                 b.form_data?.semiPrivateTimeSlot === newTime;
+          // Check both semiPrivateTimeSlot (string) and semiPrivateTimeWindows (array)
+          const semiTime = b.form_data?.semiPrivateTimeSlot ||
+            (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
+          const semiDays = b.form_data?.semiPrivateAvailability || [];
+          return semiDays.includes(newDay.toLowerCase()) && semiTime === newTime;
         }
 
         return false;
@@ -464,6 +490,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
       }
 
+      // Get original time (handle both field names)
+      const originalTime = registration.form_data?.semiPrivateTimeSlot ||
+        (registration.form_data?.semiPrivateTimeWindows && registration.form_data?.semiPrivateTimeWindows[0]) ||
+        null;
+
       // Step 3: Create schedule change record
       const { data: scheduleChange } = await supabase
         .from('schedule_changes')
@@ -472,7 +503,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           change_type: changeType,
           program_type: 'semi_private',
           original_days: registration.form_data?.semiPrivateAvailability || [],
-          original_time: registration.form_data?.semiPrivateTimeSlot,
+          original_time: originalTime,
           new_days: [newDay.toLowerCase()],
           new_time: newTime,
           specific_date: changeType === 'one_time' ? specificDate : null,
@@ -504,21 +535,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .eq('id', registrationId);
       }
 
-      // Step 5: For one-time changes, create exception
-      if (changeType === 'one_time' && specificDate) {
-        await supabase
-          .from('schedule_exceptions')
-          .insert({
-            registration_id: registrationId,
-            exception_date: specificDate,
-            exception_type: 'swap',
-            replacement_day: newDay.toLowerCase(),
-            replacement_time: newTime,
-            status: 'applied',
-            reason,
-            created_by: firebaseUid,
-            applied_at: new Date().toISOString()
-          });
+      // Step 5: For one-time changes, create exception(s)
+      if (changeType === 'one_time') {
+        console.log('Creating one-time semi-private exceptions...');
+        console.log('- exceptionMappings:', JSON.stringify(exceptionMappings));
+        console.log('- specificDate:', specificDate);
+        console.log('- newDay:', newDay);
+
+        // Use detailed mappings if provided (same approach as private training)
+        if (exceptionMappings && exceptionMappings.length > 0) {
+          for (const mapping of exceptionMappings) {
+            console.log(`Creating exception: ${mapping.originalDay} (${mapping.date}) -> ${mapping.replacementDay}`);
+
+            const { error: exceptionError } = await supabase
+              .from('schedule_exceptions')
+              .insert({
+                registration_id: registrationId,
+                exception_date: mapping.date, // Date of the ORIGINAL day
+                exception_type: 'swap',
+                replacement_day: mapping.replacementDay.toLowerCase(),
+                replacement_time: newTime,
+                status: 'applied',
+                reason: reason || `One-time swap: ${mapping.originalDay} -> ${mapping.replacementDay}`,
+                created_by: firebaseUid,
+                applied_at: new Date().toISOString()
+              });
+
+            if (exceptionError) {
+              console.error('Error creating exception:', exceptionError);
+            } else {
+              console.log('Exception created successfully!');
+            }
+          }
+        } else if (specificDate) {
+          // Fallback: old behavior for backwards compatibility
+          console.log('Using legacy exception creation (no mappings provided)');
+          await supabase
+            .from('schedule_exceptions')
+            .insert({
+              registration_id: registrationId,
+              exception_date: specificDate,
+              exception_type: 'swap',
+              replacement_day: newDay.toLowerCase(),
+              replacement_time: newTime,
+              status: 'applied',
+              reason,
+              created_by: firebaseUid,
+              applied_at: new Date().toISOString()
+            });
+        }
       }
 
       return res.status(200).json({

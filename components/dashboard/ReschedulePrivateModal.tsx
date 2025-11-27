@@ -220,8 +220,48 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
 
       // Add appropriate date field based on change type
       if (changeType === 'one_time') {
-        // For one-time, send specificDate (first selected day's next occurrence)
-        requestBody.specificDate = getNextOccurrence(newDays[0]);
+        // For one-time changes, we need to create exceptions for ORIGINAL days
+        // that map to the NEW days
+        const originalDaysLower = currentDays.map(d => d.toLowerCase());
+        const newDaysLower = newDays.map(d => d.toLowerCase());
+
+        // Find days being replaced (in original but not in new)
+        const daysBeingReplaced = originalDaysLower.filter(d => !newDaysLower.includes(d));
+        // Find days being added (in new but not in original)
+        const daysBeingAdded = newDaysLower.filter(d => !originalDaysLower.includes(d));
+
+        console.log('ONE-TIME RESCHEDULE DEBUG:');
+        console.log('- Original days:', originalDaysLower);
+        console.log('- New days:', newDaysLower);
+        console.log('- Days being replaced:', daysBeingReplaced);
+        console.log('- Days being added:', daysBeingAdded);
+
+        // Build exception mappings: each replaced day maps to an added day
+        const exceptionMappings: Array<{originalDay: string, replacementDay: string, date: string}> = [];
+
+        for (let i = 0; i < daysBeingReplaced.length && i < daysBeingAdded.length; i++) {
+          const originalDay = daysBeingReplaced[i];
+          const replacementDay = daysBeingAdded[i];
+          const exceptionDate = getNextOccurrence(originalDay); // Date of ORIGINAL day!
+
+          exceptionMappings.push({
+            originalDay,
+            replacementDay,
+            date: exceptionDate
+          });
+
+          console.log(`- Exception: ${originalDay} (${exceptionDate}) -> ${replacementDay}`);
+        }
+
+        // Send the mappings to the API
+        requestBody.exceptionMappings = exceptionMappings;
+        // Also send first original day's date for backwards compatibility
+        if (daysBeingReplaced.length > 0) {
+          requestBody.specificDate = getNextOccurrence(daysBeingReplaced[0]);
+        } else if (originalDaysLower.length > 0) {
+          // Time change only - use first original day
+          requestBody.specificDate = getNextOccurrence(originalDaysLower[0]);
+        }
       } else {
         requestBody.effectiveDate = new Date().toISOString().split('T')[0];
       }

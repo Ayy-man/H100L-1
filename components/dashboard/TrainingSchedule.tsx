@@ -119,15 +119,24 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
     // Helper to check if there's an exception for a given date
     const getExceptionForDate = (dateStr: string) => {
+      console.log(`[getExceptionForDate] Looking for exception on date: ${dateStr}`);
+      console.log(`[getExceptionForDate] Available exceptions:`, scheduleExceptions.map(e => ({
+        date: e.exception_date,
+        replacement_day: e.replacement_day,
+        status: e.status,
+        type: e.exception_type
+      })));
+
       const exception = scheduleExceptions.find(
         (exc) => exc.exception_date === dateStr && exc.status === 'applied'
       );
-      if (scheduleExceptions.length > 0) {
-        console.log(`TrainingSchedule - Checking date ${dateStr} against ${scheduleExceptions.length} exceptions:`,
-          scheduleExceptions.map(e => ({ date: e.exception_date, status: e.status })),
-          'Match:', exception ? 'YES' : 'NO'
-        );
+
+      if (exception) {
+        console.log(`[getExceptionForDate] FOUND exception: ${dateStr} -> ${exception.replacement_day}`);
+      } else {
+        console.log(`[getExceptionForDate] No exception found for ${dateStr}`);
       }
+
       return exception;
     };
 
@@ -242,7 +251,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
           }
         });
       }
-    } else if (form_data.programType === 'semi-private' && form_data.semiPrivateAvailability) {
+    } else if (form_data.programType === 'semi-private' && form_data.semiPrivateAvailability && form_data.semiPrivateAvailability.length > 0) {
       const dayMap: { [key: string]: number } = {
         sunday: 0,
         monday: 1,
@@ -252,20 +261,47 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         friday: 5,
         saturday: 6,
       };
+      const reverseDayMap: { [key: number]: string } = {
+        0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday',
+        4: 'Thursday', 5: 'Friday', 6: 'Saturday',
+      };
 
       // Get the time slot - could be semiPrivateTimeSlot (string) or semiPrivateTimeWindows (array)
       const semiPrivateTime = form_data.semiPrivateTimeSlot ||
         (form_data.semiPrivateTimeWindows && form_data.semiPrivateTimeWindows[0]) ||
         null;
 
-      for (let week = 0; week < weeksToShow; week++) {
-        form_data.semiPrivateAvailability.forEach((day) => {
-          const targetDay = dayMap[day.toLowerCase()];
-          if (targetDay !== undefined) {
-            const date = new Date(today);
-            date.setDate(today.getDate() + (7 * week) + (targetDay - today.getDay() + 7) % 7);
+      // Semi-private is ONLY 1x per week - use only the first/scheduled day
+      const day = form_data.semiPrivateAvailability[0];
 
-            if (date >= today) {
+      for (let week = 0; week < weeksToShow; week++) {
+        const targetDay = dayMap[day.toLowerCase()];
+        if (targetDay !== undefined) {
+          const date = new Date(today);
+          date.setDate(today.getDate() + (7 * week) + (targetDay - today.getDay() + 7) % 7);
+
+          if (date >= today) {
+            const dateStr = formatDate(date);
+            const exception = getExceptionForDate(dateStr);
+
+            if (exception && exception.exception_type === 'swap') {
+              // Replace with the exception day
+              const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
+              if (replacementDayNum !== undefined) {
+                const replacementDate = new Date(date);
+                const dayDiff = replacementDayNum - date.getDay();
+                replacementDate.setDate(date.getDate() + dayDiff);
+
+                sessions.push({
+                  date: replacementDate,
+                  day: reverseDayMap[replacementDayNum] || exception.replacement_day,
+                  type: 'synthetic',
+                  time: exception.replacement_time || semiPrivateTime,
+                  isException: true,
+                });
+              }
+            } else {
+              // Normal session
               sessions.push({
                 date,
                 day: day.charAt(0).toUpperCase() + day.slice(1),
@@ -274,7 +310,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
               });
             }
           }
-        });
+        }
       }
     }
 
@@ -308,19 +344,25 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
     const fetchScheduleExceptions = async () => {
       if (!id) return;
       try {
-        console.log('TrainingSchedule - Fetching exceptions for registration:', id);
+        console.log('=== FETCHING SCHEDULE EXCEPTIONS ===');
+        console.log('Registration ID:', id);
         const response = await fetch(
           `/api/schedule-exceptions?registrationId=${id}`
         );
         if (response.ok) {
           const data = await response.json();
-          console.log('TrainingSchedule - Received exceptions:', data);
+          console.log('=== EXCEPTIONS RESPONSE ===');
+          console.log('Success:', data.success);
+          console.log('Count:', data.exceptions?.length || 0);
+          console.log('Debug info:', data.debug);
+          console.log('Full exceptions:', JSON.stringify(data.exceptions, null, 2));
           if (data.success && data.exceptions) {
             setScheduleExceptions(data.exceptions);
-            console.log('TrainingSchedule - Set exceptions state:', data.exceptions);
           }
         } else {
-          console.error('TrainingSchedule - Failed to fetch exceptions, status:', response.status);
+          console.error('Failed to fetch exceptions, status:', response.status);
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
         }
       } catch (error) {
         console.error('Failed to fetch schedule exceptions:', error);
@@ -455,8 +497,12 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   };
 
   const handleRescheduleSuccess = () => {
+    console.log('RESCHEDULE SUCCESS - waiting 7s before refresh so you can copy logs...');
     setRefreshKey(prev => prev + 1);
-    window.location.reload();
+    setTimeout(() => {
+      console.log('Now refreshing page...');
+      window.location.reload();
+    }, 7000);
   };
 
   return (
