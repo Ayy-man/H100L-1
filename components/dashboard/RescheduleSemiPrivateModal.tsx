@@ -220,22 +220,34 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
 
       // Add appropriate date field based on change type
       if (changeType === 'one_time') {
-        // For one-time changes, the exception_date should be the ORIGINAL day's date
-        // so the calendar can find the exception when generating the original day's session
+        // For one-time changes, use exceptionMappings like private training does
+        // The exception_date must be the ORIGINAL day's date for calendar lookup to work
         const originalDay = currentSchedule.day?.toLowerCase() || currentPairing?.scheduledDay?.toLowerCase();
 
         console.log('SEMI-PRIVATE ONE-TIME DEBUG:');
         console.log('- Original day:', originalDay);
         console.log('- New day:', selectedDay);
 
-        if (originalDay && originalDay !== selectedDay.toLowerCase()) {
-          // Day is changing - use original day's date for exception
-          requestBody.specificDate = getNextOccurrence(originalDay);
-          console.log('- Using original day date:', requestBody.specificDate);
+        if (originalDay) {
+          // Calculate the date of the original day (this is the date we're swapping FROM)
+          const originalDayDate = getNextOccurrence(originalDay);
+
+          // Create exception mapping (same format as private training)
+          requestBody.exceptionMappings = [{
+            originalDay: originalDay,
+            replacementDay: selectedDay.toLowerCase(),
+            date: originalDayDate // Date of ORIGINAL day - this is key for calendar lookup!
+          }];
+
+          // Also keep specificDate for backwards compatibility
+          requestBody.specificDate = originalDayDate;
+
+          console.log('- Exception mapping:', JSON.stringify(requestBody.exceptionMappings));
+          console.log('- Original day date:', originalDayDate);
         } else {
-          // Only time is changing, or same day - use the selected day
+          // Fallback if no original day found - shouldn't happen
           requestBody.specificDate = getNextOccurrence(selectedDay);
-          console.log('- Using selected day date:', requestBody.specificDate);
+          console.log('- Fallback: Using selected day date:', requestBody.specificDate);
         }
       } else {
         requestBody.effectiveDate = new Date().toISOString().split('T')[0];

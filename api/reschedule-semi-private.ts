@@ -25,6 +25,12 @@ const supabase = createClient(
 const AVAILABLE_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const AVAILABLE_TIME_SLOTS = ['8-9', '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'];
 
+interface ExceptionMapping {
+  originalDay: string;
+  replacementDay: string;
+  date: string; // The date of the original day
+}
+
 interface RescheduleRequest {
   action: 'get_suggested_times' | 'get_availability' | 'check_availability' | 'reschedule' | 'get_current_pairing';
   registrationId: string;
@@ -34,6 +40,7 @@ interface RescheduleRequest {
   newTime?: string;
   specificDate?: string;
   effectiveDate?: string;
+  exceptionMappings?: ExceptionMapping[]; // Detailed mappings for one-time changes
   reason?: string;
 }
 
@@ -52,6 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       newTime,
       specificDate,
       effectiveDate,
+      exceptionMappings,
       reason
     } = req.body as RescheduleRequest;
 
@@ -527,21 +535,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .eq('id', registrationId);
       }
 
-      // Step 5: For one-time changes, create exception
-      if (changeType === 'one_time' && specificDate) {
-        await supabase
-          .from('schedule_exceptions')
-          .insert({
-            registration_id: registrationId,
-            exception_date: specificDate,
-            exception_type: 'swap',
-            replacement_day: newDay.toLowerCase(),
-            replacement_time: newTime,
-            status: 'applied',
-            reason,
-            created_by: firebaseUid,
-            applied_at: new Date().toISOString()
-          });
+      // Step 5: For one-time changes, create exception(s)
+      if (changeType === 'one_time') {
+        console.log('Creating one-time semi-private exceptions...');
+        console.log('- exceptionMappings:', JSON.stringify(exceptionMappings));
+        console.log('- specificDate:', specificDate);
+        console.log('- newDay:', newDay);
+
+        // Use detailed mappings if provided (same approach as private training)
+        if (exceptionMappings && exceptionMappings.length > 0) {
+          for (const mapping of exceptionMappings) {
+            console.log(`Creating exception: ${mapping.originalDay} (${mapping.date}) -> ${mapping.replacementDay}`);
+
+            const { error: exceptionError } = await supabase
+              .from('schedule_exceptions')
+              .insert({
+                registration_id: registrationId,
+                exception_date: mapping.date, // Date of the ORIGINAL day
+                exception_type: 'swap',
+                replacement_day: mapping.replacementDay.toLowerCase(),
+                replacement_time: newTime,
+                status: 'applied',
+                reason: reason || `One-time swap: ${mapping.originalDay} -> ${mapping.replacementDay}`,
+                created_by: firebaseUid,
+                applied_at: new Date().toISOString()
+              });
+
+            if (exceptionError) {
+              console.error('Error creating exception:', exceptionError);
+            } else {
+              console.log('Exception created successfully!');
+            }
+          }
+        } else if (specificDate) {
+          // Fallback: old behavior for backwards compatibility
+          console.log('Using legacy exception creation (no mappings provided)');
+          await supabase
+            .from('schedule_exceptions')
+            .insert({
+              registration_id: registrationId,
+              exception_date: specificDate,
+              exception_type: 'swap',
+              replacement_day: newDay.toLowerCase(),
+              replacement_time: newTime,
+              status: 'applied',
+              reason,
+              created_by: firebaseUid,
+              applied_at: new Date().toISOString()
+            });
+        }
       }
 
       return res.status(200).json({
