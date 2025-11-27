@@ -29,9 +29,10 @@ interface RescheduleRequest {
   registrationId: string;
   firebaseUid: string;
   changeType?: 'one_time' | 'permanent';
-  newDay?: string;
-  newTime?: string; // e.g., '9:00 AM'
-  originalDay?: string; // For 2x/week users: which day to replace
+  newDay?: string; // Single day (legacy)
+  newDays?: string[]; // Array of days (for 2x/week)
+  newTime?: string; // e.g., '9-10'
+  originalDay?: string; // For 2x/week users: which day to replace (legacy)
   specificDate?: string; // For one-time changes
   effectiveDate?: string; // For permanent changes
   reason?: string;
@@ -49,6 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       firebaseUid,
       changeType,
       newDay,
+      newDays,
       newTime,
       originalDay,
       specificDate,
@@ -165,7 +167,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         availability: weekAvailability,
         currentSchedule: {
           days: registration.form_data?.privateSelectedDays || [],
-          timeSlot: registration.form_data?.privateTimeSlot || null
+          timeSlot: registration.form_data?.privateTimeSlot || null,
+          frequency: registration.form_data?.privateFrequency || '1x'
         }
       });
     }
@@ -239,20 +242,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (action === 'reschedule') {
+      // Support both newDays array and legacy newDay string
+      const daysToSet = newDays || (newDay ? [newDay] : []);
+
       // Validate inputs
-      if (!changeType || !newDay || !newTime) {
+      if (!changeType || daysToSet.length === 0 || !newTime) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required fields: changeType, newDay, newTime'
+          error: 'Missing required fields: changeType, newDays/newDay, newTime'
         });
       }
 
-      // Validate day and time
-      if (!AVAILABLE_DAYS.includes(newDay.toLowerCase())) {
-        return res.status(400).json({
-          success: false,
-          error: `Invalid day. Must be one of: ${AVAILABLE_DAYS.join(', ')}`
-        });
+      // Validate all days
+      for (const day of daysToSet) {
+        if (!AVAILABLE_DAYS.includes(day.toLowerCase())) {
+          return res.status(400).json({
+            success: false,
+            error: `Invalid day: ${day}. Must be one of: ${AVAILABLE_DAYS.join(', ')}`
+          });
+        }
       }
 
       if (!AVAILABLE_TIME_SLOTS.includes(newTime)) {
@@ -305,7 +313,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           program_type: 'private',
           original_days: registration.form_data?.privateSelectedDays || [],
           original_time: registration.form_data?.privateTimeSlot,
-          new_days: [newDay.toLowerCase()],
+          new_days: daysToSet.map(d => d.toLowerCase()),
           new_time: newTime,
           specific_date: changeType === 'one_time' ? specificDate : null,
           effective_date: changeType === 'permanent' ? effectiveDate || new Date().toISOString().split('T')[0] : null,
@@ -329,21 +337,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // For permanent changes, update the registration's form_data
       if (changeType === 'permanent') {
-        // Get current days array
-        const currentDays: string[] = registration.form_data?.privateSelectedDays || [];
-
-        // For 2x/week users, only replace the specific day being rescheduled
-        let updatedDays: string[];
-        if (originalDay && currentDays.length > 1) {
-          // Replace only the originalDay with newDay
-          updatedDays = currentDays.map((d: string) =>
-            d.toLowerCase() === originalDay.toLowerCase() ? newDay.toLowerCase() : d.toLowerCase()
-          );
-          console.log(`Replacing ${originalDay} with ${newDay}. Days: ${currentDays.join(',')} -> ${updatedDays.join(',')}`);
-        } else {
-          // Single day user or no originalDay specified - replace all
-          updatedDays = [newDay.toLowerCase()];
-        }
+        // Use all the days provided (supports both 1x and 2x/week)
+        const updatedDays = daysToSet.map(d => d.toLowerCase());
+        console.log(`Updating days to: ${updatedDays.join(', ')} at ${newTime}`);
 
         const updatedFormData = {
           ...registration.form_data,
