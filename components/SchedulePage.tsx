@@ -165,14 +165,23 @@ const SchedulePage: React.FC = () => {
     const fetchScheduleExceptions = async () => {
       if (!registration?.id) return;
       try {
+        console.log('=== SchedulePage: FETCHING SCHEDULE EXCEPTIONS ===');
+        console.log('Registration ID:', registration.id);
         const response = await fetch(
           `/api/schedule-exceptions?registrationId=${registration.id}`
         );
         if (response.ok) {
           const data = await response.json();
+          console.log('=== SchedulePage: EXCEPTIONS RESPONSE ===');
+          console.log('Success:', data.success);
+          console.log('Count:', data.exceptions?.length || 0);
+          console.log('Debug info:', data.debug);
+          console.log('Full exceptions:', JSON.stringify(data.exceptions, null, 2));
           if (data.success && data.exceptions) {
             setScheduleExceptions(data.exceptions);
           }
+        } else {
+          console.error('Failed to fetch exceptions, status:', response.status);
         }
       } catch (error) {
         console.error('Failed to fetch schedule exceptions:', error);
@@ -273,6 +282,10 @@ const SchedulePage: React.FC = () => {
         }
       });
     } else if (form_data.programType === 'private' && form_data.privateSelectedDays) {
+      console.log('=== SchedulePage: Generating PRIVATE sessions ===');
+      console.log('Private selected days:', form_data.privateSelectedDays);
+      console.log('Schedule exceptions available:', scheduleExceptions.length);
+
       form_data.privateSelectedDays.forEach((day) => {
         const targetDay = dayMap[day.toLowerCase()];
         if (targetDay !== undefined) {
@@ -285,10 +298,12 @@ const SchedulePage: React.FC = () => {
 
           while (currentDate <= lastDay) {
             const dateStr = formatDate(currentDate);
+            console.log(`[SchedulePage] Checking date ${dateStr} for day ${day}`);
             const exception = getExceptionForDate(dateStr);
 
             if (exception && exception.exception_type === 'swap') {
               // Replace with the exception day
+              console.log(`[SchedulePage] FOUND EXCEPTION: ${dateStr} -> ${exception.replacement_day}`);
               const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
               if (replacementDayNum !== undefined) {
                 const replacementDate = new Date(currentDate);
@@ -787,7 +802,10 @@ const SchedulePage: React.FC = () => {
                   timeSlot: registration.form_data.privateTimeSlot || '',
                   playerCategory: registration.form_data.playerCategory || ''
                 }}
-                onSuccess={() => window.location.reload()}
+                onSuccess={() => {
+                  console.log('RESCHEDULE SUCCESS - waiting 7s before refresh...');
+                  setTimeout(() => window.location.reload(), 7000);
+                }}
               />
             )}
             {registration && registration.form_data.programType === 'semi-private' && (

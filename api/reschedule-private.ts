@@ -24,6 +24,12 @@ const supabase = createClient(
 const AVAILABLE_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const AVAILABLE_TIME_SLOTS = ['8-9', '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'];
 
+interface ExceptionMapping {
+  originalDay: string;
+  replacementDay: string;
+  date: string; // The date of the original day
+}
+
 interface RescheduleRequest {
   action: 'check_availability' | 'get_availability' | 'reschedule';
   registrationId: string;
@@ -33,8 +39,9 @@ interface RescheduleRequest {
   newDays?: string[]; // Array of days (for 2x/week)
   newTime?: string; // e.g., '9-10'
   originalDay?: string; // For 2x/week users: which day to replace (legacy)
-  specificDate?: string; // For one-time changes
+  specificDate?: string; // For one-time changes (date of original day being replaced)
   effectiveDate?: string; // For permanent changes
+  exceptionMappings?: ExceptionMapping[]; // Detailed mappings for one-time changes
   reason?: string;
 }
 
@@ -55,6 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       originalDay,
       specificDate,
       effectiveDate,
+      exceptionMappings,
       reason
     } = req.body as RescheduleRequest;
 
@@ -364,26 +372,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // For one-time changes, create schedule exception(s) for each day
-      if (changeType === 'one_time' && specificDate) {
-        // Create an exception for each day being changed
-        for (const day of daysToSet) {
-          const { error: exceptionError } = await supabase
-            .from('schedule_exceptions')
-            .insert({
-              registration_id: registrationId,
-              exception_date: specificDate,
-              exception_type: 'swap',
-              replacement_day: day.toLowerCase(),
-              replacement_time: newTime,
-              status: 'applied',
-              reason,
-              created_by: firebaseUid,
-              applied_at: new Date().toISOString()
-            });
+      // For one-time changes, create schedule exception(s)
+      if (changeType === 'one_time') {
+        console.log('Creating one-time exceptions...');
+        console.log('- exceptionMappings:', JSON.stringify(exceptionMappings));
+        console.log('- specificDate:', specificDate);
+        console.log('- daysToSet:', daysToSet);
 
-          if (exceptionError) {
-            console.error('Error creating exception:', exceptionError);
+        // Use detailed mappings if provided (new approach)
+        if (exceptionMappings && exceptionMappings.length > 0) {
+          for (const mapping of exceptionMappings) {
+            console.log(`Creating exception: ${mapping.originalDay} (${mapping.date}) -> ${mapping.replacementDay}`);
+
+            const { error: exceptionError } = await supabase
+              .from('schedule_exceptions')
+              .insert({
+                registration_id: registrationId,
+                exception_date: mapping.date, // Date of the ORIGINAL day
+                exception_type: 'swap',
+                replacement_day: mapping.replacementDay.toLowerCase(),
+                replacement_time: newTime,
+                status: 'applied',
+                reason: reason || `One-time swap: ${mapping.originalDay} -> ${mapping.replacementDay}`,
+                created_by: firebaseUid,
+                applied_at: new Date().toISOString()
+              });
+
+            if (exceptionError) {
+              console.error('Error creating exception:', exceptionError);
+            } else {
+              console.log('Exception created successfully!');
+            }
+          }
+        } else if (specificDate) {
+          // Fallback: old behavior for backwards compatibility
+          console.log('Using legacy exception creation (no mappings provided)');
+          for (const day of daysToSet) {
+            const { error: exceptionError } = await supabase
+              .from('schedule_exceptions')
+              .insert({
+                registration_id: registrationId,
+                exception_date: specificDate,
+                exception_type: 'swap',
+                replacement_day: day.toLowerCase(),
+                replacement_time: newTime,
+                status: 'applied',
+                reason,
+                created_by: firebaseUid,
+                applied_at: new Date().toISOString()
+              });
+
+            if (exceptionError) {
+              console.error('Error creating exception:', exceptionError);
+            }
           }
         }
       }
