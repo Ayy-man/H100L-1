@@ -14,6 +14,7 @@ import SundayRosterAdmin from './admin/SundayRosterAdmin';
 import UnpairedPlayersPanel from './admin/UnpairedPlayersPanel';
 import ScheduleChangesPanel from './admin/ScheduleChangesPanel';
 import ConfirmPaymentButton from './ConfirmPaymentButton';
+import { NotificationBell } from './notifications';
 import { MedicalFiles, WeekDay, Language } from '../types';
 
 interface Registration {
@@ -1035,6 +1036,12 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Notification Bell for Admin */}
+            <NotificationBell
+              userId="admin"
+              userType="admin"
+            />
+
             {/* Logged-in Admin */}
             {currentAdmin && (
               <div className="text-right hidden sm:block">

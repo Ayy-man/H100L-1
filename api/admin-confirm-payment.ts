@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { notifyPaymentConfirmed } from '../lib/notificationHelper';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -71,6 +72,21 @@ export default async function handler(
     }
 
     console.log(`✅ Payment manually confirmed for registration ${registrationId} by ${adminEmail}`);
+
+    // Send notification to parent
+    try {
+      if (registration.firebase_uid) {
+        await notifyPaymentConfirmed({
+          parentUserId: registration.firebase_uid,
+          playerName: registration.form_data?.playerFullName || 'Player',
+          registrationId,
+          confirmedBy: adminEmail
+        });
+      }
+    } catch (notificationError) {
+      // Don't fail the request if notification fails
+      console.error('Error sending payment confirmation notification:', notificationError);
+    }
 
     return res.status(200).json({
       success: true,

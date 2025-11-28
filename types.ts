@@ -97,6 +97,37 @@ export interface FirebaseUserData {
   createdAt: string;
 }
 
+// Notification Types
+export type NotificationType =
+  | 'pairing_created'      // Semi-private pairing was created
+  | 'pairing_dissolved'    // Semi-private pairing was dissolved
+  | 'schedule_changed'     // Schedule was changed (one-time or permanent)
+  | 'payment_confirmed'    // Payment was confirmed by admin
+  | 'payment_received'     // Stripe payment received
+  | 'sunday_booking'       // Sunday practice booked
+  | 'sunday_reminder'      // Sunday practice reminder
+  | 'waitlist_update'      // Waitlist status update
+  | 'admin_message'        // General admin message
+  | 'system';              // System notification
+
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface Notification {
+  id: string;
+  created_at: string;
+  user_id: string;           // Firebase UID for parent, 'admin' for admin notifications
+  user_type: 'parent' | 'admin';
+  type: NotificationType;
+  title: string;
+  message: string;
+  priority: NotificationPriority;
+  read: boolean;
+  read_at: string | null;
+  data?: Record<string, any>; // Additional context data (registration_id, player_name, etc.)
+  action_url?: string;        // Optional link to relevant page
+  expires_at?: string;        // Optional expiration date
+}
+
 // Registration with Firebase fields (matches Supabase table structure)
 export interface Registration {
   id: string;

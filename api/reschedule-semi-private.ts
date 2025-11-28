@@ -1,5 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import {
+  notifyPairingCreated,
+  notifyPairingDissolved,
+  notifyScheduleChanged
+} from '../lib/notificationHelper';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -608,6 +613,79 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               applied_at: new Date().toISOString()
             });
         }
+      }
+
+      // Step 6: Send notifications
+      try {
+        // Get the original schedule for notification
+        const originalDays = registration.form_data?.semiPrivateAvailability || [];
+        const originalSchedule = originalDays.length > 0
+          ? `${originalDays[0].charAt(0).toUpperCase() + originalDays[0].slice(1)} at ${originalTime || 'N/A'}`
+          : 'previous schedule';
+        const newScheduleStr = `${newDay.charAt(0).toUpperCase() + newDay.slice(1)} at ${newTime}`;
+
+        // Notify the current player about schedule change
+        await notifyScheduleChanged({
+          parentUserId: firebaseUid,
+          playerName: playerName,
+          changeType: changeType,
+          originalSchedule,
+          newSchedule: newScheduleStr,
+          registrationId
+        });
+
+        // If pairing was dissolved, notify the partner
+        if (dissolvedPartnerInfo) {
+          const { data: partnerReg } = await supabase
+            .from('registrations')
+            .select('firebase_uid')
+            .eq('id', dissolvedPartnerInfo.id)
+            .single();
+
+          if (partnerReg?.firebase_uid) {
+            await notifyPairingDissolved({
+              parentUserId: partnerReg.firebase_uid,
+              playerName: dissolvedPartnerInfo.name,
+              partnerName: playerName,
+              reason: `Your training partner has rescheduled to a different time. You'll be matched with a new partner soon.`,
+              registrationId: dissolvedPartnerInfo.id
+            });
+          }
+        }
+
+        // If new pairing was created, notify both players
+        if (newPairingInfo && potentialPartner) {
+          // Notify the current player
+          await notifyPairingCreated({
+            parentUserId: firebaseUid,
+            playerName: playerName,
+            partnerName: newPairingInfo.partnerName,
+            scheduledDay: newDay.charAt(0).toUpperCase() + newDay.slice(1),
+            scheduledTime: newTime,
+            registrationId
+          });
+
+          // Notify the new partner
+          const { data: partnerReg } = await supabase
+            .from('registrations')
+            .select('firebase_uid')
+            .eq('id', potentialPartner.registration_id)
+            .single();
+
+          if (partnerReg?.firebase_uid) {
+            await notifyPairingCreated({
+              parentUserId: partnerReg.firebase_uid,
+              playerName: newPairingInfo.partnerName,
+              partnerName: playerName,
+              scheduledDay: newDay.charAt(0).toUpperCase() + newDay.slice(1),
+              scheduledTime: newTime,
+              registrationId: potentialPartner.registration_id
+            });
+          }
+        }
+      } catch (notificationError) {
+        // Don't fail the request if notifications fail, just log the error
+        console.error('Error sending notifications:', notificationError);
       }
 
       return res.status(200).json({
