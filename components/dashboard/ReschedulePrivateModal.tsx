@@ -182,6 +182,11 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
     setError(null);
 
     try {
+      // Format date as YYYY-MM-DD in LOCAL timezone (not UTC!)
+      const formatLocalDate = (date: Date): string => {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      };
+
       // Extract days and time from selections
       // For private training, all days should use the same time slot
       const newDays = selectedSlots.map(s => s.day);
@@ -263,7 +268,7 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
           requestBody.specificDate = getNextOccurrence(originalDaysLower[0]);
         }
       } else {
-        requestBody.effectiveDate = new Date().toISOString().split('T')[0];
+        requestBody.effectiveDate = formatLocalDate(new Date());
       }
 
       const response = await fetch('/api/reschedule-private', {

@@ -188,6 +188,14 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
     setError(null);
 
     try {
+      // Format date as YYYY-MM-DD in LOCAL timezone (not UTC!)
+      const formatLocalDate = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       // Calculate next occurrence of selected day for one-time changes
       const getNextOccurrence = (dayName: string): string => {
         const daysMap: { [key: string]: number } = {
@@ -206,7 +214,8 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
 
         const nextDate = new Date(today);
         nextDate.setDate(today.getDate() + daysUntilTarget);
-        return nextDate.toISOString().split('T')[0];
+        // Use LOCAL date format to match server-side date comparisons
+        return formatLocalDate(nextDate);
       };
 
       const requestBody: any = {
@@ -250,7 +259,7 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
           console.log('- Fallback: Using selected day date:', requestBody.specificDate);
         }
       } else {
-        requestBody.effectiveDate = new Date().toISOString().split('T')[0];
+        requestBody.effectiveDate = formatLocalDate(new Date());
       }
 
       const response = await fetch('/api/reschedule-semi-private', {

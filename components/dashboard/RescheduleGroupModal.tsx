@@ -131,10 +131,18 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
     setError(null);
 
     try {
+      // Helper to format date as YYYY-MM-DD in LOCAL timezone (not UTC!)
+      const formatLocalDate = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       // For one-time changes, we need to specify the date(s) that will be swapped
       // For permanent changes, we use effectiveDate for when the change takes effect
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = formatLocalDate(today); // Use LOCAL date, not UTC!
 
       const dayMap: { [key: string]: number } = {
         sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
@@ -144,14 +152,6 @@ export const RescheduleGroupModal: React.FC<RescheduleGroupModalProps> = ({
       // For one-time changes, calculate the next occurrence of ALL original days
       // and map each to its corresponding new day
       let daySwaps: Array<{ originalDay: string; originalDate: string; newDay: string }> = [];
-
-      // Helper to format date as YYYY-MM-DD in LOCAL timezone (not UTC)
-      const formatLocalDate = (d: Date) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
 
       if (changeType === 'one_time' && currentSchedule.days.length > 0) {
         // Create a swap entry for each original day -> new day
