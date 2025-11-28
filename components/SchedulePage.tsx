@@ -34,6 +34,8 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
 import { getSemiPrivateTimeSlot } from '@/lib/utils';
+import { findSlotForCategory } from '@/lib/timeSlots';
+import { PlayerCategory } from '@/types';
 
 /**
  * Schedule Page Component
@@ -304,6 +306,12 @@ const SchedulePage: React.FC = () => {
 
     // Add weekday sessions
     if (form_data.programType === 'group' && form_data.groupSelectedDays) {
+      // Get the assigned time slot based on player's age category
+      const assignedSlot = form_data.playerCategory
+        ? findSlotForCategory(form_data.playerCategory as PlayerCategory)
+        : null;
+      const groupTimeSlot = assignedSlot?.time;
+
       form_data.groupSelectedDays.forEach((day) => {
         const targetDay = dayMap[day.toLowerCase()];
         if (targetDay !== undefined) {
@@ -332,6 +340,7 @@ const SchedulePage: React.FC = () => {
                   date: replacementDate,
                   day: reverseDayMap[replacementDayNum] || exception.replacement_day,
                   type: 'synthetic',
+                  time: groupTimeSlot,
                   isException: true,
                 });
               }
@@ -341,6 +350,7 @@ const SchedulePage: React.FC = () => {
                 date: new Date(currentDate),
                 day: day.charAt(0).toUpperCase() + day.slice(1),
                 type: 'synthetic',
+                time: groupTimeSlot,
               });
             }
             currentDate.setDate(currentDate.getDate() + 7);

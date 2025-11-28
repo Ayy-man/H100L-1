@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Check, Eye, EyeOff } from 'lucide-react';
 import { isValidEmail, validatePassword } from '@/lib/authService';
+import { findSlotForCategory } from '@/lib/timeSlots';
+import { PlayerCategory } from '@/types';
 
 interface FormStep4Props {
   data: FormData;
@@ -72,29 +74,50 @@ const FormStep4: React.FC<FormStep4Props> = ({
               value={<span className="capitalize">{data.programType}</span>}
             />
 
-            {data.programType === 'group' && (
-              <>
-                <SummaryItem label="Group Frequency" value={data.groupFrequency} />
-                <SummaryItem
-                  label="Training Days"
-                  value={
-                    data.groupSelectedDays.length > 0
-                      ? data.groupSelectedDays
-                          .map(day => day.charAt(0).toUpperCase() + day.slice(1))
-                          .join(', ')
-                      : 'Not selected'
-                  }
-                />
-                <SummaryItem
-                  label="Monthly Sessions"
-                  value={
-                    data.groupMonthlyDates && data.groupMonthlyDates.length > 0
-                      ? `${data.groupMonthlyDates.length} sessions scheduled this month`
-                      : 'No sessions scheduled'
-                  }
-                />
-              </>
-            )}
+            {data.programType === 'group' && (() => {
+              const assignedSlot = data.playerCategory
+                ? findSlotForCategory(data.playerCategory as PlayerCategory)
+                : null;
+
+              return (
+                <>
+                  <SummaryItem label="Group Frequency" value={data.groupFrequency} />
+                  <SummaryItem
+                    label="Training Days"
+                    value={
+                      data.groupSelectedDays.length > 0
+                        ? data.groupSelectedDays
+                            .map(day => day.charAt(0).toUpperCase() + day.slice(1))
+                            .join(', ')
+                        : 'Not selected'
+                    }
+                  />
+                  <SummaryItem
+                    label="Assigned Time Slot"
+                    value={
+                      assignedSlot ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span className="bg-[#9BD4FF] text-black px-2 py-0.5 rounded font-semibold text-sm">
+                            {assignedSlot.time}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({data.playerCategory} category)
+                          </span>
+                        </span>
+                      ) : 'To be determined'
+                    }
+                  />
+                  <SummaryItem
+                    label="Monthly Sessions"
+                    value={
+                      data.groupMonthlyDates && data.groupMonthlyDates.length > 0
+                        ? `${data.groupMonthlyDates.length} sessions scheduled this month`
+                        : 'No sessions scheduled'
+                    }
+                  />
+                </>
+              );
+            })()}
 
             {data.programType === 'private' && (
               <>
