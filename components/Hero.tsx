@@ -38,7 +38,7 @@ const Hero: React.FC<HeroProps> = ({ content, onRegisterClick }) => {
     <section className="relative h-screen flex items-center justify-center text-center px-6 pt-16">
       <div
         className="absolute inset-0 bg-cover bg-center opacity-30"
-        style={{ backgroundImage: 'url(https://picsum.photos/seed/hockey/1920/1080)' }}
+        style={{ backgroundImage: 'url(/images/hero-rink.jpg)' }}
       ></div>
       <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent"></div>
       
