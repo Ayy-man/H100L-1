@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { FormData, ProgramType, WeekDay } from '../../types';
+import React, { useEffect, useState, useMemo } from 'react';
+import { FormData, ProgramType, WeekDay, PlayerCategory } from '../../types';
 import FormSelect from './FormSelect';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateMonthlyDates, formatDateForDisplay, getCurrentMonthYear, getRemainingDates, isDateInPast } from '../../lib/dateUtils';
+import { findSlotForCategory } from '../../lib/timeSlots';
 
 interface FormStep2Props {
   data: FormData;
@@ -157,15 +158,34 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
           <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
             <h4 className="font-bold text-[#9BD4FF]">Group Training Details</h4>
 
-            {/* Schedule Info */}
-            <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
-              <p className="text-sm text-gray-300">
-                📅 <strong>Group Training Schedule:</strong> Available <span className="text-[#9BD4FF]">7 days a week</span>
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Time slots: 4:30 PM, 5:45 PM, 7:00 PM, 8:15 PM (Max 6 players per slot)
-              </p>
-            </div>
+            {/* Schedule Info - Show assigned time based on age category */}
+            {(() => {
+              const assignedSlot = data.playerCategory
+                ? findSlotForCategory(data.playerCategory as PlayerCategory)
+                : null;
+
+              return (
+                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
+                  <p className="text-sm text-gray-300">
+                    📅 <strong>Group Training Schedule:</strong> Available <span className="text-[#9BD4FF]">7 days a week</span>
+                  </p>
+                  {assignedSlot ? (
+                    <div className="mt-2 p-3 bg-[#9BD4FF]/10 border border-[#9BD4FF]/30 rounded-lg">
+                      <p className="text-sm font-semibold text-[#9BD4FF]">
+                        🕐 Your Assigned Time: {assignedSlot.time}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Based on {data.playerCategory} age category • Max 6 players per slot
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Time slots: 4:30 PM, 5:45 PM, 7:00 PM, 8:15 PM (based on age category)
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Frequency Selection */}
             <FormSelect label="Frequency" name="groupFrequency" value={data.groupFrequency} handleChange={handleChange} error={errors.groupFrequency} required>
