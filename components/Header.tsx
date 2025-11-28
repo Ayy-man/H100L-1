@@ -27,7 +27,7 @@ const Header: React.FC<HeaderProps> = ({ language, setLanguage, content }) => {
       <div className="container mx-auto px-6 py-4 flex justify-between items-center">
         <a href="/" className="flex items-center">
           <img
-            src="/images/logos/sniperzone-logo-black-on-white.jpg"
+            src="/images/logos/logo-actually-transparent.png"
             alt="SniperZone Logo"
             className="h-12 w-auto"
           />
