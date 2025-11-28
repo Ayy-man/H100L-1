@@ -158,10 +158,21 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, color }) => (
 
 const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setAuthenticated] = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState<{ name: string; email: string } | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [selectedAdmin, setSelectedAdmin] = useState<string>('');
+  const [passwordInput, setPasswordInput] = useState<string>('');
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [capacitySlots, setCapacitySlots] = useState<CapacitySlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Admin credentials
+  const ADMIN_USERS = [
+    { id: 'loic', name: 'Loïc Pierre-Louis', email: 'loic@sniperzone.ca', password: 'L2025sniper' },
+    { id: 'darick', name: 'Darick Louis-Jean', email: 'darick@sniperzone.ca', password: 'D2025sniper' },
+    { id: 'chris', name: 'Christopher Fanfan', email: 'chris@sniperzone.ca', password: 'C2025sniper' },
+  ];
 
   // Dashboard tab state
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports' | 'sunday' | 'schedule'>('overview');
@@ -298,15 +309,27 @@ const AdminDashboard: React.FC = () => {
   const [compatibilityScores, setCompatibilityScores] = useState<CompatibilityScore[]>([]);
   const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
 
-  useEffect(() => {
-    const password = prompt('Enter admin password:');
-    if (password === 'sniperzone2025') {
-      setAuthenticated(true);
-    } else {
-      alert('Incorrect password.');
-      window.location.href = '/';
+  // Handle admin login
+  const handleAdminLogin = () => {
+    if (!selectedAdmin) {
+      setLoginError('Please select your name');
+      return;
     }
-  }, []);
+
+    const admin = ADMIN_USERS.find(a => a.id === selectedAdmin);
+    if (!admin) {
+      setLoginError('Invalid admin selected');
+      return;
+    }
+
+    if (passwordInput === admin.password) {
+      setCurrentAdmin({ name: admin.name, email: admin.email });
+      setAuthenticated(true);
+      setLoginError(null);
+    } else {
+      setLoginError('Incorrect password');
+    }
+  };
 
   // Mobile detection
   useEffect(() => {
@@ -904,8 +927,86 @@ const AdminDashboard: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-gray-900 min-h-screen flex items-center justify-center">
-        <p className="text-white">Authentication required.</p>
+      <div className="bg-gray-900 min-h-screen flex items-center justify-center p-4">
+        <div className="bg-black border border-white/10 rounded-xl p-8 max-w-md w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-black uppercase tracking-wider text-white mb-2">
+              Admin Login
+            </h1>
+            <p className="text-gray-400">SniperZone Dashboard</p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Admin Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Select Your Name
+              </label>
+              <select
+                value={selectedAdmin}
+                onChange={(e) => {
+                  setSelectedAdmin(e.target.value);
+                  setLoginError(null);
+                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9BD4FF] appearance-none cursor-pointer"
+              >
+                <option value="" className="bg-gray-900">-- Select Admin --</option>
+                {ADMIN_USERS.map((admin) => (
+                  <option key={admin.id} value={admin.id} className="bg-gray-900">
+                    {admin.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Password Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setLoginError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAdminLogin();
+                  }
+                }}
+                placeholder="Enter your password"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#9BD4FF]"
+              />
+            </div>
+
+            {/* Error Message */}
+            {loginError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <p className="text-red-400 text-sm text-center">{loginError}</p>
+              </div>
+            )}
+
+            {/* Login Button */}
+            <button
+              onClick={handleAdminLogin}
+              className="w-full bg-[#9BD4FF] text-black font-bold py-3 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all uppercase tracking-wider"
+            >
+              Sign In
+            </button>
+
+            {/* Back Link */}
+            <div className="text-center">
+              <a
+                href="/"
+                className="text-gray-400 hover:text-white text-sm transition-colors"
+              >
+                ← Back to Home
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -933,8 +1034,17 @@ const AdminDashboard: React.FC = () => {
             <p className="text-gray-400 text-sm md:text-base">{t.subtitle}</p>
           </div>
 
-          {/* Language Toggle */}
-          <div className="flex gap-2 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-4">
+            {/* Logged-in Admin */}
+            {currentAdmin && (
+              <div className="text-right hidden sm:block">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Logged in as</p>
+                <p className="text-sm text-[#9BD4FF] font-semibold">{currentAdmin.name}</p>
+              </div>
+            )}
+
+            {/* Language Toggle */}
+            <div className="flex gap-2 bg-white/5 rounded-lg p-1">
             <button
               onClick={() => setLanguage(Language.FR)}
               className={`px-3 py-2 rounded-md text-sm font-bold transition-all ${
@@ -955,6 +1065,7 @@ const AdminDashboard: React.FC = () => {
             >
               EN
             </button>
+            </div>
           </div>
         </div>
 
@@ -1275,6 +1386,7 @@ const AdminDashboard: React.FC = () => {
                               registrationId={reg.id}
                               currentStatus={reg.payment_status}
                               onConfirmed={fetchRegistrations}
+                              adminEmail={currentAdmin?.email || 'admin'}
                             />
                             <button
                               onClick={() => setSelectedRegistration(reg)}
@@ -1579,7 +1691,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* SUNDAY PRACTICE TAB */}
         {dashboardTab === 'sunday' && (
-          <SundayRosterAdmin />
+          <SundayRosterAdmin adminUser={currentAdmin} />
         )}
 
         {/* SCHEDULE CHANGES TAB */}

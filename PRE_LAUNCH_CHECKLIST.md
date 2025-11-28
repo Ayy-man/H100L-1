@@ -55,9 +55,9 @@
 
 ---
 
-### 3. ⏳ Admin Attendance Hardcoded Email
+### 3. ✅ Admin Attendance Hardcoded Email
 **Severity:** MEDIUM
-**Status:** PENDING
+**Status:** FIXED
 
 **Problem:** In `components/admin/SundayRosterAdmin.tsx:174`:
 ```typescript
@@ -66,7 +66,19 @@ markedBy: 'admin@h100l.com', // TODO: Replace with actual admin email from auth
 
 **Impact:** No way to track which admin marked attendance.
 
-**Suggested Fix:** Either use the admin password entry to set a session email, or add an admin selector.
+**Files Modified:**
+- `components/AdminDashboard.tsx` - Added admin login form with dropdown selector
+- `components/admin/SundayRosterAdmin.tsx` - Now receives adminUser prop
+- `components/ConfirmPaymentButton.tsx` - Now receives adminEmail prop
+
+**Fix Applied:**
+- Added proper login screen with admin selector dropdown
+- Three admins with individual passwords:
+  - Loïc Pierre-Louis (L2025sniper)
+  - Darick Louis-Jean (D2025sniper)
+  - Christopher Fanfan (C2025sniper)
+- Admin's email is now passed to attendance marking and payment confirmation
+- Header shows "Logged in as [Admin Name]"
 
 ---
 
@@ -192,10 +204,10 @@ Should add `'verified'`.
 
 | Priority | Total | Fixed | Pending |
 |----------|-------|-------|---------|
-| 🔴 Critical | 3 | 2 | 1 |
+| 🔴 Critical | 3 | 3 | 0 |
 | 🟡 Moderate | 3 | 0 | 3 |
 | 🟢 Minor | 3 | 0 | 3 |
-| **Total** | **9** | **2** | **7** |
+| **Total** | **9** | **3** | **6** |
 
 ---
 
@@ -205,3 +217,4 @@ Should add `'verified'`.
 |------|-------|--------|-------|
 | 2024-11-28 | #1 Schedule Changes Admin View | ✅ FIXED | Added ScheduleChangesPanel component |
 | 2024-11-28 | #2 Semi-Private Waiting Status | ✅ FIXED | Added waiting banners to parent portal |
+| 2024-11-28 | #3 Admin Login & Tracking | ✅ FIXED | Added admin selector with individual passwords |

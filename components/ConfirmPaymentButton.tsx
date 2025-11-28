@@ -5,6 +5,7 @@ interface ConfirmPaymentButtonProps {
   registrationId: string;
   currentStatus: string;
   onConfirmed: () => void;
+  adminEmail?: string;
 }
 
 /**
@@ -17,6 +18,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
   registrationId,
   currentStatus,
   onConfirmed,
+  adminEmail = 'admin@sniperzone.ca',
 }) => {
   const [showDialog, setShowDialog] = useState(false);
   const [reason, setReason] = useState('');
@@ -36,7 +38,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           registrationId,
-          adminEmail: 'admin', // Admin dashboard user
+          adminEmail,
           reason,
         }),
       });

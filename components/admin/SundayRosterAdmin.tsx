@@ -79,6 +79,10 @@ interface Stats {
   attendance_rate: number;
 }
 
+interface SundayRosterAdminProps {
+  adminUser: { name: string; email: string } | null;
+}
+
 /**
  * Sunday Roster Admin Component
  *
@@ -88,7 +92,7 @@ interface Stats {
  * - Export roster to CSV
  * - View attendance statistics
  */
-const SundayRosterAdmin: React.FC = () => {
+const SundayRosterAdmin: React.FC<SundayRosterAdminProps> = ({ adminUser }) => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [availableSundays, setAvailableSundays] = useState<string[]>([]);
@@ -171,7 +175,7 @@ const SundayRosterAdmin: React.FC = () => {
         body: JSON.stringify({
           bookingId,
           attendanceStatus: status,
-          markedBy: 'admin@h100l.com', // TODO: Replace with actual admin email from auth
+          markedBy: adminUser?.email || 'admin@sniperzone.ca',
           notes: notes || null,
         }),
       });
