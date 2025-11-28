@@ -94,7 +94,7 @@ const Login: React.FC = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
             <img
-              src="/images/logos/sniperzone-logo-black-on-white.jpg"
+              src="/images/logos/logo-actually-transparent.png"
               alt="SniperZone Logo"
               className="h-20 w-auto"
             />
