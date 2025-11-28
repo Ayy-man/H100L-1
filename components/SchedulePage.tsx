@@ -788,9 +788,16 @@ const SchedulePage: React.FC = () => {
                                   className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                                     session.type === 'real-ice'
                                       ? 'bg-primary/20 text-primary'
+                                      : session.isException
+                                      ? 'bg-orange-500/20 text-orange-700 dark:text-orange-400'
                                       : 'bg-secondary/50 text-secondary-foreground'
                                   }`}
                                 >
+                                  {session.isException && (
+                                    <div className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 mb-0.5">
+                                      One-time Change
+                                    </div>
+                                  )}
                                   {session.type === 'real-ice' ? '🧊 Ice' : '🏒 Training'}
                                   {session.time && <div className="text-[10px] mt-0.5">{session.time}</div>}
                                 </div>
