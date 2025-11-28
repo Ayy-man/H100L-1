@@ -140,31 +140,31 @@ export const ScheduleChangesPanel: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'applied':
-        return <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-bold">Applied</span>;
+        return <span className="px-2 py-1 bg-[#9BD4FF]/20 text-[#9BD4FF] rounded text-xs font-bold">Applied</span>;
       case 'approved':
-        return <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-bold">Approved</span>;
+        return <span className="px-2 py-1 bg-white/20 text-white rounded text-xs font-bold">Approved</span>;
       case 'pending':
-        return <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-bold">Pending</span>;
+        return <span className="px-2 py-1 bg-white/10 text-gray-400 rounded text-xs font-bold">Pending</span>;
       case 'cancelled':
-        return <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-bold">Cancelled</span>;
+        return <span className="px-2 py-1 bg-white/5 text-gray-500 rounded text-xs font-bold">Cancelled</span>;
       case 'rejected':
-        return <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-bold">Rejected</span>;
+        return <span className="px-2 py-1 bg-white/5 text-gray-500 rounded text-xs font-bold">Rejected</span>;
       default:
-        return <span className="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs font-bold">{status}</span>;
+        return <span className="px-2 py-1 bg-white/10 text-gray-400 rounded text-xs font-bold">{status}</span>;
     }
   };
 
   const getProgramBadge = (programType: string) => {
     switch (programType) {
       case 'group':
-        return <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">Group</span>;
+        return <span className="px-2 py-1 bg-[#9BD4FF]/20 text-[#9BD4FF] rounded text-xs">Group</span>;
       case 'private':
-        return <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">Private</span>;
+        return <span className="px-2 py-1 bg-white/20 text-white rounded text-xs">Private</span>;
       case 'semi-private':
       case 'semi_private':
-        return <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs">Semi-Private</span>;
+        return <span className="px-2 py-1 bg-white/10 text-gray-300 rounded text-xs">Semi-Private</span>;
       default:
-        return <span className="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs">{programType}</span>;
+        return <span className="px-2 py-1 bg-white/10 text-gray-400 rounded text-xs">{programType}</span>;
     }
   };
 
@@ -240,19 +240,19 @@ export const ScheduleChangesPanel: React.FC = () => {
           <div className="text-sm text-gray-400">One-Time Changes</div>
         </div>
         <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-          <div className="text-2xl font-bold text-green-400">{stats.appliedExceptions}</div>
+          <div className="text-2xl font-bold text-white">{stats.appliedExceptions}</div>
           <div className="text-sm text-gray-400">Applied</div>
         </div>
         <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-          <div className="text-2xl font-bold text-yellow-400">{stats.pendingExceptions}</div>
+          <div className="text-2xl font-bold text-gray-400">{stats.pendingExceptions}</div>
           <div className="text-sm text-gray-400">Pending</div>
         </div>
         <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-          <div className="text-2xl font-bold text-purple-400">{stats.totalPermanent}</div>
+          <div className="text-2xl font-bold text-[#9BD4FF]">{stats.totalPermanent}</div>
           <div className="text-sm text-gray-400">Permanent Changes</div>
         </div>
         <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-          <div className="text-2xl font-bold text-orange-400">{stats.totalOneTime}</div>
+          <div className="text-2xl font-bold text-white">{stats.totalOneTime}</div>
           <div className="text-sm text-gray-400">Total Logged</div>
         </div>
       </div>
@@ -347,9 +347,9 @@ export const ScheduleChangesPanel: React.FC = () => {
                             {getProgramBadge(exc.program_type || 'unknown')}
                           </div>
                           <div className="text-sm text-gray-400 mt-1">
-                            <span className="text-[#9BD4FF]">{formatDate(exc.exception_date)}</span>
-                            <span className="mx-2">→</span>
-                            <span className="text-green-400 capitalize">
+                            <span className="text-gray-400">{formatDate(exc.exception_date)}</span>
+                            <span className="mx-2 text-[#9BD4FF]">→</span>
+                            <span className="text-white capitalize">
                               {exc.replacement_day || 'Skipped'}
                               {exc.replacement_time && ` at ${exc.replacement_time}`}
                             </span>
@@ -417,7 +417,7 @@ export const ScheduleChangesPanel: React.FC = () => {
                 filteredPermanentChanges.map(change => (
                   <div
                     key={change.id}
-                    className="bg-white/5 border border-white/10 rounded-lg overflow-hidden hover:border-purple-500/50 transition-colors"
+                    className="bg-white/5 border border-white/10 rounded-lg overflow-hidden hover:border-white/30 transition-colors"
                   >
                     {/* Header Row */}
                     <div
@@ -426,7 +426,7 @@ export const ScheduleChangesPanel: React.FC = () => {
                     >
                       <div className="flex items-center gap-4 flex-1">
                         <div className="flex-shrink-0">
-                          <User className="w-10 h-10 text-purple-400 bg-purple-500/10 rounded-full p-2" />
+                          <User className="w-10 h-10 text-white bg-white/10 rounded-full p-2" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -434,12 +434,12 @@ export const ScheduleChangesPanel: React.FC = () => {
                             <span className="text-gray-500">•</span>
                             <span className="text-gray-400 text-sm">{change.player_category}</span>
                             {getProgramBadge(change.program_type)}
-                            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded text-xs">Permanent</span>
+                            <span className="px-2 py-0.5 bg-white/20 text-white rounded text-xs font-medium">Permanent</span>
                           </div>
                           <div className="text-sm text-gray-400 mt-1">
-                            <span className="text-red-400">{formatDays(change.original_days)}</span>
-                            <span className="mx-2">→</span>
-                            <span className="text-green-400">{formatDays(change.new_days)}</span>
+                            <span className="text-gray-400 line-through">{formatDays(change.original_days)}</span>
+                            <span className="mx-2 text-[#9BD4FF]">→</span>
+                            <span className="text-white font-medium">{formatDays(change.new_days)}</span>
                             {change.new_time && (
                               <span className="ml-2 text-gray-500">at {change.new_time}</span>
                             )}
@@ -516,13 +516,13 @@ export const ScheduleChangesPanel: React.FC = () => {
                     className={`bg-white/5 border rounded-lg overflow-hidden transition-colors ${
                       item.type === 'exception'
                         ? 'border-[#9BD4FF]/30 hover:border-[#9BD4FF]/50'
-                        : 'border-purple-500/30 hover:border-purple-500/50'
+                        : 'border-white/20 hover:border-white/40'
                     }`}
                   >
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4 flex-1">
                         <div className={`flex-shrink-0 ${
-                          item.type === 'exception' ? 'text-[#9BD4FF]' : 'text-purple-400'
+                          item.type === 'exception' ? 'text-[#9BD4FF]' : 'text-white'
                         }`}>
                           <Clock className="w-8 h-8" />
                         </div>
@@ -530,10 +530,10 @@ export const ScheduleChangesPanel: React.FC = () => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-white font-bold">{item.player_name}</span>
                             <span className="text-gray-400 text-sm">{item.player_category}</span>
-                            <span className={`px-2 py-0.5 rounded text-xs ${
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                               item.type === 'exception'
                                 ? 'bg-[#9BD4FF]/20 text-[#9BD4FF]'
-                                : 'bg-purple-500/20 text-purple-400'
+                                : 'bg-white/20 text-white'
                             }`}>
                               {item.type === 'exception' ? 'One-Time' : 'Permanent'}
                             </span>

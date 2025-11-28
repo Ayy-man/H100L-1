@@ -560,9 +560,9 @@ const AdminDashboard: React.FC = () => {
   };
 
   const getCompatibilityColor = (score: number) => {
-    if (score >= 70) return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' };
-    if (score >= 50) return { bg: 'bg-[#9BD4FF]/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50' };
-    if (score >= 30) return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/50' };
+    if (score >= 70) return { bg: 'bg-[#9BD4FF]/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50' };
+    if (score >= 50) return { bg: 'bg-white/20', text: 'text-white', border: 'border-white/50' };
+    if (score >= 30) return { bg: 'bg-white/10', text: 'text-gray-300', border: 'border-white/30' };
     return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' };
   };
 
@@ -773,22 +773,22 @@ const AdminDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'verified': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'; // Admin verified - highest level
-      case 'succeeded': return 'bg-green-500/10 text-green-400 border-green-500/20'; // Stripe payment
-      case 'paid': return 'bg-green-500/10 text-green-400 border-green-500/20'; // Legacy
-      case 'pending': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      case 'canceled': return 'bg-red-500/10 text-red-400 border-red-500/20'; // Canceled subscription
-      case 'failed': return 'bg-red-500/10 text-red-400 border-red-500/20';
+      case 'verified': return 'bg-[#9BD4FF]/10 text-[#9BD4FF] border-[#9BD4FF]/20'; // Admin verified - highest level
+      case 'succeeded': return 'bg-[#9BD4FF]/10 text-[#9BD4FF] border-[#9BD4FF]/20'; // Stripe payment
+      case 'paid': return 'bg-[#9BD4FF]/10 text-[#9BD4FF] border-[#9BD4FF]/20'; // Legacy
+      case 'pending': return 'bg-white/10 text-gray-300 border-white/20';
+      case 'canceled': return 'bg-white/5 text-gray-500 border-white/10'; // Canceled subscription
+      case 'failed': return 'bg-white/5 text-gray-500 border-white/10';
       default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
   };
 
   const getCapacityColor = (status: string) => {
     switch (status) {
-      case 'FULL': return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/50', bar: 'bg-red-500' };
-      case 'ALMOST_FULL': return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/50', bar: 'bg-yellow-500' };
-      case 'HALF_FULL': return { bg: 'bg-blue-500/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50', bar: 'bg-[#9BD4FF]' };
-      default: return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50', bar: 'bg-green-400' };
+      case 'FULL': return { bg: 'bg-white/20', text: 'text-white', border: 'border-white/50', bar: 'bg-white' };
+      case 'ALMOST_FULL': return { bg: 'bg-white/10', text: 'text-gray-300', border: 'border-white/30', bar: 'bg-gray-300' };
+      case 'HALF_FULL': return { bg: 'bg-[#9BD4FF]/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50', bar: 'bg-[#9BD4FF]' };
+      default: return { bg: 'bg-[#9BD4FF]/10', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/30', bar: 'bg-[#9BD4FF]/70' };
     }
   };
 
@@ -843,7 +843,7 @@ const AdminDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => handleDelete(registration.id)}
-            className="bg-red-500/20 text-red-400 font-bold py-2 px-4 rounded-lg hover:bg-red-500/30 border border-red-500/50 transition-all text-sm"
+            className="bg-white/10 text-gray-400 font-bold py-2 px-4 rounded-lg hover:bg-white/20 border border-white/20 transition-all text-sm hover:text-white"
           >
             {t.delete}
           </button>
@@ -867,8 +867,8 @@ const AdminDashboard: React.FC = () => {
       >
         {/* Full Overlay */}
         {isFull && (
-          <div className="absolute inset-0 bg-red-500/10 rounded-lg flex items-center justify-center backdrop-blur-[1px]">
-            <span className="text-red-400 font-black text-2xl uppercase tracking-wider rotate-[-15deg] border-4 border-red-500 px-6 py-2 rounded-lg">
+          <div className="absolute inset-0 bg-white/5 rounded-lg flex items-center justify-center backdrop-blur-[1px]">
+            <span className="text-white font-black text-2xl uppercase tracking-wider rotate-[-15deg] border-4 border-white px-6 py-2 rounded-lg">
               FULL
             </span>
           </div>
@@ -877,7 +877,7 @@ const AdminDashboard: React.FC = () => {
         {/* Warning Badge */}
         {needsWarning && !isFull && (
           <div className="absolute top-2 right-2">
-            <span className="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2 py-1 rounded-full border border-yellow-500/50">
+            <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full border border-white/50">
               ⚠️ {slot.spots_remaining} left
             </span>
           </div>
@@ -983,8 +983,8 @@ const AdminDashboard: React.FC = () => {
 
             {/* Error Message */}
             {loginError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <p className="text-red-400 text-sm text-center">{loginError}</p>
+              <div className="p-3 bg-white/10 border border-white/20 rounded-lg">
+                <p className="text-white text-sm text-center">{loginError}</p>
               </div>
             )}
 
@@ -1305,8 +1305,8 @@ const AdminDashboard: React.FC = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-8">
-            <p className="text-red-400">Error: {error}</p>
+          <div className="bg-white/10 border border-white/20 rounded-lg p-4 mb-8">
+            <p className="text-white">Error: {error}</p>
           </div>
         )}
 
@@ -1658,10 +1658,10 @@ const AdminDashboard: React.FC = () => {
                           animate={{ width: `${slot.utilization_rate}%` }}
                           transition={{ duration: 0.5 }}
                           className={`h-4 rounded-full ${
-                            slot.utilization_rate >= 100 ? 'bg-red-500' :
-                            slot.utilization_rate >= 75 ? 'bg-yellow-500' :
+                            slot.utilization_rate >= 100 ? 'bg-white' :
+                            slot.utilization_rate >= 75 ? 'bg-gray-300' :
                             slot.utilization_rate >= 50 ? 'bg-[#9BD4FF]' :
-                            'bg-green-400'
+                            'bg-[#9BD4FF]/70'
                           }`}
                         />
                       </div>

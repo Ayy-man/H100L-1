@@ -4,25 +4,26 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 199 95% 64%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 199 95% 64%;
+    /* Black & White with Ice Blue accent theme */
+    --background: 0 0% 0%;           /* Pure black #000000 */
+    --foreground: 0 0% 100%;         /* Pure white #FFFFFF */
+    --card: 0 0% 7%;                 /* Dark gray #111111 */
+    --card-foreground: 0 0% 100%;    /* White */
+    --popover: 0 0% 7%;              /* Dark gray #111111 */
+    --popover-foreground: 0 0% 100%; /* White */
+    --primary: 199 100% 81%;         /* Ice blue #9BD4FF */
+    --primary-foreground: 0 0% 0%;   /* Black text on ice blue */
+    --secondary: 0 0% 13%;           /* Dark gray #222222 */
+    --secondary-foreground: 0 0% 100%; /* White */
+    --muted: 0 0% 10%;               /* Dark gray #1a1a1a */
+    --muted-foreground: 0 0% 53%;    /* Gray #888888 */
+    --accent: 199 100% 81%;          /* Ice blue #9BD4FF */
+    --accent-foreground: 0 0% 0%;    /* Black */
+    --destructive: 0 0% 40%;         /* Gray for errors (de-emphasized) */
+    --destructive-foreground: 0 0% 100%; /* White */
+    --border: 0 0% 100% / 0.1;       /* White with 10% opacity */
+    --input: 0 0% 100% / 0.1;        /* White with 10% opacity */
+    --ring: 199 100% 81%;            /* Ice blue for focus rings */
     --radius: 0.5rem;
   }
 }

@@ -69,7 +69,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
     <>
       <button
         onClick={() => setShowDialog(true)}
-        className="text-green-400 hover:text-green-300 transition-colors"
+        className="text-[#9BD4FF] hover:text-[#7BB4DD] transition-colors"
         title="Manually Confirm Payment"
       >
         ✅
@@ -101,7 +101,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
                   value="offline_payment"
                   checked={reason === 'offline_payment'}
                   onChange={(e) => setReason(e.target.value)}
-                  className="form-radio text-blue-500"
+                  className="form-radio text-[#9BD4FF]"
                 />
                 <span className="text-gray-200">
                   Offline Payment (cash, e-transfer)
@@ -115,7 +115,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
                   value="external_payment"
                   checked={reason === 'external_payment'}
                   onChange={(e) => setReason(e.target.value)}
-                  className="form-radio text-blue-500"
+                  className="form-radio text-[#9BD4FF]"
                 />
                 <span className="text-gray-200">
                   Payment made outside dashboard
@@ -129,7 +129,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
                   value="stripe_verified"
                   checked={reason === 'stripe_verified'}
                   onChange={(e) => setReason(e.target.value)}
-                  className="form-radio text-blue-500"
+                  className="form-radio text-[#9BD4FF]"
                 />
                 <span className="text-gray-200">
                   Verified in Stripe Dashboard
@@ -143,7 +143,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
                   value="error_override"
                   checked={reason === 'error_override'}
                   onChange={(e) => setReason(e.target.value)}
-                  className="form-radio text-blue-500"
+                  className="form-radio text-[#9BD4FF]"
                 />
                 <span className="text-gray-200">
                   Error Override / Customer Request
@@ -155,7 +155,7 @@ const ConfirmPaymentButton: React.FC<ConfirmPaymentButtonProps> = ({
               <button
                 onClick={handleConfirm}
                 disabled={isSubmitting || !reason}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded transition-colors"
+                className="flex-1 bg-[#9BD4FF] hover:bg-[#7BB4DD] disabled:bg-gray-600 disabled:cursor-not-allowed text-black font-bold py-2 px-4 rounded transition-colors"
               >
                 {isSubmitting ? 'Verifying...' : 'Verify Payment'}
               </button>

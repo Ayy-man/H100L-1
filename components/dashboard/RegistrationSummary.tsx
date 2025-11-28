@@ -279,16 +279,16 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
               </h3>
               <div className="space-y-3 text-sm">
                 {form_data.hasAllergies && (
-                  <div className="p-3 rounded-md bg-orange-500/10 border border-orange-500/20">
-                    <p className="font-semibold text-orange-500">Allergies</p>
+                  <div className="p-3 rounded-md bg-[#9BD4FF]/10 border border-[#9BD4FF]/20">
+                    <p className="font-semibold text-[#9BD4FF]">Allergies</p>
                     <p className="text-foreground mt-1">
                       {form_data.allergiesDetails}
                     </p>
                   </div>
                 )}
                 {form_data.hasMedicalConditions && (
-                  <div className="p-3 rounded-md bg-orange-500/10 border border-orange-500/20">
-                    <p className="font-semibold text-orange-500">Medical Conditions</p>
+                  <div className="p-3 rounded-md bg-[#9BD4FF]/10 border border-[#9BD4FF]/20">
+                    <p className="font-semibold text-[#9BD4FF]">Medical Conditions</p>
                     <p className="text-foreground mt-1">
                       {form_data.medicalConditionsDetails}
                     </p>

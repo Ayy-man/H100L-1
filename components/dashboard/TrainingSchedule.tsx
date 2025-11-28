@@ -623,22 +623,22 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
         {/* Waiting for Partner Indicator - Semi-Private Only */}
         {form_data.programType === 'semi-private' && isWaitingForPartner && waitingInfo && (
-          <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30">
+          <div className="p-4 rounded-lg bg-[#9BD4FF]/5 border border-[#9BD4FF]/20">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="h-5 w-5 text-[#9BD4FF] mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <p className="font-semibold text-orange-700 dark:text-orange-400">
+                <p className="font-semibold text-white">
                   Waiting for Training Partner
                 </p>
-                <p className="text-sm text-orange-600 dark:text-orange-400/80 mt-1">
+                <p className="text-sm text-gray-400 mt-1">
                   You're on the waiting list since{' '}
                   {new Date(waitingInfo.waitingSince).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric'
                   })}. We're actively looking for a partner in your age group ({waitingInfo.playerCategory}).
                 </p>
-                <p className="text-xs text-orange-500 dark:text-orange-400/70 mt-2">
-                  Questions? Contact <a href="mailto:info@sniperzone.ca" className="underline">info@sniperzone.ca</a>
+                <p className="text-xs text-gray-500 mt-2">
+                  Questions? Contact <a href="mailto:info@sniperzone.ca" className="text-[#9BD4FF] underline hover:text-white">info@sniperzone.ca</a>
                 </p>
               </div>
             </div>

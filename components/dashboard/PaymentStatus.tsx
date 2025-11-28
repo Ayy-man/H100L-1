@@ -243,9 +243,9 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
             }
             className={
               payment_status === 'pending' || payment_status === 'canceled'
-                ? 'bg-orange-500/20 text-orange-500 border-orange-500/50'
+                ? 'bg-white/10 text-gray-300 border-white/20'
                 : payment_status === 'verified'
-                ? 'bg-blue-500/20 text-blue-500 border-blue-500/50'
+                ? 'bg-[#9BD4FF]/20 text-[#9BD4FF] border-[#9BD4FF]/50'
                 : ''
             }
           >
@@ -378,14 +378,14 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
               </p>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="bg-[#9BD4FF]/5 dark:bg-[#9BD4FF]/10 border border-[#9BD4FF]/30 dark:border-[#9BD4FF]/20 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="h-5 w-5 text-[#9BD4FF] flex-shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
                     What happens next:
                   </p>
-                  <ul className="text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                  <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
                     <li>• Your subscription will not renew</li>
                     <li>• You keep access until the end of your billing period</li>
                     <li>• No refunds for the current billing period</li>

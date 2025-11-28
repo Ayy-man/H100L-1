@@ -595,18 +595,18 @@ const SchedulePage: React.FC = () => {
 
             {/* Waiting for Partner Banner - Semi-Private Only */}
             {registration.form_data.programType === 'semi-private' && isWaitingForPartner && waitingInfo && (
-              <Alert className="border-orange-500/50 bg-orange-500/10">
-                <AlertCircle className="h-5 w-5 text-orange-500" />
-                <AlertTitle className="text-orange-600 font-semibold">Waiting for Training Partner</AlertTitle>
-                <AlertDescription className="text-orange-600/90">
+              <Alert className="border-[#9BD4FF]/30 bg-[#9BD4FF]/5">
+                <AlertCircle className="h-5 w-5 text-[#9BD4FF]" />
+                <AlertTitle className="text-white font-semibold">Waiting for Training Partner</AlertTitle>
+                <AlertDescription className="text-gray-300">
                   <div className="mt-2 space-y-2">
                     <p>
                       You are currently on the waiting list to be matched with a semi-private training partner.
                       Our team is actively looking for a player with similar availability in your age category.
                     </p>
-                    <div className="mt-3 p-3 bg-orange-500/10 rounded-lg space-y-1">
+                    <div className="mt-3 p-3 bg-white/5 rounded-lg border border-white/10 space-y-1">
                       <p className="text-sm">
-                        <strong>Waiting Since:</strong>{' '}
+                        <strong className="text-[#9BD4FF]">Waiting Since:</strong>{' '}
                         {new Date(waitingInfo.waitingSince).toLocaleDateString('en-US', {
                           month: 'long',
                           day: 'numeric',
@@ -614,18 +614,18 @@ const SchedulePage: React.FC = () => {
                         })}
                       </p>
                       <p className="text-sm">
-                        <strong>Age Category:</strong> {waitingInfo.playerCategory}
+                        <strong className="text-[#9BD4FF]">Age Category:</strong> {waitingInfo.playerCategory}
                       </p>
                       {waitingInfo.preferredDays && waitingInfo.preferredDays.length > 0 && (
                         <p className="text-sm">
-                          <strong>Your Preferred Days:</strong>{' '}
+                          <strong className="text-[#9BD4FF]">Your Preferred Days:</strong>{' '}
                           {waitingInfo.preferredDays.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
                         </p>
                       )}
                     </div>
                     <p className="text-sm mt-3">
-                      <strong>Questions?</strong> Contact us at{' '}
-                      <a href="mailto:info@sniperzone.ca" className="underline hover:text-orange-700">
+                      <strong className="text-white">Questions?</strong> Contact us at{' '}
+                      <a href="mailto:info@sniperzone.ca" className="text-[#9BD4FF] underline hover:text-white">
                         info@sniperzone.ca
                       </a>{' '}
                       and we'll help expedite your matching.

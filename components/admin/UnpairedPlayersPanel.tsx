@@ -227,7 +227,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Users className="w-6 h-6 text-purple-400" />
+            <Users className="w-6 h-6 text-[#9BD4FF]" />
             Semi-Private Pairing Management
           </h2>
           <p className="text-sm text-gray-400 mt-1">
@@ -238,7 +238,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
         <button
           onClick={loadData}
           disabled={isLoading}
-          className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+          className="px-4 py-2 bg-[#9BD4FF] text-black rounded-lg hover:bg-[#7BB4DD] transition-colors disabled:opacity-50 font-bold"
         >
           {isLoading ? 'Loading...' : 'Refresh'}
         </button>
@@ -247,19 +247,19 @@ export const UnpairedPlayersPanel: React.FC = () => {
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-          <div className="text-2xl font-bold text-yellow-400">{unpairedPlayers.length}</div>
+          <div className="text-2xl font-bold text-[#9BD4FF]">{unpairedPlayers.length}</div>
           <div className="text-sm text-gray-400">Unpaired Players</div>
         </div>
         <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-          <div className="text-2xl font-bold text-green-400">{pairingOpportunities.length}</div>
+          <div className="text-2xl font-bold text-white">{pairingOpportunities.length}</div>
           <div className="text-sm text-gray-400">Potential Matches</div>
         </div>
         <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-          <div className="text-2xl font-bold text-blue-400">{activePairings.length}</div>
+          <div className="text-2xl font-bold text-[#9BD4FF]">{activePairings.length}</div>
           <div className="text-sm text-gray-400">Active Pairs</div>
         </div>
         <div className="bg-white/5 p-4 rounded-lg border border-white/10">
-          <div className="text-2xl font-bold text-purple-400">
+          <div className="text-2xl font-bold text-white">
             {pairingOpportunities.length > 0 ? Math.round(pairingOpportunities[0].matchScore) : 0}
           </div>
           <div className="text-sm text-gray-400">Best Match Score</div>
@@ -279,7 +279,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
             onClick={() => setActiveTab(tab.id as TabType)}
             className={`px-4 py-2 border-b-2 transition-colors ${
               activeTab === tab.id
-                ? 'border-purple-500 text-purple-400'
+                ? 'border-[#9BD4FF] text-[#9BD4FF]'
                 : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
@@ -305,14 +305,14 @@ export const UnpairedPlayersPanel: React.FC = () => {
                 placeholder="Search by player name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-[#9BD4FF]"
               />
             </div>
 
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9BD4FF]"
             >
               <option value="all">All Categories</option>
               {categories.map(cat => (
@@ -323,7 +323,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
             <select
               value={filterDay}
               onChange={(e) => setFilterDay(e.target.value)}
-              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9BD4FF]"
             >
               <option value="all">All Days</option>
               {days.map(day => (
@@ -355,7 +355,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
                     <tr key={player.id} className="hover:bg-white/5 transition-colors">
                       <td className="px-4 py-3 text-sm text-white">{player.player_name}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">
+                        <span className="px-2 py-1 bg-[#9BD4FF]/20 text-[#9BD4FF] rounded text-xs font-medium">
                           {player.age_category}
                         </span>
                       </td>
@@ -367,12 +367,12 @@ export const UnpairedPlayersPanel: React.FC = () => {
                         {player.preferred_time_slots.length > 2 && ` +${player.preferred_time_slots.length - 2}`}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs ${
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
                           daysAgo > 14
-                            ? 'bg-red-500/20 text-red-400'
+                            ? 'bg-white/20 text-white'
                             : daysAgo > 7
-                            ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-green-500/20 text-green-400'
+                            ? 'bg-white/10 text-gray-300'
+                            : 'bg-[#9BD4FF]/20 text-[#9BD4FF]'
                         }`}>
                           {daysAgo} days
                         </span>
@@ -385,7 +385,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
                       <td className="px-4 py-3 text-sm">
                         <a
                           href={`mailto:${player.parent_email}`}
-                          className="text-purple-400 hover:text-purple-300 transition-colors"
+                          className="text-[#9BD4FF] hover:text-[#7BB4DD] transition-colors"
                           title="Contact parent"
                         >
                           <Mail className="w-4 h-4" />
@@ -409,14 +409,14 @@ export const UnpairedPlayersPanel: React.FC = () => {
       {activeTab === 'opportunities' && (
         <div className="space-y-4">
           {pairingOpportunities.map((opp, index) => (
-            <div key={index} className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/30 p-6 rounded-lg">
+            <div key={index} className="bg-[#9BD4FF]/5 border border-[#9BD4FF]/30 p-6 rounded-lg">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-bold text-white">
                       {opp.player1.player_name} + {opp.player2.player_name}
                     </h3>
-                    <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">
+                    <span className="px-3 py-1 bg-[#9BD4FF]/20 text-[#9BD4FF] rounded-full text-sm font-medium">
                       {opp.player1.age_category}
                     </span>
                   </div>
@@ -432,7 +432,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="flex items-center gap-1 text-green-400">
+                  <div className="flex items-center gap-1 text-[#9BD4FF]">
                     <TrendingUp className="w-4 h-4" />
                     <span className="text-2xl font-bold">{Math.round(opp.matchScore)}</span>
                   </div>
@@ -467,7 +467,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
                     const timeSelect = document.getElementById(`time-${index}`) as HTMLSelectElement;
                     handleCreatePairing(opp, daySelect.value, timeSelect.value);
                   }}
-                  className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium flex items-center gap-2"
+                  className="px-6 py-2 bg-[#9BD4FF] text-black rounded-lg hover:bg-[#7BB4DD] transition-colors font-bold flex items-center gap-2"
                 >
                   <UserPlus className="w-4 h-4" />
                   Create Pairing
@@ -503,7 +503,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
                   <td className="px-4 py-3 text-sm text-white">{pairing.player_1_name}</td>
                   <td className="px-4 py-3 text-sm text-white">{pairing.player_2_name}</td>
                   <td className="px-4 py-3 text-sm">
-                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">
+                    <span className="px-2 py-1 bg-[#9BD4FF]/20 text-[#9BD4FF] rounded text-xs font-medium">
                       {pairing.player_1_category}
                     </span>
                   </td>
@@ -514,7 +514,7 @@ export const UnpairedPlayersPanel: React.FC = () => {
                   <td className="px-4 py-3 text-sm">
                     <button
                       onClick={() => handleDissolvePairing(pairing.id)}
-                      className="text-red-400 hover:text-red-300 transition-colors text-xs"
+                      className="text-gray-400 hover:text-white transition-colors text-xs underline"
                     >
                       Dissolve
                     </button>
