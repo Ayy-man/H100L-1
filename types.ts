@@ -58,9 +58,10 @@ export interface FormData {
 
   // Group Details - New 7-day schedule with monthly booking
   groupFrequency: '1x' | '2x' | '';
-  groupDay: 'tuesday' | 'friday' | ''; // Legacy field - kept for backward compatibility
-  groupSelectedDays: WeekDay[]; // New: Selected days of the week for recurring training
-  groupMonthlyDates: string[]; // New: Generated dates for the current month (ISO format: YYYY-MM-DD)
+  /** @deprecated Use groupSelectedDays instead. Kept for backward compatibility with existing data. */
+  groupDay: 'tuesday' | 'friday' | '';
+  groupSelectedDays: WeekDay[]; // Preferred: Selected days of the week for recurring training
+  groupMonthlyDates: string[]; // Generated dates for the current month (ISO format: YYYY-MM-DD)
 
   // Private Details
   privateFrequency: '1x' | '2x' | 'one-time' | '';
@@ -69,6 +70,8 @@ export interface FormData {
 
   // Semi-Private Details
   semiPrivateAvailability: string[];
+  semiPrivateTimeSlot: string; // Preferred: Single time slot string (e.g., "9-10")
+  /** @deprecated Use semiPrivateTimeSlot instead. Kept for backward compatibility with existing data. */
   semiPrivateTimeWindows: string[];
   semiPrivateMatchingPreference: string;
 
@@ -133,8 +136,13 @@ export interface Registration {
   id: string;
   created_at: string;
   updated_at: string;
-  payment_status: 'pending' | 'succeeded' | 'failed' | 'canceled' | null;
+  payment_status: 'pending' | 'succeeded' | 'verified' | 'failed' | 'canceled' | null;
   payment_method_id: string | null;
+  // Manual confirmation fields (admin override)
+  manually_confirmed?: boolean;
+  manually_confirmed_by?: string;
+  manually_confirmed_at?: string;
+  manually_confirmed_reason?: string;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
 

@@ -33,6 +33,7 @@ import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
+import { getSemiPrivateTimeSlot } from '@/lib/utils';
 
 /**
  * Schedule Page Component
@@ -405,9 +406,7 @@ const SchedulePage: React.FC = () => {
       // Use pairing's scheduled day/time if paired, otherwise fall back to form data
       // This is CRITICAL - semiPrivateAvailability is PREFERENCES, not the actual schedule!
       const semiPrivateTime = semiPrivatePairing?.scheduled_time ||
-        form_data.semiPrivateTimeSlot ||
-        (form_data.semiPrivateTimeWindows && form_data.semiPrivateTimeWindows[0]) ||
-        null;
+        getSemiPrivateTimeSlot(form_data);
 
       // Semi-private is ONLY 1x per week - use pairing day or first availability
       const day = semiPrivatePairing?.scheduled_day || form_data.semiPrivateAvailability?.[0];
@@ -1003,7 +1002,7 @@ const SchedulePage: React.FC = () => {
                 currentSchedule={{
                   // Use pairing's scheduled day if paired, otherwise fall back to form data
                   day: semiPrivatePairing?.scheduled_day || registration.form_data.semiPrivateAvailability?.[0],
-                  timeSlot: semiPrivatePairing?.scheduled_time || registration.form_data.semiPrivateTimeSlot || registration.form_data.semiPrivateTimeWindows?.[0],
+                  timeSlot: semiPrivatePairing?.scheduled_time || getSemiPrivateTimeSlot(registration.form_data),
                   playerCategory: registration.form_data.playerCategory || ''
                 }}
                 onSuccess={() => window.location.reload()}

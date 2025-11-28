@@ -166,15 +166,23 @@ This showed the number of **availability preferences**, not actual scheduled day
 
 ## 🟢 MINOR ISSUES - Nice to Fix
 
-### 7. ⏳ Legacy Field References
+### 7. ✅ Legacy Field References
 **Severity:** LOW
-**Status:** PENDING
+**Status:** FIXED
 
-Several files reference legacy fields:
-- `groupDay` (old single day) vs `groupSelectedDays` (new multi-day)
-- Both `semiPrivateTimeSlot` and `semiPrivateTimeWindows` are checked
+Several files referenced legacy fields. Now cleaned up with backward-compatible helpers.
 
-These work but add complexity. Consider cleaning up after launch.
+**Files Modified:**
+- `types.ts` - Added `semiPrivateTimeSlot` to FormData, marked legacy fields with @deprecated JSDoc
+- `lib/utils.ts` - Added `getSemiPrivateTimeSlot()` and `getGroupSelectedDays()` helper functions
+- `components/RegistrationForm.tsx` - Added `semiPrivateTimeSlot` to initial state, syncs when time windows change
+- `components/SchedulePage.tsx` - Updated to use `getSemiPrivateTimeSlot()` helper
+
+**Fix Applied:**
+- Legacy fields kept for backward compatibility with existing database records
+- New helper functions abstract the fallback logic
+- Forms now populate both new and legacy fields
+- JSDoc @deprecated comments added to guide future development
 
 ---
 
@@ -191,16 +199,23 @@ Consider moving to environment variable or proper auth system.
 
 ---
 
-### 9. ⏳ Missing TypeScript Type for `verified` Status
+### 9. ✅ Missing TypeScript Type for `verified` Status
 **Severity:** LOW
-**Status:** PENDING
+**Status:** FIXED
 
-The Registration type (`types.ts:105`) doesn't include `'verified'` in payment_status union:
+**File Modified:**
+- `types.ts` - Updated Registration interface
+
+**Fix Applied:**
 ```typescript
-payment_status: 'pending' | 'succeeded' | 'failed' | 'canceled' | null;
-```
+payment_status: 'pending' | 'succeeded' | 'verified' | 'failed' | 'canceled' | null;
 
-Should add `'verified'`.
+// Also added manual confirmation fields:
+manually_confirmed?: boolean;
+manually_confirmed_by?: string;
+manually_confirmed_at?: string;
+manually_confirmed_reason?: string;
+```
 
 ---
 
@@ -246,8 +261,8 @@ Should add `'verified'`.
 |----------|-------|-------|---------|
 | 🔴 Critical | 3 | 3 | 0 |
 | 🟡 Moderate | 3 | 3 | 0 |
-| 🟢 Minor | 3 | 0 | 3 |
-| **Total** | **9** | **6** | **3** |
+| 🟢 Minor | 3 | 2 | 1 |
+| **Total** | **9** | **8** | **1** |
 
 ---
 
@@ -261,3 +276,5 @@ Should add `'verified'`.
 | 2024-11-28 | #4 Semi-Private Pairing History | ✅ FIXED | Added Pairing History tab with dissolved pairs |
 | 2024-11-28 | #5 Training Days Count | ✅ FIXED | Semi-private now shows 1 day + scheduled day |
 | 2024-11-28 | #6 Notification System | ✅ FIXED | Full in-app notification system for parent & admin portals |
+| 2024-11-28 | #7 Legacy Field References | ✅ FIXED | Added helper functions, deprecated legacy fields |
+| 2024-11-28 | #9 TypeScript verified Status | ✅ FIXED | Added 'verified' to payment_status type + manual confirmation fields |
