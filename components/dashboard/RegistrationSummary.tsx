@@ -14,6 +14,8 @@ import { Registration } from '@/types';
 import { RescheduleGroupModal } from './RescheduleGroupModal';
 import { ReschedulePrivateModal } from './ReschedulePrivateModal';
 import { RescheduleSemiPrivateModal } from './RescheduleSemiPrivateModal';
+import { findSlotForCategory } from '@/lib/timeSlots';
+import { PlayerCategory } from '@/types';
 
 interface RegistrationSummaryProps {
   registration: Registration;
@@ -150,17 +152,40 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
               <p className="text-muted-foreground">Monthly Cost</p>
               <p className="font-bold text-lg text-primary">{getMonthlyPrice()}/month</p>
             </div>
-            {form_data.programType === 'group' && (
-              <div className="col-span-full">
-                <p className="text-muted-foreground">Training Days</p>
-                <p className="font-medium">{formatDays(form_data.groupSelectedDays)}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {form_data.groupFrequency === '1x'
-                    ? '1 session per week'
-                    : '2 sessions per week'}
-                </p>
-              </div>
-            )}
+            {form_data.programType === 'group' && (() => {
+              const assignedSlot = form_data.playerCategory
+                ? findSlotForCategory(form_data.playerCategory as PlayerCategory)
+                : null;
+
+              return (
+                <>
+                  <div className="col-span-full">
+                    <p className="text-muted-foreground">Training Days</p>
+                    <p className="font-medium">{formatDays(form_data.groupSelectedDays)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {form_data.groupFrequency === '1x'
+                        ? '1 session per week'
+                        : '2 sessions per week'}
+                    </p>
+                  </div>
+                  <div className="col-span-full">
+                    <p className="text-muted-foreground">Assigned Time Slot</p>
+                    {assignedSlot ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className="bg-[#9BD4FF] text-black font-semibold">
+                          {assignedSlot.time}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          Based on {form_data.playerCategory} category
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="font-medium">To be determined</p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
             {form_data.programType === 'private' && (
               <>
                 <div>
@@ -279,16 +304,16 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
               </h3>
               <div className="space-y-3 text-sm">
                 {form_data.hasAllergies && (
-                  <div className="p-3 rounded-md bg-orange-500/10 border border-orange-500/20">
-                    <p className="font-semibold text-orange-500">Allergies</p>
+                  <div className="p-3 rounded-md bg-[#9BD4FF]/10 border border-[#9BD4FF]/20">
+                    <p className="font-semibold text-[#9BD4FF]">Allergies</p>
                     <p className="text-foreground mt-1">
                       {form_data.allergiesDetails}
                     </p>
                   </div>
                 )}
                 {form_data.hasMedicalConditions && (
-                  <div className="p-3 rounded-md bg-orange-500/10 border border-orange-500/20">
-                    <p className="font-semibold text-orange-500">Medical Conditions</p>
+                  <div className="p-3 rounded-md bg-[#9BD4FF]/10 border border-[#9BD4FF]/20">
+                    <p className="font-semibold text-[#9BD4FF]">Medical Conditions</p>
                     <p className="text-foreground mt-1">
                       {form_data.medicalConditionsDetails}
                     </p>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, Loader2, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import { RescheduleGroupModal } from './RescheduleGroupModal';
 import { ReschedulePrivateModal } from './ReschedulePrivateModal';
 import { RescheduleSemiPrivateModal } from './RescheduleSemiPrivateModal';
+import { findSlotForCategory } from '@/lib/timeSlots';
+import { PlayerCategory } from '@/types';
 
 interface TrainingScheduleProps {
   registration: Registration;
@@ -72,6 +74,13 @@ interface SemiPrivatePairing {
   partner_name?: string;
 }
 
+interface WaitingInfo {
+  waitingSince: string;
+  preferredDays: string[];
+  preferredTimeSlots: string[];
+  playerCategory: string;
+}
+
 const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => {
   const { form_data, firebase_uid, id } = registration;
   const [sundayStatus, setSundayStatus] = useState<SundayBookingStatus | null>(null);
@@ -82,6 +91,8 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
   const [dayCapacity, setDayCapacity] = useState<Record<string, DayCapacity>>({});
   const [semiPrivatePairing, setSemiPrivatePairing] = useState<SemiPrivatePairing | null>(null);
+  const [isWaitingForPartner, setIsWaitingForPartner] = useState(false);
+  const [waitingInfo, setWaitingInfo] = useState<WaitingInfo | null>(null);
 
   // Helper function to check Sunday eligibility
   const isSundayEligible = () => {
@@ -163,6 +174,12 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         4: 'Thursday', 5: 'Friday', 6: 'Saturday',
       };
 
+      // Get the assigned time slot based on player's age category
+      const assignedSlot = form_data.playerCategory
+        ? findSlotForCategory(form_data.playerCategory as PlayerCategory)
+        : null;
+      const groupTimeSlot = assignedSlot?.time;
+
       for (let week = 0; week < weeksToShow; week++) {
         form_data.groupSelectedDays.forEach((day) => {
           const targetDay = dayMap[day.toLowerCase()];
@@ -188,6 +205,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                     date: replacementDate,
                     day: reverseDayMap[replacementDayNum] || exception.replacement_day,
                     type: 'synthetic',
+                    time: groupTimeSlot,
                     isException: true,
                   });
                 }
@@ -197,6 +215,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
                   date,
                   day: day.charAt(0).toUpperCase() + day.slice(1),
                   type: 'synthetic',
+                  time: groupTimeSlot,
                 });
               }
             }
@@ -414,9 +433,19 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
               scheduled_time: data.pairing.scheduledTime,
               partner_name: data.pairing.partnerName
             });
+            setIsWaitingForPartner(false);
+            setWaitingInfo(null);
             console.log('Set semi-private pairing:', data.pairing.scheduledDay, data.pairing.scheduledTime);
+          } else if (data.success && data.waiting && data.waitingInfo) {
+            // Player is waiting to be paired
+            setIsWaitingForPartner(true);
+            setWaitingInfo(data.waitingInfo);
+            setSemiPrivatePairing(null);
+            console.log('Player is waiting for partner since:', data.waitingInfo.waitingSince);
           } else {
-            console.log('Not paired, using availability preferences');
+            console.log('Not paired and not waiting, using availability preferences');
+            setIsWaitingForPartner(false);
+            setWaitingInfo(null);
           }
         }
       } catch (error) {
@@ -602,25 +631,68 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
           </div>
         </div>
 
-        {/* Group Training Time Slots */}
-        {form_data.programType === 'group' && (
-          <div className="p-4 rounded-lg bg-muted/50 border border-border">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-4 w-4 text-primary" />
-              <p className="font-semibold text-sm">Group Training Time Slots</p>
+        {/* Waiting for Partner Indicator - Semi-Private Only */}
+        {form_data.programType === 'semi-private' && isWaitingForPartner && waitingInfo && (
+          <div className="p-4 rounded-lg bg-[#9BD4FF]/5 border border-[#9BD4FF]/20">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-[#9BD4FF] mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-white">
+                  Waiting for Training Partner
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  You're on the waiting list since{' '}
+                  {new Date(waitingInfo.waitingSince).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                  })}. We're actively looking for a partner in your age group ({waitingInfo.playerCategory}).
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Questions? Contact <a href="mailto:info@sniperzone.ca" className="text-[#9BD4FF] underline hover:text-white">info@sniperzone.ca</a>
+                </p>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {getGroupTimeSlots().map((time) => (
-                <Badge key={time} variant="outline" className="justify-center">
-                  {time}
-                </Badge>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Choose your preferred time when you arrive
-            </p>
           </div>
         )}
+
+        {/* Group Training Time Slots */}
+        {form_data.programType === 'group' && (() => {
+          const assignedSlot = form_data.playerCategory
+            ? findSlotForCategory(form_data.playerCategory as PlayerCategory)
+            : null;
+
+          return (
+            <div className="p-4 rounded-lg bg-[#9BD4FF]/10 border border-[#9BD4FF]/30">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="h-4 w-4 text-[#9BD4FF]" />
+                <p className="font-semibold text-sm text-white">Your Assigned Training Time</p>
+              </div>
+              {assignedSlot ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-[#9BD4FF] text-black font-bold text-sm px-3 py-1">
+                      {assignedSlot.time}
+                    </Badge>
+                    <span className="text-xs text-gray-400">
+                      ({form_data.playerCategory} category)
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    This time is assigned based on your age category. Max 6 players per slot.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {getGroupTimeSlots().map((time) => (
+                    <Badge key={time} variant="outline" className="justify-center">
+                      {time}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <Separator />
 

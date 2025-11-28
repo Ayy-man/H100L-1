@@ -28,7 +28,7 @@ const initialFormData: FormData = {
   emergencyContactName: '', emergencyContactPhone: '', emergencyRelationship: '',
   programType: '', groupFrequency: '', groupDay: '', groupSelectedDays: [], groupMonthlyDates: [],
   privateFrequency: '', privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
-  semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
+  semiPrivateTimeSlot: '', semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
   dominantHand: '', currentLevel: '', jerseySize: '', hasAllergies: false,
   allergiesDetails: '', hasMedicalConditions: false, medicalConditionsDetails: '',
   actionPlan: null, medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
@@ -221,6 +221,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         const newValues = existing.includes(option)
             ? existing.filter(item => item !== option)
             : [...existing, option];
+
+        // Sync semiPrivateTimeSlot with semiPrivateTimeWindows for backward compatibility
+        if (name === 'semiPrivateTimeWindows') {
+          return {
+            ...prev,
+            [name]: newValues,
+            semiPrivateTimeSlot: newValues.length > 0 ? newValues[0] : ''
+          };
+        }
+
         return { ...prev, [name]: newValues };
     });
   };

@@ -12,7 +12,9 @@ import DocumentStatusBadge from './DocumentStatusBadge';
 import ScheduleEditModal from './ScheduleEditModal';
 import SundayRosterAdmin from './admin/SundayRosterAdmin';
 import UnpairedPlayersPanel from './admin/UnpairedPlayersPanel';
+import ScheduleChangesPanel from './admin/ScheduleChangesPanel';
 import ConfirmPaymentButton from './ConfirmPaymentButton';
+import { NotificationBell } from './notifications';
 import { MedicalFiles, WeekDay, Language } from '../types';
 
 interface Registration {
@@ -157,13 +159,24 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, color }) => (
 
 const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setAuthenticated] = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState<{ name: string; email: string } | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [selectedAdmin, setSelectedAdmin] = useState<string>('');
+  const [passwordInput, setPasswordInput] = useState<string>('');
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [capacitySlots, setCapacitySlots] = useState<CapacitySlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Admin credentials
+  const ADMIN_USERS = [
+    { id: 'loic', name: 'Loïc Pierre-Louis', email: 'loic@sniperzone.ca', password: 'L2025sniper' },
+    { id: 'darick', name: 'Darick Louis-Jean', email: 'darick@sniperzone.ca', password: 'D2025sniper' },
+    { id: 'chris', name: 'Christopher Fanfan', email: 'chris@sniperzone.ca', password: 'C2025sniper' },
+  ];
+
   // Dashboard tab state
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports' | 'sunday'>('overview');
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports' | 'sunday' | 'schedule'>('overview');
 
   // Mobile responsiveness
   const [isMobile, setIsMobile] = useState(false);
@@ -297,15 +310,27 @@ const AdminDashboard: React.FC = () => {
   const [compatibilityScores, setCompatibilityScores] = useState<CompatibilityScore[]>([]);
   const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
 
-  useEffect(() => {
-    const password = prompt('Enter admin password:');
-    if (password === 'sniperzone2025') {
-      setAuthenticated(true);
-    } else {
-      alert('Incorrect password.');
-      window.location.href = '/';
+  // Handle admin login
+  const handleAdminLogin = () => {
+    if (!selectedAdmin) {
+      setLoginError('Please select your name');
+      return;
     }
-  }, []);
+
+    const admin = ADMIN_USERS.find(a => a.id === selectedAdmin);
+    if (!admin) {
+      setLoginError('Invalid admin selected');
+      return;
+    }
+
+    if (passwordInput === admin.password) {
+      setCurrentAdmin({ name: admin.name, email: admin.email });
+      setAuthenticated(true);
+      setLoginError(null);
+    } else {
+      setLoginError('Incorrect password');
+    }
+  };
 
   // Mobile detection
   useEffect(() => {
@@ -536,9 +561,9 @@ const AdminDashboard: React.FC = () => {
   };
 
   const getCompatibilityColor = (score: number) => {
-    if (score >= 70) return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' };
-    if (score >= 50) return { bg: 'bg-[#9BD4FF]/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50' };
-    if (score >= 30) return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/50' };
+    if (score >= 70) return { bg: 'bg-[#9BD4FF]/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50' };
+    if (score >= 50) return { bg: 'bg-white/20', text: 'text-white', border: 'border-white/50' };
+    if (score >= 30) return { bg: 'bg-white/10', text: 'text-gray-300', border: 'border-white/30' };
     return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' };
   };
 
@@ -749,22 +774,22 @@ const AdminDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'verified': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'; // Admin verified - highest level
-      case 'succeeded': return 'bg-green-500/10 text-green-400 border-green-500/20'; // Stripe payment
-      case 'paid': return 'bg-green-500/10 text-green-400 border-green-500/20'; // Legacy
-      case 'pending': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      case 'canceled': return 'bg-red-500/10 text-red-400 border-red-500/20'; // Canceled subscription
-      case 'failed': return 'bg-red-500/10 text-red-400 border-red-500/20';
+      case 'verified': return 'bg-[#9BD4FF]/10 text-[#9BD4FF] border-[#9BD4FF]/20'; // Admin verified - highest level
+      case 'succeeded': return 'bg-[#9BD4FF]/10 text-[#9BD4FF] border-[#9BD4FF]/20'; // Stripe payment
+      case 'paid': return 'bg-[#9BD4FF]/10 text-[#9BD4FF] border-[#9BD4FF]/20'; // Legacy
+      case 'pending': return 'bg-white/10 text-gray-300 border-white/20';
+      case 'canceled': return 'bg-white/5 text-gray-500 border-white/10'; // Canceled subscription
+      case 'failed': return 'bg-white/5 text-gray-500 border-white/10';
       default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
   };
 
   const getCapacityColor = (status: string) => {
     switch (status) {
-      case 'FULL': return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/50', bar: 'bg-red-500' };
-      case 'ALMOST_FULL': return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/50', bar: 'bg-yellow-500' };
-      case 'HALF_FULL': return { bg: 'bg-blue-500/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50', bar: 'bg-[#9BD4FF]' };
-      default: return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50', bar: 'bg-green-400' };
+      case 'FULL': return { bg: 'bg-white/20', text: 'text-white', border: 'border-white/50', bar: 'bg-white' };
+      case 'ALMOST_FULL': return { bg: 'bg-white/10', text: 'text-gray-300', border: 'border-white/30', bar: 'bg-gray-300' };
+      case 'HALF_FULL': return { bg: 'bg-[#9BD4FF]/20', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/50', bar: 'bg-[#9BD4FF]' };
+      default: return { bg: 'bg-[#9BD4FF]/10', text: 'text-[#9BD4FF]', border: 'border-[#9BD4FF]/30', bar: 'bg-[#9BD4FF]/70' };
     }
   };
 
@@ -819,7 +844,7 @@ const AdminDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => handleDelete(registration.id)}
-            className="bg-red-500/20 text-red-400 font-bold py-2 px-4 rounded-lg hover:bg-red-500/30 border border-red-500/50 transition-all text-sm"
+            className="bg-white/10 text-gray-400 font-bold py-2 px-4 rounded-lg hover:bg-white/20 border border-white/20 transition-all text-sm hover:text-white"
           >
             {t.delete}
           </button>
@@ -843,8 +868,8 @@ const AdminDashboard: React.FC = () => {
       >
         {/* Full Overlay */}
         {isFull && (
-          <div className="absolute inset-0 bg-red-500/10 rounded-lg flex items-center justify-center backdrop-blur-[1px]">
-            <span className="text-red-400 font-black text-2xl uppercase tracking-wider rotate-[-15deg] border-4 border-red-500 px-6 py-2 rounded-lg">
+          <div className="absolute inset-0 bg-white/5 rounded-lg flex items-center justify-center backdrop-blur-[1px]">
+            <span className="text-white font-black text-2xl uppercase tracking-wider rotate-[-15deg] border-4 border-white px-6 py-2 rounded-lg">
               FULL
             </span>
           </div>
@@ -853,7 +878,7 @@ const AdminDashboard: React.FC = () => {
         {/* Warning Badge */}
         {needsWarning && !isFull && (
           <div className="absolute top-2 right-2">
-            <span className="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2 py-1 rounded-full border border-yellow-500/50">
+            <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-full border border-white/50">
               ⚠️ {slot.spots_remaining} left
             </span>
           </div>
@@ -903,8 +928,86 @@ const AdminDashboard: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-gray-900 min-h-screen flex items-center justify-center">
-        <p className="text-white">Authentication required.</p>
+      <div className="bg-gray-900 min-h-screen flex items-center justify-center p-4">
+        <div className="bg-black border border-white/10 rounded-xl p-8 max-w-md w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-black uppercase tracking-wider text-white mb-2">
+              Admin Login
+            </h1>
+            <p className="text-gray-400">SniperZone Dashboard</p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Admin Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Select Your Name
+              </label>
+              <select
+                value={selectedAdmin}
+                onChange={(e) => {
+                  setSelectedAdmin(e.target.value);
+                  setLoginError(null);
+                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9BD4FF] appearance-none cursor-pointer"
+              >
+                <option value="" className="bg-gray-900">-- Select Admin --</option>
+                {ADMIN_USERS.map((admin) => (
+                  <option key={admin.id} value={admin.id} className="bg-gray-900">
+                    {admin.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Password Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setLoginError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAdminLogin();
+                  }
+                }}
+                placeholder="Enter your password"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#9BD4FF]"
+              />
+            </div>
+
+            {/* Error Message */}
+            {loginError && (
+              <div className="p-3 bg-white/10 border border-white/20 rounded-lg">
+                <p className="text-white text-sm text-center">{loginError}</p>
+              </div>
+            )}
+
+            {/* Login Button */}
+            <button
+              onClick={handleAdminLogin}
+              className="w-full bg-[#9BD4FF] text-black font-bold py-3 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition-all uppercase tracking-wider"
+            >
+              Sign In
+            </button>
+
+            {/* Back Link */}
+            <div className="text-center">
+              <a
+                href="/"
+                className="text-gray-400 hover:text-white text-sm transition-colors"
+              >
+                ← Back to Home
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -932,8 +1035,23 @@ const AdminDashboard: React.FC = () => {
             <p className="text-gray-400 text-sm md:text-base">{t.subtitle}</p>
           </div>
 
-          {/* Language Toggle */}
-          <div className="flex gap-2 bg-white/5 rounded-lg p-1">
+          <div className="flex items-center gap-4">
+            {/* Notification Bell for Admin */}
+            <NotificationBell
+              userId="admin"
+              userType="admin"
+            />
+
+            {/* Logged-in Admin */}
+            {currentAdmin && (
+              <div className="text-right hidden sm:block">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Logged in as</p>
+                <p className="text-sm text-[#9BD4FF] font-semibold">{currentAdmin.name}</p>
+              </div>
+            )}
+
+            {/* Language Toggle */}
+            <div className="flex gap-2 bg-white/5 rounded-lg p-1">
             <button
               onClick={() => setLanguage(Language.FR)}
               className={`px-3 py-2 rounded-md text-sm font-bold transition-all ${
@@ -954,6 +1072,7 @@ const AdminDashboard: React.FC = () => {
             >
               EN
             </button>
+            </div>
           </div>
         </div>
 
@@ -1008,6 +1127,16 @@ const AdminDashboard: React.FC = () => {
             }`}
           >
             🏒 {t.sunday}
+          </button>
+          <button
+            onClick={() => setDashboardTab('schedule')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'schedule'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            📅 Schedule
           </button>
         </div>
 
@@ -1183,8 +1312,8 @@ const AdminDashboard: React.FC = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-8">
-            <p className="text-red-400">Error: {error}</p>
+          <div className="bg-white/10 border border-white/20 rounded-lg p-4 mb-8">
+            <p className="text-white">Error: {error}</p>
           </div>
         )}
 
@@ -1264,6 +1393,7 @@ const AdminDashboard: React.FC = () => {
                               registrationId={reg.id}
                               currentStatus={reg.payment_status}
                               onConfirmed={fetchRegistrations}
+                              adminEmail={currentAdmin?.email || 'admin'}
                             />
                             <button
                               onClick={() => setSelectedRegistration(reg)}
@@ -1535,10 +1665,10 @@ const AdminDashboard: React.FC = () => {
                           animate={{ width: `${slot.utilization_rate}%` }}
                           transition={{ duration: 0.5 }}
                           className={`h-4 rounded-full ${
-                            slot.utilization_rate >= 100 ? 'bg-red-500' :
-                            slot.utilization_rate >= 75 ? 'bg-yellow-500' :
+                            slot.utilization_rate >= 100 ? 'bg-white' :
+                            slot.utilization_rate >= 75 ? 'bg-gray-300' :
                             slot.utilization_rate >= 50 ? 'bg-[#9BD4FF]' :
-                            'bg-green-400'
+                            'bg-[#9BD4FF]/70'
                           }`}
                         />
                       </div>
@@ -1568,7 +1698,12 @@ const AdminDashboard: React.FC = () => {
 
         {/* SUNDAY PRACTICE TAB */}
         {dashboardTab === 'sunday' && (
-          <SundayRosterAdmin />
+          <SundayRosterAdmin adminUser={currentAdmin} />
+        )}
+
+        {/* SCHEDULE CHANGES TAB */}
+        {dashboardTab === 'schedule' && (
+          <ScheduleChangesPanel />
         )}
       </div>
 
@@ -2188,6 +2323,17 @@ const AdminDashboard: React.FC = () => {
           >
             <span className="text-lg mb-1">🏒</span>
             <span className="text-[9px] font-bold uppercase tracking-wider">Sunday</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('schedule')}
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
+              dashboardTab === 'schedule'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-lg mb-1">📅</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">Schedule</span>
           </button>
         </div>
       )}

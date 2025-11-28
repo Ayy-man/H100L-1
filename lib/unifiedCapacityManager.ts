@@ -83,7 +83,7 @@ export const checkSlotAvailability = async (
       const { data: groupBookings, error } = await supabase
         .from('registrations')
         .select('form_data')
-        .eq('payment_status', 'active')
+        .in('payment_status', ['succeeded', 'verified'])
         .contains('form_data->groupSelectedDays', [day.toLowerCase()]);
 
       if (error) {
@@ -106,7 +106,7 @@ export const checkSlotAvailability = async (
       const { data: bookings, error } = await supabase
         .from('registrations')
         .select('form_data')
-        .eq('payment_status', 'active')
+        .in('payment_status', ['succeeded', 'verified'])
         .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
 
       if (error) {
@@ -242,7 +242,7 @@ export const getAvailableSlots = async (
 
 /**
  * Reserve a time slot (called during registration submission)
- * This is handled by saving the registration with payment_status = 'active'
+ * This is handled by saving the registration with payment_status = 'succeeded' or 'verified'
  * The checkSlotAvailability function will then count it as booked
  */
 export const validateBookingRequest = async (

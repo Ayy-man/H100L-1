@@ -79,6 +79,10 @@ interface Stats {
   attendance_rate: number;
 }
 
+interface SundayRosterAdminProps {
+  adminUser: { name: string; email: string } | null;
+}
+
 /**
  * Sunday Roster Admin Component
  *
@@ -88,7 +92,7 @@ interface Stats {
  * - Export roster to CSV
  * - View attendance statistics
  */
-const SundayRosterAdmin: React.FC = () => {
+const SundayRosterAdmin: React.FC<SundayRosterAdminProps> = ({ adminUser }) => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [availableSundays, setAvailableSundays] = useState<string[]>([]);
@@ -171,7 +175,7 @@ const SundayRosterAdmin: React.FC = () => {
         body: JSON.stringify({
           bookingId,
           attendanceStatus: status,
-          markedBy: 'admin@h100l.com', // TODO: Replace with actual admin email from auth
+          markedBy: adminUser?.email || 'admin@sniperzone.ca',
           notes: notes || null,
         }),
       });
@@ -227,11 +231,11 @@ const SundayRosterAdmin: React.FC = () => {
   const getAttendanceBadge = (status: string) => {
     switch (status) {
       case 'attended':
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Attended</Badge>;
+        return <Badge className="bg-[#9BD4FF]/20 text-[#9BD4FF] hover:bg-[#9BD4FF]/20 font-medium">Attended</Badge>;
       case 'absent':
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Absent</Badge>;
+        return <Badge className="bg-white/10 text-gray-400 hover:bg-white/10 font-medium">Absent</Badge>;
       case 'excused':
-        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">Excused</Badge>;
+        return <Badge className="bg-white/20 text-white hover:bg-white/20 font-medium">Excused</Badge>;
       default:
         return <Badge variant="outline">Pending</Badge>;
     }
@@ -288,23 +292,23 @@ const SundayRosterAdmin: React.FC = () => {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{stats.total_bookings}</div>
+                <div className="text-2xl font-bold text-[#9BD4FF]">{stats.total_bookings}</div>
                 <div className="text-sm text-muted-foreground">Total Bookings</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.attended_count}</div>
+                <div className="text-2xl font-bold text-[#9BD4FF]">{stats.attended_count}</div>
                 <div className="text-sm text-muted-foreground">Attended</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{stats.absent_count}</div>
+                <div className="text-2xl font-bold text-gray-400">{stats.absent_count}</div>
                 <div className="text-sm text-muted-foreground">Absent</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">{stats.excused_count}</div>
+                <div className="text-2xl font-bold text-white">{stats.excused_count}</div>
                 <div className="text-sm text-muted-foreground">Excused</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.attendance_rate}%</div>
+                <div className="text-2xl font-bold text-[#9BD4FF]">{stats.attendance_rate}%</div>
                 <div className="text-sm text-muted-foreground">Attendance Rate</div>
               </div>
             </div>
@@ -400,7 +404,7 @@ const SundayRosterAdmin: React.FC = () => {
                                 variant="outline"
                                 onClick={() => markAttendance(booking.booking_id, 'attended')}
                                 disabled={actionLoading === booking.booking_id}
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                className="text-[#9BD4FF] hover:text-[#7BB4DD] hover:bg-[#9BD4FF]/10 border-[#9BD4FF]/30"
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
@@ -409,7 +413,7 @@ const SundayRosterAdmin: React.FC = () => {
                                 variant="outline"
                                 onClick={() => markAttendance(booking.booking_id, 'absent')}
                                 disabled={actionLoading === booking.booking_id}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="text-gray-400 hover:text-white hover:bg-white/10 border-white/20"
                               >
                                 <XCircle className="h-4 w-4" />
                               </Button>
@@ -429,7 +433,7 @@ const SundayRosterAdmin: React.FC = () => {
                                       setAttendanceNotes(booking.attendance_notes || '');
                                       setNotesDialogOpen(true);
                                     }}
-                                    className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                                    className="text-white hover:text-[#9BD4FF] hover:bg-white/10 border-white/20"
                                   >
                                     <AlertCircle className="h-4 w-4" />
                                   </Button>

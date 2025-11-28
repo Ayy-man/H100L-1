@@ -33,6 +33,9 @@ import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
+import { getSemiPrivateTimeSlot } from '@/lib/utils';
+import { findSlotForCategory } from '@/lib/timeSlots';
+import { PlayerCategory } from '@/types';
 
 /**
  * Schedule Page Component
@@ -66,6 +69,13 @@ interface SemiPrivatePairing {
   partner_name?: string;
 }
 
+interface WaitingInfo {
+  waitingSince: string;
+  preferredDays: string[];
+  preferredTimeSlots: string[];
+  playerCategory: string;
+}
+
 const SchedulePage: React.FC = () => {
   const { user, selectedProfile, selectedProfileId } = useProfile();
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -76,6 +86,8 @@ const SchedulePage: React.FC = () => {
   const [sundayStatuses, setSundayStatuses] = useState<Map<string, SundaySlotStatus>>(new Map());
   const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
   const [semiPrivatePairing, setSemiPrivatePairing] = useState<SemiPrivatePairing | null>(null);
+  const [isWaitingForPartner, setIsWaitingForPartner] = useState(false);
+  const [waitingInfo, setWaitingInfo] = useState<WaitingInfo | null>(null);
 
   // Fetch Sunday slot statuses for the current month
   const fetchSundayStatuses = async () => {
@@ -224,9 +236,19 @@ const SchedulePage: React.FC = () => {
               scheduled_time: data.pairing.scheduledTime,
               partner_name: data.pairing.partnerName
             });
+            setIsWaitingForPartner(false);
+            setWaitingInfo(null);
             console.log('Set semi-private pairing:', data.pairing.scheduledDay, data.pairing.scheduledTime);
+          } else if (data.success && data.waiting && data.waitingInfo) {
+            // Player is waiting to be paired
+            setIsWaitingForPartner(true);
+            setWaitingInfo(data.waitingInfo);
+            setSemiPrivatePairing(null);
+            console.log('Player is waiting for partner since:', data.waitingInfo.waitingSince);
           } else {
-            console.log('Not paired, using availability preferences');
+            console.log('Not paired and not waiting, using availability preferences');
+            setIsWaitingForPartner(false);
+            setWaitingInfo(null);
           }
         }
       } catch (error) {
@@ -284,6 +306,12 @@ const SchedulePage: React.FC = () => {
 
     // Add weekday sessions
     if (form_data.programType === 'group' && form_data.groupSelectedDays) {
+      // Get the assigned time slot based on player's age category
+      const assignedSlot = form_data.playerCategory
+        ? findSlotForCategory(form_data.playerCategory as PlayerCategory)
+        : null;
+      const groupTimeSlot = assignedSlot?.time;
+
       form_data.groupSelectedDays.forEach((day) => {
         const targetDay = dayMap[day.toLowerCase()];
         if (targetDay !== undefined) {
@@ -312,6 +340,7 @@ const SchedulePage: React.FC = () => {
                   date: replacementDate,
                   day: reverseDayMap[replacementDayNum] || exception.replacement_day,
                   type: 'synthetic',
+                  time: groupTimeSlot,
                   isException: true,
                 });
               }
@@ -321,6 +350,7 @@ const SchedulePage: React.FC = () => {
                 date: new Date(currentDate),
                 day: day.charAt(0).toUpperCase() + day.slice(1),
                 type: 'synthetic',
+                time: groupTimeSlot,
               });
             }
             currentDate.setDate(currentDate.getDate() + 7);
@@ -386,9 +416,7 @@ const SchedulePage: React.FC = () => {
       // Use pairing's scheduled day/time if paired, otherwise fall back to form data
       // This is CRITICAL - semiPrivateAvailability is PREFERENCES, not the actual schedule!
       const semiPrivateTime = semiPrivatePairing?.scheduled_time ||
-        form_data.semiPrivateTimeSlot ||
-        (form_data.semiPrivateTimeWindows && form_data.semiPrivateTimeWindows[0]) ||
-        null;
+        getSemiPrivateTimeSlot(form_data);
 
       // Semi-private is ONLY 1x per week - use pairing day or first availability
       const day = semiPrivatePairing?.scheduled_day || form_data.semiPrivateAvailability?.[0];
@@ -574,6 +602,48 @@ const SchedulePage: React.FC = () => {
               </Button>
             </div>
 
+            {/* Waiting for Partner Banner - Semi-Private Only */}
+            {registration.form_data.programType === 'semi-private' && isWaitingForPartner && waitingInfo && (
+              <Alert className="border-[#9BD4FF]/30 bg-[#9BD4FF]/5">
+                <AlertCircle className="h-5 w-5 text-[#9BD4FF]" />
+                <AlertTitle className="text-white font-semibold">Waiting for Training Partner</AlertTitle>
+                <AlertDescription className="text-gray-300">
+                  <div className="mt-2 space-y-2">
+                    <p>
+                      You are currently on the waiting list to be matched with a semi-private training partner.
+                      Our team is actively looking for a player with similar availability in your age category.
+                    </p>
+                    <div className="mt-3 p-3 bg-white/5 rounded-lg border border-white/10 space-y-1">
+                      <p className="text-sm">
+                        <strong className="text-[#9BD4FF]">Waiting Since:</strong>{' '}
+                        {new Date(waitingInfo.waitingSince).toLocaleDateString('en-US', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-sm">
+                        <strong className="text-[#9BD4FF]">Age Category:</strong> {waitingInfo.playerCategory}
+                      </p>
+                      {waitingInfo.preferredDays && waitingInfo.preferredDays.length > 0 && (
+                        <p className="text-sm">
+                          <strong className="text-[#9BD4FF]">Your Preferred Days:</strong>{' '}
+                          {waitingInfo.preferredDays.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-sm mt-3">
+                      <strong className="text-white">Questions?</strong> Contact us at{' '}
+                      <a href="mailto:info@sniperzone.ca" className="text-[#9BD4FF] underline hover:text-white">
+                        info@sniperzone.ca
+                      </a>{' '}
+                      and we'll help expedite your matching.
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Stats Card */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
@@ -612,12 +682,18 @@ const SchedulePage: React.FC = () => {
                       registration.form_data.groupSelectedDays?.length}
                     {registration.form_data.programType === 'private' &&
                       registration.form_data.privateSelectedDays?.length}
-                    {registration.form_data.programType === 'semi-private' &&
-                      registration.form_data.semiPrivateAvailability?.length}
+                    {/* Semi-private is always 1x per week */}
+                    {registration.form_data.programType === 'semi-private' && 1}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">Days per week</p>
+                  <p className="text-sm text-muted-foreground">
+                    {registration.form_data.programType === 'semi-private'
+                      ? (semiPrivatePairing?.scheduled_day
+                          ? `${semiPrivatePairing.scheduled_day.charAt(0).toUpperCase() + semiPrivatePairing.scheduled_day.slice(1)}`
+                          : 'Pending pairing')
+                      : 'Days per week'}
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -936,7 +1012,7 @@ const SchedulePage: React.FC = () => {
                 currentSchedule={{
                   // Use pairing's scheduled day if paired, otherwise fall back to form data
                   day: semiPrivatePairing?.scheduled_day || registration.form_data.semiPrivateAvailability?.[0],
-                  timeSlot: semiPrivatePairing?.scheduled_time || registration.form_data.semiPrivateTimeSlot || registration.form_data.semiPrivateTimeWindows?.[0],
+                  timeSlot: semiPrivatePairing?.scheduled_time || getSemiPrivateTimeSlot(registration.form_data),
                   playerCategory: registration.form_data.playerCategory || ''
                 }}
                 onSuccess={() => window.location.reload()}

@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { notifySundayCancelled } from '../lib/notificationHelper';
 
 /**
  * Sunday Cancel API Endpoint
@@ -102,6 +103,28 @@ export default async function handler(
 
       const statusCode = statusMap[data.code] || 400;
       return res.status(statusCode).json(data);
+    }
+
+    // Send notification on successful cancellation
+    try {
+      // Fetch registration details for notification
+      const { data: registration } = await supabase
+        .from('registrations')
+        .select('form_data')
+        .eq('id', registrationId)
+        .single();
+
+      if (registration) {
+        await notifySundayCancelled({
+          parentUserId: firebaseUid,
+          playerName: registration.form_data?.playerFullName || 'Player',
+          practiceDate: data.slot_date || 'scheduled date',
+          registrationId
+        });
+      }
+    } catch (notificationError) {
+      // Don't fail the cancellation if notification fails
+      console.error('Error sending Sunday cancellation notification:', notificationError);
     }
 
     // Success - return 200 with confirmation

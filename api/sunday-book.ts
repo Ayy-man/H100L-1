@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { notifySundayBooked } from '../lib/notificationHelper';
 
 /**
  * Sunday Book API Endpoint
@@ -109,6 +110,29 @@ export default async function handler(
 
       const statusCode = statusMap[data.code] || 400;
       return res.status(statusCode).json(data);
+    }
+
+    // Send notification on successful booking
+    try {
+      // Fetch registration details for notification
+      const { data: registration } = await supabase
+        .from('registrations')
+        .select('form_data')
+        .eq('id', registrationId)
+        .single();
+
+      if (registration) {
+        await notifySundayBooked({
+          parentUserId: firebaseUid,
+          playerName: registration.form_data?.playerFullName || 'Player',
+          practiceDate: data.slot_date,
+          timeSlot: data.time_range,
+          registrationId
+        });
+      }
+    } catch (notificationError) {
+      // Don't fail the booking if notification fails
+      console.error('Error sending Sunday booking notification:', notificationError);
     }
 
     // Success - return 200 with booking details

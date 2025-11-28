@@ -9,9 +9,9 @@ export interface TimeSlotInfo {
 
 export const TIME_SLOTS: TimeSlotInfo[] = [
   { time: '4:30-5:30 PM', applicableCategories: ['M9', 'M11'] },
-  { time: '5:45-6:45 PM', applicableCategories: ['M11 Elite', 'M13'] },
-  { time: '7:00-8:00 PM', applicableCategories: ['M13 Elite', 'M15'] },
-  { time: '8:15-9:15 PM', applicableCategories: ['M15 Elite', 'M18'] },
+  { time: '5:45-6:45 PM', applicableCategories: ['M13'] },
+  { time: '7:00-8:00 PM', applicableCategories: ['M15'] },
+  { time: '8:15-9:15 PM', applicableCategories: ['M18', 'Junior'] },
 ];
 
 /**
