@@ -673,12 +673,18 @@ const SchedulePage: React.FC = () => {
                       registration.form_data.groupSelectedDays?.length}
                     {registration.form_data.programType === 'private' &&
                       registration.form_data.privateSelectedDays?.length}
-                    {registration.form_data.programType === 'semi-private' &&
-                      registration.form_data.semiPrivateAvailability?.length}
+                    {/* Semi-private is always 1x per week */}
+                    {registration.form_data.programType === 'semi-private' && 1}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">Days per week</p>
+                  <p className="text-sm text-muted-foreground">
+                    {registration.form_data.programType === 'semi-private'
+                      ? (semiPrivatePairing?.scheduled_day
+                          ? `${semiPrivatePairing.scheduled_day.charAt(0).toUpperCase() + semiPrivatePairing.scheduled_day.slice(1)}`
+                          : 'Pending pairing')
+                      : 'Days per week'}
+                  </p>
                 </CardContent>
               </Card>
             </div>

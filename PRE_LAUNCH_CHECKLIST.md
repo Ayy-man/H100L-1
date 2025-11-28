@@ -109,19 +109,26 @@ markedBy: 'admin@h100l.com', // TODO: Replace with actual admin email from auth
 
 ---
 
-### 5. ⏳ SchedulePage Shows Wrong "Training Days" Count for Semi-Private
+### 5. ✅ SchedulePage Shows Wrong "Training Days" Count for Semi-Private
 **Severity:** LOW-MEDIUM
-**Status:** PENDING
+**Status:** FIXED
 
-**Problem:** In `components/SchedulePage.tsx:614-617`:
+**Problem:** In `components/SchedulePage.tsx`:
 ```tsx
 {registration.form_data.programType === 'semi-private' &&
   registration.form_data.semiPrivateAvailability?.length}
 ```
 
-This shows the number of **availability preferences**, not actual scheduled days (semi-private is always 1x/week).
+This showed the number of **availability preferences**, not actual scheduled days (semi-private is always 1x/week).
 
-**Suggested Fix:** Show `1` or the actual scheduled day from `semi_private_pairings`.
+**Files Modified:**
+- `components/SchedulePage.tsx` - Fixed Training Days card for semi-private
+
+**Fix Applied:**
+- Changed semi-private Training Days count to always show `1` (since semi-private is 1x/week)
+- Updated the description below to show:
+  - The actual scheduled day (e.g., "Monday") if paired
+  - "Pending pairing" if waiting for a partner
 
 ---
 
@@ -219,9 +226,9 @@ Should add `'verified'`.
 | Priority | Total | Fixed | Pending |
 |----------|-------|-------|---------|
 | 🔴 Critical | 3 | 3 | 0 |
-| 🟡 Moderate | 3 | 1 | 2 |
+| 🟡 Moderate | 3 | 2 | 1 |
 | 🟢 Minor | 3 | 0 | 3 |
-| **Total** | **9** | **4** | **5** |
+| **Total** | **9** | **5** | **4** |
 
 ---
 
@@ -233,3 +240,4 @@ Should add `'verified'`.
 | 2024-11-28 | #2 Semi-Private Waiting Status | ✅ FIXED | Added waiting banners to parent portal |
 | 2024-11-28 | #3 Admin Login & Tracking | ✅ FIXED | Added admin selector with individual passwords |
 | 2024-11-28 | #4 Semi-Private Pairing History | ✅ FIXED | Added Pairing History tab with dissolved pairs |
+| 2024-11-28 | #5 Training Days Count | ✅ FIXED | Semi-private now shows 1 day + scheduled day |
