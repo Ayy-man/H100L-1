@@ -103,9 +103,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single();
 
       if (!pairing) {
+        // Check if player is in the unpaired waiting list
+        const { data: unpairedEntry } = await supabase
+          .from('unpaired_semi_private')
+          .select('*')
+          .eq('registration_id', registrationId)
+          .eq('status', 'waiting')
+          .single();
+
+        if (unpairedEntry) {
+          return res.status(200).json({
+            success: true,
+            paired: false,
+            waiting: true,
+            waitingInfo: {
+              waitingSince: unpairedEntry.unpaired_since_date,
+              preferredDays: unpairedEntry.preferred_days,
+              preferredTimeSlots: unpairedEntry.preferred_time_slots,
+              playerCategory: unpairedEntry.age_category
+            },
+            message: 'You are currently waiting to be paired with a partner'
+          });
+        }
+
         return res.status(200).json({
           success: true,
           paired: false,
+          waiting: false,
           message: 'You are currently not paired with a partner'
         });
       }

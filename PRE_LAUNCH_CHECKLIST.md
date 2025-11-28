@@ -30,20 +30,28 @@
 
 ---
 
-### 2. ⏳ Parent Can't See Semi-Private "Waiting" Status Clearly
+### 2. ✅ Parent Can't See Semi-Private "Waiting" Status Clearly
 **Severity:** MEDIUM-HIGH
-**Status:** PENDING
+**Status:** FIXED
 
-**Problem:** When a semi-private player reschedules and becomes unpaired, they're added to `unpaired_semi_private` with status `waiting`. However, the parent dashboard doesn't clearly communicate:
+**Problem:** When a semi-private player reschedules and becomes unpaired, they're added to `unpaired_semi_private` with status `waiting`. However, the parent dashboard didn't clearly communicate:
 - "You are currently waiting for a partner"
 - How long they've been waiting
 - Admin contact for manual pairing
 
-**Files to Modify:**
-- `components/SchedulePage.tsx` - Add waiting status banner
-- `components/dashboard/TrainingSchedule.tsx` - Add waiting indicator
+**Files Modified:**
+- `api/reschedule-semi-private.ts` - Enhanced `get_current_pairing` to return waiting status
+- `components/SchedulePage.tsx` - Added waiting status banner with full details
+- `components/dashboard/TrainingSchedule.tsx` - Added compact waiting indicator
 
-**Suggested Fix:** Add a visible alert/banner when player is in `unpaired_semi_private` with status='waiting'
+**Fix Applied:**
+- API now checks `unpaired_semi_private` table and returns waiting info
+- SchedulePage shows prominent orange banner with:
+  - Waiting since date
+  - Age category
+  - Preferred days
+  - Contact email for questions
+- TrainingSchedule shows compact indicator on the dashboard
 
 ---
 
@@ -184,10 +192,10 @@ Should add `'verified'`.
 
 | Priority | Total | Fixed | Pending |
 |----------|-------|-------|---------|
-| 🔴 Critical | 3 | 1 | 2 |
+| 🔴 Critical | 3 | 2 | 1 |
 | 🟡 Moderate | 3 | 0 | 3 |
 | 🟢 Minor | 3 | 0 | 3 |
-| **Total** | **9** | **1** | **8** |
+| **Total** | **9** | **2** | **7** |
 
 ---
 
@@ -196,3 +204,4 @@ Should add `'verified'`.
 | Date | Issue | Status | Notes |
 |------|-------|--------|-------|
 | 2024-11-28 | #1 Schedule Changes Admin View | ✅ FIXED | Added ScheduleChangesPanel component |
+| 2024-11-28 | #2 Semi-Private Waiting Status | ✅ FIXED | Added waiting banners to parent portal |

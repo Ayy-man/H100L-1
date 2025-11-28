@@ -66,6 +66,13 @@ interface SemiPrivatePairing {
   partner_name?: string;
 }
 
+interface WaitingInfo {
+  waitingSince: string;
+  preferredDays: string[];
+  preferredTimeSlots: string[];
+  playerCategory: string;
+}
+
 const SchedulePage: React.FC = () => {
   const { user, selectedProfile, selectedProfileId } = useProfile();
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -76,6 +83,8 @@ const SchedulePage: React.FC = () => {
   const [sundayStatuses, setSundayStatuses] = useState<Map<string, SundaySlotStatus>>(new Map());
   const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
   const [semiPrivatePairing, setSemiPrivatePairing] = useState<SemiPrivatePairing | null>(null);
+  const [isWaitingForPartner, setIsWaitingForPartner] = useState(false);
+  const [waitingInfo, setWaitingInfo] = useState<WaitingInfo | null>(null);
 
   // Fetch Sunday slot statuses for the current month
   const fetchSundayStatuses = async () => {
@@ -224,9 +233,19 @@ const SchedulePage: React.FC = () => {
               scheduled_time: data.pairing.scheduledTime,
               partner_name: data.pairing.partnerName
             });
+            setIsWaitingForPartner(false);
+            setWaitingInfo(null);
             console.log('Set semi-private pairing:', data.pairing.scheduledDay, data.pairing.scheduledTime);
+          } else if (data.success && data.waiting && data.waitingInfo) {
+            // Player is waiting to be paired
+            setIsWaitingForPartner(true);
+            setWaitingInfo(data.waitingInfo);
+            setSemiPrivatePairing(null);
+            console.log('Player is waiting for partner since:', data.waitingInfo.waitingSince);
           } else {
-            console.log('Not paired, using availability preferences');
+            console.log('Not paired and not waiting, using availability preferences');
+            setIsWaitingForPartner(false);
+            setWaitingInfo(null);
           }
         }
       } catch (error) {
@@ -573,6 +592,48 @@ const SchedulePage: React.FC = () => {
                 Reschedule
               </Button>
             </div>
+
+            {/* Waiting for Partner Banner - Semi-Private Only */}
+            {registration.form_data.programType === 'semi-private' && isWaitingForPartner && waitingInfo && (
+              <Alert className="border-orange-500/50 bg-orange-500/10">
+                <AlertCircle className="h-5 w-5 text-orange-500" />
+                <AlertTitle className="text-orange-600 font-semibold">Waiting for Training Partner</AlertTitle>
+                <AlertDescription className="text-orange-600/90">
+                  <div className="mt-2 space-y-2">
+                    <p>
+                      You are currently on the waiting list to be matched with a semi-private training partner.
+                      Our team is actively looking for a player with similar availability in your age category.
+                    </p>
+                    <div className="mt-3 p-3 bg-orange-500/10 rounded-lg space-y-1">
+                      <p className="text-sm">
+                        <strong>Waiting Since:</strong>{' '}
+                        {new Date(waitingInfo.waitingSince).toLocaleDateString('en-US', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-sm">
+                        <strong>Age Category:</strong> {waitingInfo.playerCategory}
+                      </p>
+                      {waitingInfo.preferredDays && waitingInfo.preferredDays.length > 0 && (
+                        <p className="text-sm">
+                          <strong>Your Preferred Days:</strong>{' '}
+                          {waitingInfo.preferredDays.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-sm mt-3">
+                      <strong>Questions?</strong> Contact us at{' '}
+                      <a href="mailto:info@sniperzone.ca" className="underline hover:text-orange-700">
+                        info@sniperzone.ca
+                      </a>{' '}
+                      and we'll help expedite your matching.
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Stats Card */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

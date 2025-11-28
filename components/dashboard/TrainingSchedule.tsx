@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, Loader2, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -72,6 +72,13 @@ interface SemiPrivatePairing {
   partner_name?: string;
 }
 
+interface WaitingInfo {
+  waitingSince: string;
+  preferredDays: string[];
+  preferredTimeSlots: string[];
+  playerCategory: string;
+}
+
 const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => {
   const { form_data, firebase_uid, id } = registration;
   const [sundayStatus, setSundayStatus] = useState<SundayBookingStatus | null>(null);
@@ -82,6 +89,8 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
   const [dayCapacity, setDayCapacity] = useState<Record<string, DayCapacity>>({});
   const [semiPrivatePairing, setSemiPrivatePairing] = useState<SemiPrivatePairing | null>(null);
+  const [isWaitingForPartner, setIsWaitingForPartner] = useState(false);
+  const [waitingInfo, setWaitingInfo] = useState<WaitingInfo | null>(null);
 
   // Helper function to check Sunday eligibility
   const isSundayEligible = () => {
@@ -414,9 +423,19 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
               scheduled_time: data.pairing.scheduledTime,
               partner_name: data.pairing.partnerName
             });
+            setIsWaitingForPartner(false);
+            setWaitingInfo(null);
             console.log('Set semi-private pairing:', data.pairing.scheduledDay, data.pairing.scheduledTime);
+          } else if (data.success && data.waiting && data.waitingInfo) {
+            // Player is waiting to be paired
+            setIsWaitingForPartner(true);
+            setWaitingInfo(data.waitingInfo);
+            setSemiPrivatePairing(null);
+            console.log('Player is waiting for partner since:', data.waitingInfo.waitingSince);
           } else {
-            console.log('Not paired, using availability preferences');
+            console.log('Not paired and not waiting, using availability preferences');
+            setIsWaitingForPartner(false);
+            setWaitingInfo(null);
           }
         }
       } catch (error) {
@@ -601,6 +620,30 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
             </div>
           </div>
         </div>
+
+        {/* Waiting for Partner Indicator - Semi-Private Only */}
+        {form_data.programType === 'semi-private' && isWaitingForPartner && waitingInfo && (
+          <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-orange-700 dark:text-orange-400">
+                  Waiting for Training Partner
+                </p>
+                <p className="text-sm text-orange-600 dark:text-orange-400/80 mt-1">
+                  You're on the waiting list since{' '}
+                  {new Date(waitingInfo.waitingSince).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                  })}. We're actively looking for a partner in your age group ({waitingInfo.playerCategory}).
+                </p>
+                <p className="text-xs text-orange-500 dark:text-orange-400/70 mt-2">
+                  Questions? Contact <a href="mailto:info@sniperzone.ca" className="underline">info@sniperzone.ca</a>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Group Training Time Slots */}
         {form_data.programType === 'group' && (
