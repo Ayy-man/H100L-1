@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Filter, UserPlus, Mail, Calendar, Clock, TrendingUp } from 'lucide-react';
+import { Users, Search, Filter, UserPlus, Mail, Calendar, Clock, TrendingUp, History } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface UnpairedPlayer {
@@ -27,6 +27,20 @@ interface ActivePairing {
   player_2_category: string;
 }
 
+interface DissolvedPairing {
+  id: string;
+  player_1_name: string;
+  player_2_name: string;
+  scheduled_day: string;
+  scheduled_time: string;
+  paired_date: string;
+  dissolved_date: string;
+  dissolved_reason: string;
+  dissolved_by: string;
+  player_1_category: string;
+  player_2_category: string;
+}
+
 interface PairingOpportunity {
   player1: UnpairedPlayer;
   player2: UnpairedPlayer;
@@ -35,12 +49,13 @@ interface PairingOpportunity {
   matchScore: number;
 }
 
-type TabType = 'unpaired' | 'opportunities' | 'active' | 'activity';
+type TabType = 'unpaired' | 'opportunities' | 'active' | 'history';
 
 export const UnpairedPlayersPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('unpaired');
   const [unpairedPlayers, setUnpairedPlayers] = useState<UnpairedPlayer[]>([]);
   const [activePairings, setActivePairings] = useState<ActivePairing[]>([]);
+  const [dissolvedPairings, setDissolvedPairings] = useState<DissolvedPairing[]>([]);
   const [pairingOpportunities, setPairingOpportunities] = useState<PairingOpportunity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -97,6 +112,41 @@ export const UnpairedPlayersPanel: React.FC = () => {
           paired_date: p.paired_date
         }));
         setActivePairings(formattedPairings);
+      }
+
+      // Load dissolved pairings (history)
+      const { data: dissolved, error: dissolvedError } = await supabase
+        .from('semi_private_pairings')
+        .select(`
+          id,
+          scheduled_day,
+          scheduled_time,
+          paired_date,
+          dissolved_date,
+          dissolved_reason,
+          dissolved_by,
+          player_1:player_1_registration_id(form_data),
+          player_2:player_2_registration_id(form_data)
+        `)
+        .eq('status', 'dissolved')
+        .order('dissolved_date', { ascending: false })
+        .limit(50);
+
+      if (dissolved && !dissolvedError) {
+        const formattedDissolved = dissolved.map((p: any) => ({
+          id: p.id,
+          player_1_name: p.player_1?.form_data?.playerFullName || 'Unknown',
+          player_2_name: p.player_2?.form_data?.playerFullName || 'Unknown',
+          player_1_category: p.player_1?.form_data?.playerCategory || 'Unknown',
+          player_2_category: p.player_2?.form_data?.playerCategory || 'Unknown',
+          scheduled_day: p.scheduled_day,
+          scheduled_time: p.scheduled_time,
+          paired_date: p.paired_date,
+          dissolved_date: p.dissolved_date,
+          dissolved_reason: p.dissolved_reason || 'No reason provided',
+          dissolved_by: p.dissolved_by || 'Unknown'
+        }));
+        setDissolvedPairings(formattedDissolved);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -267,12 +317,12 @@ export const UnpairedPlayersPanel: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 mb-6 border-b border-white/10">
+      <div className="flex items-center gap-2 mb-6 border-b border-white/10 overflow-x-auto">
         {[
           { id: 'unpaired', label: 'Unpaired Players', count: unpairedPlayers.length },
           { id: 'opportunities', label: 'Pairing Opportunities', count: pairingOpportunities.length },
           { id: 'active', label: 'Active Pairs', count: activePairings.length },
-          { id: 'activity', label: 'Recent Activity', count: null }
+          { id: 'history', label: 'Pairing History', count: dissolvedPairings.length }
         ].map(tab => (
           <button
             key={tab.id}
@@ -532,9 +582,66 @@ export const UnpairedPlayersPanel: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'activity' && (
-        <div className="p-12 text-center text-gray-400">
-          Recent activity feed coming soon...
+      {activeTab === 'history' && (
+        <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+          <div className="p-4 border-b border-white/10 flex items-center gap-2">
+            <History className="w-5 h-5 text-[#9BD4FF]" />
+            <span className="text-white font-medium">Dissolved Pairings History</span>
+            <span className="text-gray-400 text-sm">(Last 50)</span>
+          </div>
+          <table className="w-full">
+            <thead className="bg-white/5">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Players</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Category</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Schedule</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Paired</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Dissolved</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Reason</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">By</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/10">
+              {dissolvedPairings.map(pairing => (
+                <tr key={pairing.id} className="hover:bg-white/5 transition-colors">
+                  <td className="px-4 py-3 text-sm">
+                    <div className="text-white">{pairing.player_1_name}</div>
+                    <div className="text-gray-400 text-xs">+ {pairing.player_2_name}</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className="px-2 py-1 bg-white/10 text-gray-300 rounded text-xs font-medium">
+                      {pairing.player_1_category}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-300">
+                    {pairing.scheduled_day} at {pairing.scheduled_time}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-400">
+                    {pairing.paired_date}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-300">
+                    {pairing.dissolved_date}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className="text-gray-400 max-w-[150px] truncate block" title={pairing.dissolved_reason}>
+                      {pairing.dissolved_reason}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-400">
+                    {pairing.dissolved_by}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {dissolvedPairings.length === 0 && (
+            <div className="p-12 text-center text-gray-400">
+              <History className="w-12 h-12 mx-auto mb-4 opacity-30" />
+              <p>No dissolved pairings found</p>
+              <p className="text-sm mt-2">Dissolved pairs will appear here</p>
+            </div>
+          )}
         </div>
       )}
     </div>

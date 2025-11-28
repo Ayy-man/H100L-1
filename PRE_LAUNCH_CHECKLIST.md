@@ -84,14 +84,28 @@ markedBy: 'admin@h100l.com', // TODO: Replace with actual admin email from auth
 
 ## 🟡 MODERATE ISSUES - Should Fix Before Launch
 
-### 4. ⏳ Semi-Private Pairing History Not Visible
+### 4. ✅ Semi-Private Pairing History Not Visible
 **Severity:** MEDIUM
-**Status:** PENDING
+**Status:** FIXED
 
 **Problem:** Admin can see active pairings and dissolved pairings via the `semi_private_pairings` table (with `status='dissolved'`), but the UnpairedPlayersPanel doesn't show dissolved pairing history.
 
-**Files to Modify:**
-- `components/admin/UnpairedPlayersPanel.tsx` - Add "Dissolved Pairs" history tab
+**Files Modified:**
+- `components/admin/UnpairedPlayersPanel.tsx` - Added "Pairing History" tab
+
+**Fix Applied:**
+- Added `DissolvedPairing` interface for type safety
+- Added `dissolvedPairings` state to track history
+- Updated `loadData()` to fetch dissolved pairings (status='dissolved')
+- Renamed "Recent Activity" tab to "Pairing History"
+- Added full history table showing:
+  - Player names (both partners)
+  - Category
+  - Original schedule (day & time)
+  - Date paired
+  - Date dissolved
+  - Dissolution reason
+  - Who dissolved (admin name)
 
 ---
 
@@ -205,9 +219,9 @@ Should add `'verified'`.
 | Priority | Total | Fixed | Pending |
 |----------|-------|-------|---------|
 | 🔴 Critical | 3 | 3 | 0 |
-| 🟡 Moderate | 3 | 0 | 3 |
+| 🟡 Moderate | 3 | 1 | 2 |
 | 🟢 Minor | 3 | 0 | 3 |
-| **Total** | **9** | **3** | **6** |
+| **Total** | **9** | **4** | **5** |
 
 ---
 
@@ -218,3 +232,4 @@ Should add `'verified'`.
 | 2024-11-28 | #1 Schedule Changes Admin View | ✅ FIXED | Added ScheduleChangesPanel component |
 | 2024-11-28 | #2 Semi-Private Waiting Status | ✅ FIXED | Added waiting banners to parent portal |
 | 2024-11-28 | #3 Admin Login & Tracking | ✅ FIXED | Added admin selector with individual passwords |
+| 2024-11-28 | #4 Semi-Private Pairing History | ✅ FIXED | Added Pairing History tab with dissolved pairs |
