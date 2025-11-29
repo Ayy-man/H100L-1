@@ -199,16 +199,18 @@ Consider moving to environment variable or proper auth system.
 
 ---
 
-### 10. 🔴 Blue Time Slot Highlight Too Bright
+### 10. ✅ Blue Time Slot Highlight Too Bright
 **Severity:** MEDIUM
-**Status:** IN PROGRESS
+**Status:** FIXED
 
-**Problem:** The ice-blue (#9BD4FF) badge background for assigned time slots is too bright/saturated, making text and UI elements hard to see.
+**Problem:** The ice-blue (#9BD4FF) badge background for assigned time slots was too bright/saturated, making text and UI elements hard to see.
 
-**Files to Fix:**
-- `components/dashboard/TrainingSchedule.tsx` - Time slot badge
-- `components/dashboard/RegistrationSummary.tsx` - Time slot badge
-- `components/form/FormStep4.tsx` - Time slot badge
+**Files Fixed:**
+- `components/dashboard/TrainingSchedule.tsx` - Changed to outlined badge with primary color
+- `components/dashboard/RegistrationSummary.tsx` - Changed to outlined badge with primary color
+- `components/form/FormStep4.tsx` - Changed to outlined badge with primary color
+
+**Fix Applied:** Changed from solid bright blue background to subtle outlined style using the theme's primary color for better contrast and readability.
 
 ---
 
