@@ -199,6 +199,30 @@ Consider moving to environment variable or proper auth system.
 
 ---
 
+### 10. 🔴 Blue Time Slot Highlight Too Bright
+**Severity:** MEDIUM
+**Status:** IN PROGRESS
+
+**Problem:** The ice-blue (#9BD4FF) badge background for assigned time slots is too bright/saturated, making text and UI elements hard to see.
+
+**Files to Fix:**
+- `components/dashboard/TrainingSchedule.tsx` - Time slot badge
+- `components/dashboard/RegistrationSummary.tsx` - Time slot badge
+- `components/form/FormStep4.tsx` - Time slot badge
+
+---
+
+### 11. 🔴 Sunday Ice Booking Button Missing
+**Severity:** HIGH
+**Status:** PENDING
+
+**Problem:** The "Book Now" button for Sunday ice practice has disappeared from the TrainingSchedule component. Parents cannot book their Sunday ice sessions.
+
+**Files to Investigate:**
+- `components/dashboard/TrainingSchedule.tsx` - Sunday booking logic
+
+---
+
 ### 9. ✅ Missing TypeScript Type for `verified` Status
 **Severity:** LOW
 **Status:** FIXED
@@ -261,8 +285,8 @@ manually_confirmed_reason?: string;
 |----------|-------|-------|---------|
 | 🔴 Critical | 3 | 3 | 0 |
 | 🟡 Moderate | 3 | 3 | 0 |
-| 🟢 Minor | 3 | 2 | 1 |
-| **Total** | **9** | **8** | **1** |
+| 🟢 Minor | 5 | 2 | 3 |
+| **Total** | **11** | **8** | **3** |
 
 ---
 

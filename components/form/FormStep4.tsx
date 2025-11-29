@@ -97,7 +97,7 @@ const FormStep4: React.FC<FormStep4Props> = ({
                     value={
                       assignedSlot ? (
                         <span className="inline-flex items-center gap-2">
-                          <span className="bg-[#9BD4FF] text-black px-2 py-0.5 rounded font-semibold text-sm">
+                          <span className="border border-primary text-primary px-2 py-0.5 rounded font-semibold text-sm">
                             {assignedSlot.time}
                           </span>
                           <span className="text-xs text-muted-foreground">

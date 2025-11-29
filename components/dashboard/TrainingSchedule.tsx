@@ -662,22 +662,22 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
             : null;
 
           return (
-            <div className="p-4 rounded-lg bg-[#9BD4FF]/10 border border-[#9BD4FF]/30">
+            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
               <div className="flex items-center gap-2 mb-3">
-                <Clock className="h-4 w-4 text-[#9BD4FF]" />
-                <p className="font-semibold text-sm text-white">Your Assigned Training Time</p>
+                <Clock className="h-4 w-4 text-primary" />
+                <p className="font-semibold text-sm">Your Assigned Training Time</p>
               </div>
               {assignedSlot ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-[#9BD4FF] text-black font-bold text-sm px-3 py-1">
+                    <Badge variant="outline" className="border-primary text-primary font-semibold text-sm px-3 py-1">
                       {assignedSlot.time}
                     </Badge>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       ({form_data.playerCategory} category)
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     This time is assigned based on your age category. Max 6 players per slot.
                   </p>
                 </div>
