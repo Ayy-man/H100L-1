@@ -766,7 +766,8 @@ const SchedulePage: React.FC = () => {
                       day.date.toDateString() === today.toDateString();
                     const hasSessions = day.sessions.length > 0;
                     const isSunday = day.date.getDay() === 0;
-                    const dateStr = day.date.toISOString().split('T')[0];
+                    // Use local date format (not UTC) to match API date keys
+                    const dateStr = `${day.date.getFullYear()}-${String(day.date.getMonth() + 1).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`;
                     const sundayStatus = sundayStatuses.get(dateStr);
 
                     // Determine Sunday cell styling
