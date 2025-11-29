@@ -199,6 +199,35 @@ Consider moving to environment variable or proper auth system.
 
 ---
 
+### 10. ✅ Blue Time Slot Highlight Too Bright
+**Severity:** MEDIUM
+**Status:** FIXED
+
+**Problem:** The ice-blue (#9BD4FF) badge background for assigned time slots was too bright/saturated, making text and UI elements hard to see.
+
+**Files Fixed:**
+- `components/dashboard/TrainingSchedule.tsx` - Changed to outlined badge with primary color
+- `components/dashboard/RegistrationSummary.tsx` - Changed to outlined badge with primary color
+- `components/form/FormStep4.tsx` - Changed to outlined badge with primary color
+
+**Fix Applied:** Changed from solid bright blue background to subtle outlined style using the theme's primary color for better contrast and readability.
+
+---
+
+### 11. ❌ Sunday Ice Booking Button - Not a Bug
+**Severity:** N/A
+**Status:** RESOLVED (Working as intended)
+
+**Original Report:** The "Book Now" button for Sunday ice practice was missing for M18/Junior players.
+
+**Resolution:** This is **intentional behavior**, not a bug. Sunday ice practice is only available for M7-M15 age categories. M18 and Junior players do not have access to Sunday ice sessions.
+
+**Eligibility Rules:**
+- M9, M11, M13, M15 → Eligible for Sunday ice
+- M18, Junior → NOT eligible for Sunday ice
+
+---
+
 ### 9. ✅ Missing TypeScript Type for `verified` Status
 **Severity:** LOW
 **Status:** FIXED
@@ -261,8 +290,39 @@ manually_confirmed_reason?: string;
 |----------|-------|-------|---------|
 | 🔴 Critical | 3 | 3 | 0 |
 | 🟡 Moderate | 3 | 3 | 0 |
-| 🟢 Minor | 3 | 2 | 1 |
-| **Total** | **9** | **8** | **1** |
+| 🟢 Minor | 4 | 3 | 1 |
+| **Total** | **10** | **9** | **1** |
+
+*Note: Issue #11 was not a bug - Sunday ice is intentionally restricted to M7-M15 categories.*
+
+---
+
+## 🔍 Codebase Audit (Nov 29, 2024)
+
+### ✅ Fixed in This Session
+
+| Issue | File | Severity | Fix |
+|-------|------|----------|-----|
+| Payment status 'paid' vs 'succeeded' | create-subscription.ts:125 | HIGH | Changed to 'succeeded' |
+| 3x/week price using wrong env var | create-subscription.ts:229 | HIGH | Now uses VITE_STRIPE_PRICE_PRIVATE_3X |
+| JSON parse null safety | AdminDashboard.tsx:398-403 | MEDIUM | Added try-catch |
+| CSV escape fails on 0/false | sunday-export-roster.ts:125 | LOW | Check null/undefined only |
+| Sunday booking status timezone | SchedulePage.tsx:769 | MEDIUM | Use local date format |
+
+### ⚠️ Known Security Issues (Deferred)
+
+| Issue | File | Severity | Notes |
+|-------|------|----------|-------|
+| Hardcoded admin passwords | AdminDashboard.tsx:172-176 | HIGH | Move to Firebase Auth post-launch |
+| Missing admin auth on endpoints | admin-confirm-payment.ts | HIGH | All admin APIs need token verification |
+| No user auth on verify-payment | verify-payment.ts:31-35 | MEDIUM | Add Firebase token check |
+
+### 📝 Performance Issues (Nice-to-Have)
+
+| Issue | File | Notes |
+|-------|------|-------|
+| N+1 queries in availability check | reschedule-semi-private.ts:210-270 | Fetch all bookings once, filter in memory |
+| Inefficient exception lookup | reschedule-group.ts:287-345 | Use upsert instead of select+update |
 
 ---
 
@@ -278,3 +338,6 @@ manually_confirmed_reason?: string;
 | 2024-11-28 | #6 Notification System | ✅ FIXED | Full in-app notification system for parent & admin portals |
 | 2024-11-28 | #7 Legacy Field References | ✅ FIXED | Added helper functions, deprecated legacy fields |
 | 2024-11-28 | #9 TypeScript verified Status | ✅ FIXED | Added 'verified' to payment_status type + manual confirmation fields |
+| 2024-11-29 | #10 Blue Badge Highlight | ✅ FIXED | Toned down bright blue to outlined badge |
+| 2024-11-29 | Sunday booking calendar status | ✅ FIXED | Fixed timezone issue with date format |
+| 2024-11-29 | Codebase Audit | ✅ DONE | Fixed payment_status, JSON parse, CSV escape issues |

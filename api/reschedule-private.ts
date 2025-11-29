@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { notifyScheduleChanged } from '../lib/notificationHelper';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -427,6 +428,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
           }
         }
+      }
+
+      // Send notification to parent about schedule change
+      try {
+        const originalDays = registration.form_data?.privateSelectedDays || [];
+        const originalTime = registration.form_data?.privateTimeSlot || '';
+        const originalDaysStr = originalDays
+          .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
+          .join(', ');
+        const newDaysStr = daysToSet
+          .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
+          .join(', ');
+
+        // Format time slots for display (e.g., "9-10" -> "9:00-10:00 AM")
+        const formatTime = (t: string) => {
+          const [start, end] = t.split('-').map(Number);
+          const format = (h: number) => `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
+          return `${format(start)} - ${format(end)}`;
+        };
+
+        await notifyScheduleChanged({
+          parentUserId: firebaseUid,
+          playerName: registration.form_data?.playerFullName || 'Your child',
+          changeType: changeType,
+          originalSchedule: `${originalDaysStr} at ${formatTime(originalTime)}`,
+          newSchedule: `${newDaysStr} at ${formatTime(newTime)}`,
+          registrationId,
+        });
+      } catch (notifyError) {
+        console.error('Failed to send schedule change notification:', notifyError);
+        // Don't fail the whole request for notification errors
       }
 
       return res.status(200).json({

@@ -172,7 +172,7 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
                     <p className="text-muted-foreground">Assigned Time Slot</p>
                     {assignedSlot ? (
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge className="bg-[#9BD4FF] text-black font-semibold">
+                        <Badge variant="outline" className="border-primary text-primary font-semibold">
                           {assignedSlot.time}
                         </Badge>
                         <span className="text-xs text-muted-foreground">

@@ -168,11 +168,11 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Admin credentials
+  // Admin credentials - loaded from environment variables
   const ADMIN_USERS = [
-    { id: 'loic', name: 'Loïc Pierre-Louis', email: 'loic@sniperzone.ca', password: 'L2025sniper' },
-    { id: 'darick', name: 'Darick Louis-Jean', email: 'darick@sniperzone.ca', password: 'D2025sniper' },
-    { id: 'chris', name: 'Christopher Fanfan', email: 'chris@sniperzone.ca', password: 'C2025sniper' },
+    { id: 'loic', name: 'Loïc Pierre-Louis', email: 'loic@sniperzone.ca', password: import.meta.env.VITE_ADMIN_PASSWORD_LOIC || '' },
+    { id: 'darick', name: 'Darick Louis-Jean', email: 'darick@sniperzone.ca', password: import.meta.env.VITE_ADMIN_PASSWORD_DARICK || '' },
+    { id: 'chris', name: 'Christopher Fanfan', email: 'chris@sniperzone.ca', password: import.meta.env.VITE_ADMIN_PASSWORD_CHRIS || '' },
   ];
 
   // Dashboard tab state
@@ -395,12 +395,18 @@ const AdminDashboard: React.FC = () => {
 
     if (regError) throw regError;
 
-    const parsedData = regData.map((reg: any) => ({
-      ...reg,
-      form_data: typeof reg.form_data === 'string'
-        ? JSON.parse(reg.form_data)
-        : reg.form_data
-    }));
+    const parsedData = regData.map((reg: any) => {
+      let formData = reg.form_data;
+      if (typeof formData === 'string' && formData) {
+        try {
+          formData = JSON.parse(formData);
+        } catch (e) {
+          console.error('Failed to parse form_data for registration:', reg.id, e);
+          formData = null;
+        }
+      }
+      return { ...reg, form_data: formData };
+    });
 
     setRegistrations(parsedData);
   };

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { notifyNewRegistration } from '../lib/notificationHelper';
 
 // Initialize Stripe with secret key from environment
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -122,7 +123,7 @@ export default async function handler(
         .from('registrations')
         .update({
           stripe_customer_id: customer.id,
-          payment_status: paymentIntent.status === 'succeeded' ? 'paid' : 'pending',
+          payment_status: paymentIntent.status === 'succeeded' ? 'succeeded' : 'pending',
           updated_at: new Date().toISOString(),
         })
         .eq('id', registrationId);
@@ -169,6 +170,36 @@ export default async function handler(
           updated_at: new Date().toISOString(),
         })
         .eq('id', registrationId);
+
+      // Notify admin about new registration
+      if (paymentStatus === 'succeeded') {
+        try {
+          // Get registration details for notification
+          const { data: regData } = await supabase
+            .from('registrations')
+            .select('form_data')
+            .eq('id', registrationId)
+            .single();
+
+          if (regData?.form_data) {
+            const formData = regData.form_data;
+            await notifyNewRegistration({
+              playerName: formData.playerFullName || 'Unknown Player',
+              playerCategory: formData.playerCategory || 'Unknown',
+              programType: programType === 'group'
+                ? `Group Training (${frequency})`
+                : programType === 'private'
+                ? `Private Training (${frequency})`
+                : 'Semi-Private Training',
+              parentEmail: formData.parentEmail || customerEmail,
+              registrationId,
+            });
+          }
+        } catch (notifyError) {
+          console.error('Failed to send new registration notification:', notifyError);
+          // Don't fail the whole request for notification errors
+        }
+      }
 
       // For semi-private, add player to unpaired list for matching
       if (programType === 'semi-private' && paymentStatus === 'succeeded') {
@@ -221,13 +252,13 @@ export default async function handler(
 
 // Helper function to get Stripe Price ID based on program
 function getPriceId(programType: string, frequency: string): string | null {
-  const priceMap: Record<string, string> = {
-    'group-1x': process.env.VITE_STRIPE_PRICE_GROUP_1X || '',
-    'group-2x': process.env.VITE_STRIPE_PRICE_GROUP_2X || '',
-    'private-1x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_1X || '',
-    'private-2x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_2X || '',
-    'private-3x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_2X || '', // Using 2x price as placeholder
-    'semi-private-monthly': process.env.VITE_STRIPE_PRICE_SEMI_PRIVATE || '',
+  const priceMap: Record<string, string | undefined> = {
+    'group-1x': process.env.VITE_STRIPE_PRICE_GROUP_1X,
+    'group-2x': process.env.VITE_STRIPE_PRICE_GROUP_2X,
+    'private-1x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_1X,
+    'private-2x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_2X,
+    'private-3x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_3X, // Requires separate price config
+    'semi-private-monthly': process.env.VITE_STRIPE_PRICE_SEMI_PRIVATE,
   };
 
   if (frequency === 'one-time') {
