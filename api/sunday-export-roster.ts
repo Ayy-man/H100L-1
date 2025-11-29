@@ -122,8 +122,8 @@ export default async function handler(
  * Helper function to escape CSV values
  * Wraps values in quotes if they contain commas, quotes, or newlines
  */
-function escapeCSV(value: string | null | undefined): string {
-  if (!value) return '';
+function escapeCSV(value: string | number | boolean | null | undefined): string {
+  if (value === null || value === undefined) return '';
 
   const stringValue = String(value);
 
