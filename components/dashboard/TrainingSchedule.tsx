@@ -96,21 +96,9 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
   // Helper function to check Sunday eligibility
   const isSundayEligible = () => {
-    // Only Group Training players
-    if (form_data.programType !== 'group') return false;
-
-    // Extract category number
-    const playerCategory = form_data.playerCategory;
-    if (!playerCategory) return false;
-
-    // Extract numeric part from category (e.g., "M11" -> 11, "M13 Elite" -> 13)
-    const categoryMatch = playerCategory.match(/M(\d+)/);
-    if (!categoryMatch) return false;
-
-    const categoryNum = parseInt(categoryMatch[1], 10);
-
-    // Only M7-M15 are eligible
-    return categoryNum >= 7 && categoryNum <= 15;
+    // All Group Training players are eligible for Sunday ice practice
+    // (included free with subscription)
+    return form_data.programType === 'group';
   };
 
   // Get next 4 weeks of training dates
@@ -349,7 +337,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
       }
     }
 
-    // Add Sunday ice practice sessions ONLY if eligible (M7-M15 Group Training)
+    // Add Sunday ice practice sessions for all Group Training players
     if (isSundayEligible()) {
       for (let week = 0; week < weeksToShow; week++) {
         const date = new Date(today);
