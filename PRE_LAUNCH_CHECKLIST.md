@@ -297,6 +297,35 @@ manually_confirmed_reason?: string;
 
 ---
 
+## 🔍 Codebase Audit (Nov 29, 2024)
+
+### ✅ Fixed in This Session
+
+| Issue | File | Severity | Fix |
+|-------|------|----------|-----|
+| Payment status 'paid' vs 'succeeded' | create-subscription.ts:125 | HIGH | Changed to 'succeeded' |
+| 3x/week price using wrong env var | create-subscription.ts:229 | HIGH | Now uses VITE_STRIPE_PRICE_PRIVATE_3X |
+| JSON parse null safety | AdminDashboard.tsx:398-403 | MEDIUM | Added try-catch |
+| CSV escape fails on 0/false | sunday-export-roster.ts:125 | LOW | Check null/undefined only |
+| Sunday booking status timezone | SchedulePage.tsx:769 | MEDIUM | Use local date format |
+
+### ⚠️ Known Security Issues (Deferred)
+
+| Issue | File | Severity | Notes |
+|-------|------|----------|-------|
+| Hardcoded admin passwords | AdminDashboard.tsx:172-176 | HIGH | Move to Firebase Auth post-launch |
+| Missing admin auth on endpoints | admin-confirm-payment.ts | HIGH | All admin APIs need token verification |
+| No user auth on verify-payment | verify-payment.ts:31-35 | MEDIUM | Add Firebase token check |
+
+### 📝 Performance Issues (Nice-to-Have)
+
+| Issue | File | Notes |
+|-------|------|-------|
+| N+1 queries in availability check | reschedule-semi-private.ts:210-270 | Fetch all bookings once, filter in memory |
+| Inefficient exception lookup | reschedule-group.ts:287-345 | Use upsert instead of select+update |
+
+---
+
 ## Change Log
 
 | Date | Issue | Status | Notes |
@@ -309,3 +338,6 @@ manually_confirmed_reason?: string;
 | 2024-11-28 | #6 Notification System | ✅ FIXED | Full in-app notification system for parent & admin portals |
 | 2024-11-28 | #7 Legacy Field References | ✅ FIXED | Added helper functions, deprecated legacy fields |
 | 2024-11-28 | #9 TypeScript verified Status | ✅ FIXED | Added 'verified' to payment_status type + manual confirmation fields |
+| 2024-11-29 | #10 Blue Badge Highlight | ✅ FIXED | Toned down bright blue to outlined badge |
+| 2024-11-29 | Sunday booking calendar status | ✅ FIXED | Fixed timezone issue with date format |
+| 2024-11-29 | Codebase Audit | ✅ DONE | Fixed payment_status, JSON parse, CSV escape issues |
