@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { notifyNewRegistration } from '../lib/notificationHelper';
 
 // Initialize Stripe with secret key from environment
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -169,6 +170,36 @@ export default async function handler(
           updated_at: new Date().toISOString(),
         })
         .eq('id', registrationId);
+
+      // Notify admin about new registration
+      if (paymentStatus === 'succeeded') {
+        try {
+          // Get registration details for notification
+          const { data: regData } = await supabase
+            .from('registrations')
+            .select('form_data')
+            .eq('id', registrationId)
+            .single();
+
+          if (regData?.form_data) {
+            const formData = regData.form_data;
+            await notifyNewRegistration({
+              playerName: formData.playerFullName || 'Unknown Player',
+              playerCategory: formData.playerCategory || 'Unknown',
+              programType: programType === 'group'
+                ? `Group Training (${frequency})`
+                : programType === 'private'
+                ? `Private Training (${frequency})`
+                : 'Semi-Private Training',
+              parentEmail: formData.parentEmail || customerEmail,
+              registrationId,
+            });
+          }
+        } catch (notifyError) {
+          console.error('Failed to send new registration notification:', notifyError);
+          // Don't fail the whole request for notification errors
+        }
+      }
 
       // For semi-private, add player to unpaired list for matching
       if (programType === 'semi-private' && paymentStatus === 'succeeded') {

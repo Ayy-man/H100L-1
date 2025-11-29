@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { createNotification, notifyAdmins } from '../lib/notificationHelper';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
@@ -95,6 +96,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const canceledBookingCount = canceledBookings?.length || 0;
+
+    // Send notifications about cancellation
+    try {
+      const formData = registration.form_data || {};
+      const playerName = formData.playerFullName || 'Your child';
+      const programType = formData.programType || 'training';
+
+      // Notify parent about cancellation
+      await createNotification({
+        userId: firebaseUid,
+        userType: 'parent',
+        type: 'system',
+        title: 'Subscription Cancelled',
+        message: `Your ${programType} training subscription for ${playerName} has been cancelled. Access will remain active until ${billingPeriodEnd.toLocaleDateString()}.`,
+        priority: 'high',
+        data: {
+          registration_id: registrationId,
+          player_name: playerName,
+          access_until: billingPeriodEnd.toISOString(),
+          canceled_bookings: canceledBookingCount
+        },
+        actionUrl: '/dashboard'
+      });
+
+      // Notify admin about cancellation (churn tracking)
+      await notifyAdmins({
+        type: 'system',
+        title: 'Subscription Cancelled',
+        message: `${playerName} (${programType}) has cancelled their subscription. Contact: ${formData.parentEmail || 'N/A'}`,
+        priority: 'normal',
+        data: {
+          registration_id: registrationId,
+          player_name: playerName,
+          program_type: programType,
+          parent_email: formData.parentEmail
+        }
+      });
+    } catch (notifyError) {
+      console.error('Failed to send cancellation notifications:', notifyError);
+      // Don't fail the whole request for notification errors
+    }
 
     // Return success with cancellation details
     return res.status(200).json({
