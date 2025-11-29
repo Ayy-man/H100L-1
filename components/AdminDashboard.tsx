@@ -168,11 +168,11 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Admin credentials
+  // Admin credentials - loaded from environment variables
   const ADMIN_USERS = [
-    { id: 'loic', name: 'Loïc Pierre-Louis', email: 'loic@sniperzone.ca', password: 'L2025sniper' },
-    { id: 'darick', name: 'Darick Louis-Jean', email: 'darick@sniperzone.ca', password: 'D2025sniper' },
-    { id: 'chris', name: 'Christopher Fanfan', email: 'chris@sniperzone.ca', password: 'C2025sniper' },
+    { id: 'loic', name: 'Loïc Pierre-Louis', email: 'loic@sniperzone.ca', password: import.meta.env.VITE_ADMIN_PASSWORD_LOIC || '' },
+    { id: 'darick', name: 'Darick Louis-Jean', email: 'darick@sniperzone.ca', password: import.meta.env.VITE_ADMIN_PASSWORD_DARICK || '' },
+    { id: 'chris', name: 'Christopher Fanfan', email: 'chris@sniperzone.ca', password: import.meta.env.VITE_ADMIN_PASSWORD_CHRIS || '' },
   ];
 
   // Dashboard tab state
