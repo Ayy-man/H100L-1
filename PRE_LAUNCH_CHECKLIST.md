@@ -214,29 +214,17 @@ Consider moving to environment variable or proper auth system.
 
 ---
 
-### 11. ✅ Sunday Ice Booking Button Missing
-**Severity:** HIGH
-**Status:** FIXED
+### 11. ❌ Sunday Ice Booking Button - Not a Bug
+**Severity:** N/A
+**Status:** RESOLVED (Working as intended)
 
-**Problem:** The "Book Now" button for Sunday ice practice was missing for M18 and Junior players because `isSundayEligible()` incorrectly restricted Sunday ice to only M7-M15 categories.
+**Original Report:** The "Book Now" button for Sunday ice practice was missing for M18/Junior players.
 
-**Root Cause:** The eligibility check in `TrainingSchedule.tsx` used a regex pattern `/M(\d+)/` and checked if the number was between 7-15. This excluded:
-- M18 players (18 > 15)
-- Junior players (doesn't match the M pattern at all)
+**Resolution:** This is **intentional behavior**, not a bug. Sunday ice practice is only available for M7-M15 age categories. M18 and Junior players do not have access to Sunday ice sessions.
 
-**Files Fixed:**
-- `components/dashboard/TrainingSchedule.tsx` - Simplified `isSundayEligible()` to allow ALL group training players
-
-**Fix Applied:**
-```typescript
-// Before (broken):
-const categoryMatch = playerCategory.match(/M(\d+)/);
-const categoryNum = parseInt(categoryMatch[1], 10);
-return categoryNum >= 7 && categoryNum <= 15;
-
-// After (fixed):
-return form_data.programType === 'group';
-```
+**Eligibility Rules:**
+- M9, M11, M13, M15 → Eligible for Sunday ice
+- M18, Junior → NOT eligible for Sunday ice
 
 ---
 
@@ -302,8 +290,10 @@ manually_confirmed_reason?: string;
 |----------|-------|-------|---------|
 | 🔴 Critical | 3 | 3 | 0 |
 | 🟡 Moderate | 3 | 3 | 0 |
-| 🟢 Minor | 5 | 4 | 1 |
-| **Total** | **11** | **10** | **1** |
+| 🟢 Minor | 4 | 3 | 1 |
+| **Total** | **10** | **9** | **1** |
+
+*Note: Issue #11 was not a bug - Sunday ice is intentionally restricted to M7-M15 categories.*
 
 ---
 
