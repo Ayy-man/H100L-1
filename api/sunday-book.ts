@@ -93,6 +93,16 @@ export default async function handler(
       });
     }
 
+    // Check if data is null/undefined (shouldn't happen but handle gracefully)
+    if (!data) {
+      console.error('Database returned null data without error');
+      return res.status(500).json({
+        success: false,
+        error: 'Unexpected database response',
+        code: 'NULL_RESPONSE',
+      });
+    }
+
     // The database function returns a JSON object with success/error
     if (!data.success) {
       // Map error codes to appropriate HTTP status codes
