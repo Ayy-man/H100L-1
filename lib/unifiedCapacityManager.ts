@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 
 /**
  * Unified Capacity Manager
@@ -80,6 +80,7 @@ export const checkSlotAvailability = async (
       maxCapacity = MAX_GROUP_CAPACITY;
 
       // Query only group bookings on this day (time is static, doesn't need to be queried)
+      const supabase = getSupabase();
       const { data: groupBookings, error } = await supabase
         .from('registrations')
         .select('form_data')
@@ -103,6 +104,7 @@ export const checkSlotAvailability = async (
 
       // Query both private AND semi-private on this day
       // Need to check if they selected this specific time
+      const supabase = getSupabase();
       const { data: bookings, error } = await supabase
         .from('registrations')
         .select('form_data')

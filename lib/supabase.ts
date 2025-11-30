@@ -63,6 +63,12 @@ export const getSupabase = (): SupabaseClient => {
 // This will throw if accessed without proper env vars, but won't crash at import time
 export const supabase = new Proxy({} as SupabaseClient, {
   get(target, prop) {
-    return getSupabase()[prop as keyof SupabaseClient];
+    const client = getSupabase();
+    const value = client[prop as keyof SupabaseClient];
+    // Bind methods to the client instance to preserve 'this' context
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
   }
 });
