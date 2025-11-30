@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Dual-environment Supabase client
@@ -8,16 +8,23 @@ import { createClient } from '@supabase/supabase-js';
  * - Serverless (Vercel API): Uses process.env.SUPABASE_* or process.env.VITE_SUPABASE_*
  */
 
+let _supabase: SupabaseClient | null = null;
+
 // Detect environment and get credentials accordingly
 const getSupabaseCredentials = () => {
   // Check if we're in a browser environment (Vite) with actual values
-  if (typeof import.meta !== 'undefined' &&
-      import.meta.env &&
-      import.meta.env.VITE_SUPABASE_URL) {
-    return {
-      url: import.meta.env.VITE_SUPABASE_URL,
-      key: import.meta.env.VITE_SUPABASE_ANON_KEY
-    };
+  // Use try-catch because import.meta might not be defined in all environments
+  try {
+    if (typeof import.meta !== 'undefined' &&
+        import.meta.env &&
+        import.meta.env.VITE_SUPABASE_URL) {
+      return {
+        url: import.meta.env.VITE_SUPABASE_URL,
+        key: import.meta.env.VITE_SUPABASE_ANON_KEY
+      };
+    }
+  } catch (e) {
+    // import.meta not available, continue to process.env
   }
 
   // Otherwise, we're in a Node.js environment (Vercel serverless function)
@@ -33,21 +40,29 @@ const getSupabaseCredentials = () => {
   return { url: undefined, key: undefined };
 };
 
-const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseCredentials();
+/**
+ * Get or create the Supabase client
+ * Lazily initialized to avoid crashes at import time
+ */
+export const getSupabase = (): SupabaseClient => {
+  if (!_supabase) {
+    const { url, key } = getSupabaseCredentials();
 
-// Validate credentials
-if (!supabaseUrl || !supabaseAnonKey) {
-  const env = typeof import.meta !== 'undefined' ? 'browser (Vite)' : 'serverless (Node.js)';
-  console.error(`⚠️ SUPABASE ERROR: Missing credentials in ${env} environment`);
-  console.error('Required variables:');
-  if (env === 'browser (Vite)') {
-    console.error('  - VITE_SUPABASE_URL');
-    console.error('  - VITE_SUPABASE_ANON_KEY');
-  } else {
-    console.error('  - SUPABASE_URL or VITE_SUPABASE_URL');
-    console.error('  - SUPABASE_ANON_KEY or VITE_SUPABASE_ANON_KEY');
+    if (!url || !key) {
+      console.error('⚠️ SUPABASE ERROR: Missing credentials');
+      console.error('Required: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+      throw new Error('Supabase URL and Anon Key are required.');
+    }
+
+    _supabase = createClient(url, key);
   }
-  throw new Error('Supabase URL and Anon Key are required.');
-}
+  return _supabase;
+};
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// For backward compatibility - lazy initialization
+// This will throw if accessed without proper env vars, but won't crash at import time
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    return getSupabase()[prop as keyof SupabaseClient];
+  }
+});
