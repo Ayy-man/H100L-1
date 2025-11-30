@@ -34,7 +34,7 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
 import { getSemiPrivateTimeSlot } from '@/lib/utils';
-import { findSlotForCategory } from '@/lib/timeSlots';
+import { findSlotForCategory, findSundaySlotForCategory } from '@/lib/timeSlots';
 import { PlayerCategory } from '@/types';
 
 /**
@@ -473,20 +473,29 @@ const SchedulePage: React.FC = () => {
       }
     }
 
-    // Add all Sundays for real ice (Group Training only)
+    // Add all Sundays for real ice (Group Training only, M7-M15)
     if (form_data.programType === 'group') {
-      let currentDate = new Date(firstDay);
-      while (currentDate.getDay() !== 0 && currentDate <= lastDay) {
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
+      // Get the Sunday time slot based on player's category
+      const sundaySlot = form_data.playerCategory
+        ? findSundaySlotForCategory(form_data.playerCategory as PlayerCategory)
+        : null;
 
-      while (currentDate <= lastDay) {
-        sessions.push({
-          date: new Date(currentDate),
-          day: 'Sunday',
-          type: 'real-ice',
-        });
-        currentDate.setDate(currentDate.getDate() + 7);
+      // Only add Sunday sessions if player is eligible (M7-M15)
+      if (sundaySlot) {
+        let currentDate = new Date(firstDay);
+        while (currentDate.getDay() !== 0 && currentDate <= lastDay) {
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        while (currentDate <= lastDay) {
+          sessions.push({
+            date: new Date(currentDate),
+            day: 'Sunday',
+            type: 'real-ice',
+            time: sundaySlot.time,
+          });
+          currentDate.setDate(currentDate.getDate() + 7);
+        }
       }
     }
 
@@ -845,6 +854,11 @@ const SchedulePage: React.FC = () => {
                                             </>
                                           )}
                                         </div>
+                                        {session.time && (
+                                          <div className="text-[10px] text-muted-foreground pl-1">
+                                            {session.time}
+                                          </div>
+                                        )}
                                         {!sundayStatus.booked && sundayStatus.availableSpots > 0 && (
                                           <div className="text-[10px] text-muted-foreground pl-1">
                                             {sundayStatus.availableSpots} spot{sundayStatus.availableSpots !== 1 ? 's' : ''} left
@@ -854,7 +868,7 @@ const SchedulePage: React.FC = () => {
                                     ) : (
                                       // Loading or no status available
                                       <div className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                                        🧊 Ice
+                                        🧊 Ice {session.time && <span className="text-[10px]">({session.time})</span>}
                                       </div>
                                     )}
                                   </div>
