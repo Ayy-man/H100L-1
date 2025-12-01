@@ -211,19 +211,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         AVAILABLE_DAYS.map(async (day) => {
           const daySlots = await Promise.all(
             AVAILABLE_TIME_SLOTS.map(async (time) => {
-              // Check if this specific slot is booked
+              // Check if this specific slot is booked - fetch all and filter in JS
               const { data: bookings } = await supabase
                 .from('registrations')
                 .select('form_data, id')
-                .in('payment_status', ['succeeded', 'verified'])
-                .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
+                .in('payment_status', ['succeeded', 'verified']);
 
               const bookedCount = bookings?.filter(b => {
                 const isPrivate = b.form_data?.programType === 'private';
                 const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
                 if (isPrivate) {
-                  return b.form_data?.privateSelectedDays?.includes(day) &&
+                  const selectedDays = b.form_data?.privateSelectedDays || [];
+                  return selectedDays.map((d: string) => d.toLowerCase()).includes(day.toLowerCase()) &&
                          b.form_data?.privateTimeSlot === time;
                 }
 
@@ -232,7 +232,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   const semiTime = b.form_data?.semiPrivateTimeSlot ||
                     (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
                   const semiDays = b.form_data?.semiPrivateAvailability || [];
-                  return semiDays.includes(day) && semiTime === time;
+                  return semiDays.map((d: string) => d.toLowerCase()).includes(day.toLowerCase()) && semiTime === time;
                 }
 
                 return false;
