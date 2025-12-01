@@ -308,7 +308,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
         if (isPrivate) {
-          return b.form_data?.privateSelectedDays?.includes(newDay.toLowerCase()) &&
+          const selectedDays = b.form_data?.privateSelectedDays || [];
+          return selectedDays.map((d: string) => d.toLowerCase()).includes(newDay.toLowerCase()) &&
                  b.form_data?.privateTimeSlot === newTime;
         }
 
@@ -317,7 +318,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const semiTime = b.form_data?.semiPrivateTimeSlot ||
             (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
           const semiDays = b.form_data?.semiPrivateAvailability || [];
-          return semiDays.includes(newDay.toLowerCase()) && semiTime === newTime;
+          return semiDays.map((d: string) => d.toLowerCase()).includes(newDay.toLowerCase()) && semiTime === newTime;
         }
 
         return false;
@@ -375,7 +376,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
         if (isPrivate) {
-          return b.form_data?.privateSelectedDays?.includes(newDay.toLowerCase()) &&
+          const selectedDays = b.form_data?.privateSelectedDays || [];
+          return selectedDays.map((d: string) => d.toLowerCase()).includes(newDay.toLowerCase()) &&
                  b.form_data?.privateTimeSlot === newTime;
         }
 
@@ -384,7 +386,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const semiTime = b.form_data?.semiPrivateTimeSlot ||
             (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
           const semiDays = b.form_data?.semiPrivateAvailability || [];
-          return semiDays.includes(newDay.toLowerCase()) && semiTime === newTime;
+          return semiDays.map((d: string) => d.toLowerCase()).includes(newDay.toLowerCase()) && semiTime === newTime;
         }
 
         return false;

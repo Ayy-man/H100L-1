@@ -131,42 +131,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      const availabilityResults = await Promise.all(
-        newDays.map(async (day) => {
-          // Count current registrations for this day
-          // FIXED: Use 'succeeded' and 'verified' instead of 'active'
-          const { data: bookings, error } = await supabase
-            .from('registrations')
-            .select('form_data, id')
-            .in('payment_status', ['succeeded', 'verified'])
-            .contains('form_data->groupSelectedDays', [day.toLowerCase()]);
+      // Fetch ALL group registrations once (more efficient)
+      const { data: allBookings, error: fetchError } = await supabase
+        .from('registrations')
+        .select('form_data, id')
+        .in('payment_status', ['succeeded', 'verified']);
 
-          if (error) {
-            console.error('Error checking capacity:', error);
-            return {
-              day,
-              available: false,
-              spotsRemaining: 0,
-              totalCapacity: 6,
-              error: 'Failed to check capacity'
-            };
-          }
+      if (fetchError) {
+        console.error('Error fetching bookings:', fetchError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to check availability'
+        });
+      }
 
-          const currentBookings = bookings?.filter(
-            b => b.form_data?.programType === 'group'
-          ).length || 0;
+      // Filter to group registrations only
+      const groupBookings = allBookings?.filter(b => b.form_data?.programType === 'group') || [];
 
-          const spotsRemaining = Math.max(0, 6 - currentBookings);
+      const availabilityResults = newDays.map(day => {
+        const dayLower = day.toLowerCase();
 
-          return {
-            day,
-            available: spotsRemaining > 0,
-            spotsRemaining,
-            totalCapacity: 6,
-            isFull: spotsRemaining === 0
-          };
-        })
-      );
+        // Count registrations for this specific day (filter in JS)
+        const currentBookings = groupBookings.filter(b => {
+          const selectedDays = b.form_data?.groupSelectedDays || [];
+          return selectedDays.map((d: string) => d.toLowerCase()).includes(dayLower);
+        }).length;
+
+        const spotsRemaining = Math.max(0, 6 - currentBookings);
+
+        return {
+          day,
+          available: spotsRemaining > 0,
+          spotsRemaining,
+          totalCapacity: 6,
+          isFull: spotsRemaining === 0
+        };
+      });
 
       return res.status(200).json({
         success: true,
@@ -192,27 +192,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // Check capacity for all new days
-      // FIXED: Use 'succeeded' and 'verified' instead of 'active'
-      const capacityChecks = await Promise.all(
-        newDays.map(async (day) => {
-          const { data: bookings } = await supabase
-            .from('registrations')
-            .select('form_data, id')
-            .in('payment_status', ['succeeded', 'verified'])
-            .contains('form_data->groupSelectedDays', [day.toLowerCase()]);
+      // Check capacity for all new days - fetch all once and filter in JS
+      const { data: allCapacityBookings } = await supabase
+        .from('registrations')
+        .select('form_data, id')
+        .in('payment_status', ['succeeded', 'verified']);
 
-          const currentBookings = bookings?.filter(
-            b => b.form_data?.programType === 'group'
-          ).length || 0;
+      const groupCapacityBookings = allCapacityBookings?.filter(b => b.form_data?.programType === 'group') || [];
 
-          return {
-            day,
-            available: currentBookings < 6,
-            spotsRemaining: Math.max(0, 6 - currentBookings)
-          };
-        })
-      );
+      const capacityChecks = newDays.map(day => {
+        const dayLower = day.toLowerCase();
+
+        // Count registrations for this day, excluding current registration
+        const currentBookings = groupCapacityBookings.filter(b => {
+          if (b.id === registrationId) return false; // Exclude current registration
+          const selectedDays = b.form_data?.groupSelectedDays || [];
+          return selectedDays.map((d: string) => d.toLowerCase()).includes(dayLower);
+        }).length;
+
+        return {
+          day,
+          available: currentBookings < 6,
+          spotsRemaining: Math.max(0, 6 - currentBookings)
+        };
+      });
 
       // Check if any day is full
       const fullDays = capacityChecks.filter(c => !c.available);
