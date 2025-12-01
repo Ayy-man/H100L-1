@@ -206,12 +206,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // Check if slot is available
+      // Check if slot is available - fetch all and filter in JS
       const { data: bookings, error } = await supabase
         .from('registrations')
         .select('form_data, id')
-        .in('payment_status', ['succeeded', 'verified'])
-        .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
+        .in('payment_status', ['succeeded', 'verified']);
 
       if (error) {
         console.error('Error checking availability:', error);
@@ -229,12 +228,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
         if (isPrivate) {
-          return b.form_data?.privateSelectedDays?.includes(newDay.toLowerCase()) &&
+          const selectedDays = b.form_data?.privateSelectedDays || [];
+          return selectedDays.map((d: string) => d.toLowerCase()).includes(newDay.toLowerCase()) &&
                  b.form_data?.privateTimeSlot === newTime;
         }
 
         if (isSemiPrivate) {
-          return b.form_data?.semiPrivateAvailability?.includes(newDay.toLowerCase()) &&
+          const availDays = b.form_data?.semiPrivateAvailability || [];
+          return availDays.map((d: string) => d.toLowerCase()).includes(newDay.toLowerCase()) &&
                  b.form_data?.semiPrivateTimeSlot === newTime;
         }
 
@@ -279,13 +280,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // Check if slot is available
+      // Check if slot is available - fetch all and filter in JS
       const { data: bookings } = await supabase
         .from('registrations')
         .select('form_data, id')
-        .in('payment_status', ['succeeded', 'verified'])
-        .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
+        .in('payment_status', ['succeeded', 'verified']);
 
+      // Check all new days for conflicts
       const isBooked = bookings?.some(b => {
         // Exclude current registration from conflict check
         if (b.id === registrationId) return false;
@@ -293,14 +294,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const isPrivate = b.form_data?.programType === 'private';
         const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
-        if (isPrivate) {
-          return b.form_data?.privateSelectedDays?.includes(newDay.toLowerCase()) &&
-                 b.form_data?.privateTimeSlot === newTime;
-        }
+        // Check if any of the new days conflict
+        for (const day of daysToSet) {
+          if (isPrivate) {
+            const selectedDays = b.form_data?.privateSelectedDays || [];
+            if (selectedDays.map((d: string) => d.toLowerCase()).includes(day.toLowerCase()) &&
+                b.form_data?.privateTimeSlot === newTime) {
+              return true;
+            }
+          }
 
-        if (isSemiPrivate) {
-          return b.form_data?.semiPrivateAvailability?.includes(newDay.toLowerCase()) &&
-                 b.form_data?.semiPrivateTimeSlot === newTime;
+          if (isSemiPrivate) {
+            const availDays = b.form_data?.semiPrivateAvailability || [];
+            if (availDays.map((d: string) => d.toLowerCase()).includes(day.toLowerCase()) &&
+                b.form_data?.semiPrivateTimeSlot === newTime) {
+              return true;
+            }
+          }
         }
 
         return false;
