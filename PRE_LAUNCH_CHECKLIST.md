@@ -341,3 +341,8 @@ manually_confirmed_reason?: string;
 | 2024-11-29 | #10 Blue Badge Highlight | ✅ FIXED | Toned down bright blue to outlined badge |
 | 2024-11-29 | Sunday booking calendar status | ✅ FIXED | Fixed timezone issue with date format |
 | 2024-11-29 | Codebase Audit | ✅ DONE | Fixed payment_status, JSON parse, CSV escape issues |
+| 2024-12-01 | check-availability API 500 | ✅ FIXED | Removed invalid JSONB path syntax in Supabase queries |
+| 2024-12-01 | Private reschedule 500 error | ✅ FIXED | Fixed .or() JSONB query syntax, filter in JS |
+| 2024-12-01 | 2x/week reschedule 1 slot only | ✅ FIXED | Use frequency field properly, pass days array to modal |
+| 2024-12-01 | Semi-private reschedule syntax | ✅ FIXED | Fixed JSONB query syntax in availability check |
+| 2024-12-01 | Homepage icons | ✅ ADDED | Hockey puck, coach, skates icons on program cards |
