@@ -13,6 +13,7 @@ interface ReschedulePrivateModalProps {
     days?: string[]; // Support for multiple days (2x/week)
     timeSlot: string;
     playerCategory: string;
+    frequency?: string; // '1x' or '2x'
   };
   onSuccess: () => void;
 }
@@ -119,15 +120,17 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
 
         // Store current schedule from API
         const apiDays = data.currentSchedule?.days || [];
-        setCurrentDays(apiDays);
-        setCurrentTimeSlot(data.currentSchedule?.timeSlot || null);
+        setCurrentDays(apiDays.length > 0 ? apiDays : (currentSchedule.days || []));
+        setCurrentTimeSlot(data.currentSchedule?.timeSlot || currentSchedule.timeSlot || null);
 
-        // Determine frequency from number of days (most reliable)
-        // Don't trust the frequency field - infer from actual days count
-        const freq = apiDays.length >= 2 ? '2x' : '1x';
+        // Determine frequency: prefer API response, fall back to props, then infer from days
+        const apiFreq = data.currentSchedule?.frequency;
+        const propsFreq = currentSchedule.frequency;
+        const inferredFreq = apiDays.length >= 2 ? '2x' : '1x';
+        const freq = apiFreq || propsFreq || inferredFreq;
         setPrivateFrequency(freq);
 
-        console.log('ReschedulePrivateModal: Current days:', apiDays, 'Time:', data.currentSchedule?.timeSlot, 'Frequency:', freq);
+        console.log('ReschedulePrivateModal: Current days:', apiDays, 'Time:', data.currentSchedule?.timeSlot, 'API Freq:', apiFreq, 'Props Freq:', propsFreq, 'Final:', freq);
       } else {
         setError(data.error || 'Failed to load availability');
       }

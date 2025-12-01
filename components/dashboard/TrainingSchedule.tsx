@@ -889,8 +889,10 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         firebaseUid={firebase_uid}
         currentSchedule={{
           day: form_data.privateSelectedDays?.[0] || '',
+          days: form_data.privateSelectedDays || [],
           timeSlot: form_data.privateTimeSlot || '',
-          playerCategory: form_data.playerCategory || ''
+          playerCategory: form_data.playerCategory || '',
+          frequency: form_data.privateFrequency || '1x'
         }}
         onSuccess={handleRescheduleSuccess}
       />
