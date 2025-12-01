@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifySundayBooked } from '../lib/notificationHelper';
 
 /**
  * Sunday Book API Endpoint
@@ -24,11 +23,13 @@ import { notifySundayBooked } from '../lib/notificationHelper';
  *   - code: error code (if failed)
  */
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Initialize Supabase client lazily to avoid crashes if env vars are missing
+const getSupabase = () => {
+  return createClient(
+    process.env.VITE_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 export default async function handler(
   req: VercelRequest,
@@ -40,6 +41,7 @@ export default async function handler(
   }
 
   try {
+    const supabase = getSupabase();
     const { slotId, registrationId, firebaseUid } = req.body;
 
     // Validate required fields
@@ -93,6 +95,16 @@ export default async function handler(
       });
     }
 
+    // Check if data is null/undefined (shouldn't happen but handle gracefully)
+    if (!data) {
+      console.error('Database returned null data without error');
+      return res.status(500).json({
+        success: false,
+        error: 'Unexpected database response',
+        code: 'NULL_RESPONSE',
+      });
+    }
+
     // The database function returns a JSON object with success/error
     if (!data.success) {
       // Map error codes to appropriate HTTP status codes
@@ -104,6 +116,7 @@ export default async function handler(
         INVALID_PROGRAM_TYPE: 403,
         PAYMENT_REQUIRED: 402,
         INELIGIBLE_CATEGORY: 403,
+        CATEGORY_MISMATCH: 403,
         DUPLICATE_BOOKING: 409,
         DATABASE_ERROR: 500,
       };
@@ -112,7 +125,7 @@ export default async function handler(
       return res.status(statusCode).json(data);
     }
 
-    // Send notification on successful booking
+    // Send notification on successful booking (inline to avoid import issues)
     try {
       // Fetch registration details for notification
       const { data: registration } = await supabase
@@ -122,12 +135,21 @@ export default async function handler(
         .single();
 
       if (registration) {
-        await notifySundayBooked({
-          parentUserId: firebaseUid,
-          playerName: registration.form_data?.playerFullName || 'Player',
-          practiceDate: data.slot_date,
-          timeSlot: data.time_range,
-          registrationId
+        // Create notification directly instead of using helper
+        await supabase.from('notifications').insert({
+          user_id: firebaseUid,
+          user_type: 'parent',
+          type: 'sunday_booking',
+          title: 'Sunday Practice Booked',
+          message: `${registration.form_data?.playerFullName || 'Player'} is booked for Sunday ice practice on ${data.slot_date} at ${data.time_range}.`,
+          priority: 'normal',
+          data: {
+            registration_id: registrationId,
+            player_name: registration.form_data?.playerFullName,
+            practice_date: data.slot_date,
+            time_slot: data.time_range
+          },
+          action_url: '/schedule'
         });
       }
     } catch (notificationError) {

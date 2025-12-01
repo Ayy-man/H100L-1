@@ -230,7 +230,7 @@ const Login: React.FC = () => {
               <div className="mt-6 text-center text-sm">
                 <span className="text-muted-foreground">Don't have an account? </span>
                 <a
-                  href="/"
+                  href="/register"
                   className="text-primary hover:underline font-medium"
                 >
                   Register now

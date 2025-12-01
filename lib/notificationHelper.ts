@@ -30,30 +30,37 @@ interface CreateNotificationParams {
  * Create a single notification
  */
 export async function createNotification(params: CreateNotificationParams) {
-  const supabase = getSupabase();
+  try {
+    const supabase = getSupabase();
 
-  const { data, error } = await supabase
-    .from('notifications')
-    .insert({
-      user_id: params.userId,
-      user_type: params.userType,
-      type: params.type,
-      title: params.title,
-      message: params.message,
-      priority: params.priority || 'normal',
-      data: params.data || null,
-      action_url: params.actionUrl || null,
-      expires_at: params.expiresAt || null
-    })
-    .select()
-    .single();
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: params.userId,
+        user_type: params.userType,
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        priority: params.priority || 'normal',
+        data: params.data || null,
+        action_url: params.actionUrl || null,
+        expires_at: params.expiresAt || null
+      })
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error creating notification:', error);
-    throw error;
+    if (error) {
+      console.error('Error creating notification:', error);
+      // Don't throw - just return null so callers don't crash
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Exception creating notification:', err);
+    // Don't throw - just return null so callers don't crash
+    return null;
   }
-
-  return data;
 }
 
 /**

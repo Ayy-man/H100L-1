@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { RescheduleGroupModal } from './RescheduleGroupModal';
 import { ReschedulePrivateModal } from './ReschedulePrivateModal';
 import { RescheduleSemiPrivateModal } from './RescheduleSemiPrivateModal';
-import { findSlotForCategory } from '@/lib/timeSlots';
+import { findSlotForCategory, findSundaySlotForCategory } from '@/lib/timeSlots';
 import { PlayerCategory } from '@/types';
 
 interface TrainingScheduleProps {
@@ -351,6 +351,11 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
     // Add Sunday ice practice sessions ONLY if eligible (M7-M15 Group Training)
     if (isSundayEligible()) {
+      // Get the Sunday time slot based on player's category
+      const sundaySlot = form_data.playerCategory
+        ? findSundaySlotForCategory(form_data.playerCategory as PlayerCategory)
+        : null;
+
       for (let week = 0; week < weeksToShow; week++) {
         const date = new Date(today);
         const daysUntilSunday = (7 - today.getDay() + 7) % 7 || 7;
@@ -361,6 +366,7 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
             date,
             day: 'Sunday',
             type: 'real-ice',
+            time: sundaySlot?.time,
           });
         }
       }
