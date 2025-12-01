@@ -79,21 +79,24 @@ export const checkSlotAvailability = async (
       programTypes.push('group');
       maxCapacity = MAX_GROUP_CAPACITY;
 
-      // Query only group bookings on this day (time is static, doesn't need to be queried)
+      // Query all active group registrations and filter in JS
       const supabase = getSupabase();
       const { data: groupBookings, error } = await supabase
         .from('registrations')
         .select('form_data')
-        .in('payment_status', ['succeeded', 'verified'])
-        .contains('form_data->groupSelectedDays', [day.toLowerCase()]);
+        .in('payment_status', ['succeeded', 'verified']);
 
       if (error) {
         console.error('Error checking group availability:', error);
         return null;
       }
 
-      // Filter by program type
-      bookedSpots = groupBookings?.filter(b => b.form_data?.programType === 'group').length || 0;
+      // Filter by program type AND selected day
+      bookedSpots = groupBookings?.filter(b => {
+        if (b.form_data?.programType !== 'group') return false;
+        const selectedDays = b.form_data?.groupSelectedDays || [];
+        return selectedDays.map((d: string) => d.toLowerCase()).includes(day.toLowerCase());
+      }).length || 0;
     }
 
     // PRIVATE/SEMI-PRIVATE POOL (flexible times on Mon/Wed/Thu)
@@ -102,14 +105,12 @@ export const checkSlotAvailability = async (
       programTypes.push('private', 'semi-private');
       maxCapacity = MAX_PRIVATE_CAPACITY;
 
-      // Query both private AND semi-private on this day
-      // Need to check if they selected this specific time
+      // Query all active registrations and filter in JS for private/semi-private
       const supabase = getSupabase();
       const { data: bookings, error } = await supabase
         .from('registrations')
         .select('form_data')
-        .in('payment_status', ['succeeded', 'verified'])
-        .or(`form_data->programType.eq.private,form_data->programType.eq.semi-private`);
+        .in('payment_status', ['succeeded', 'verified']);
 
       if (error) {
         console.error('Error checking private/semi-private availability:', error);
@@ -124,13 +125,15 @@ export const checkSlotAvailability = async (
         const isSemiPrivate = b.form_data?.programType === 'semi-private';
 
         if (isPrivate) {
-          return b.form_data?.privateSelectedDays?.includes(day) &&
+          const selectedDays = b.form_data?.privateSelectedDays || [];
+          return selectedDays.map((d: string) => d.toLowerCase()).includes(day.toLowerCase()) &&
                  b.form_data?.privateTimeSlot === time;
         }
 
         if (isSemiPrivate) {
-          return b.form_data?.semiPrivateAvailability?.includes(day) &&
-                 b.form_data?.semiPrivateTimeSlot === time; // Assuming this field exists
+          const availableDays = b.form_data?.semiPrivateAvailability || [];
+          return availableDays.map((d: string) => d.toLowerCase()).includes(day.toLowerCase()) &&
+                 b.form_data?.semiPrivateTimeSlot === time;
         }
 
         return false;
