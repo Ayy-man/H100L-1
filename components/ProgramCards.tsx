@@ -16,6 +16,7 @@ interface ProgramCard {
   period: { en: string; fr: string };
   features: { en: string[]; fr: string[] };
   popular?: boolean;
+  icon: string;
 }
 
 const programs: ProgramCard[] = [
@@ -26,6 +27,7 @@ const programs: ProgramCard[] = [
     title: { en: 'Group Training - 1x/week', fr: 'Entraînement de Groupe - 1x/semaine' },
     price: '$249.99',
     period: { en: '/month', fr: '/mois' },
+    icon: '/images/hockey-puck-icon.png',
     features: {
       en: [
         'Weekly group session',
@@ -51,6 +53,7 @@ const programs: ProgramCard[] = [
     price: '$399.99',
     period: { en: '/month', fr: '/mois' },
     popular: true,
+    icon: '/images/hockey-puck-icon.png',
     features: {
       en: [
         'Twice weekly sessions (Tue & Fri)',
@@ -77,6 +80,7 @@ const programs: ProgramCard[] = [
     title: { en: 'Private Training - 1x/week', fr: 'Entraînement Privé - 1x/semaine' },
     price: '$499.99',
     period: { en: '/month', fr: '/mois' },
+    icon: '/images/coach-icon.png',
     features: {
       en: [
         'One-on-one coaching',
@@ -101,6 +105,7 @@ const programs: ProgramCard[] = [
     title: { en: 'Private Training - 2x/week', fr: 'Entraînement Privé - 2x/semaine' },
     price: '$799.99',
     period: { en: '/month', fr: '/mois' },
+    icon: '/images/coach-icon.png',
     features: {
       en: [
         'Twice weekly one-on-one',
@@ -127,6 +132,7 @@ const programs: ProgramCard[] = [
     title: { en: 'Semi-Private Training', fr: 'Entraînement Semi-Privé' },
     price: '$349.99',
     period: { en: '/month', fr: '/mois' },
+    icon: '/images/hockey-skates-icon.png',
     features: {
       en: [
         '1 session per week',
@@ -204,9 +210,16 @@ const ProgramCards: React.FC<ProgramCardsProps> = ({ language, onProgramSelect }
               )}
 
               <div className="flex-grow">
-                <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-4">
-                  {program.title[lang]}
-                </h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <img
+                    src={program.icon}
+                    alt=""
+                    className="w-12 h-12 object-contain"
+                  />
+                  <h3 className="text-xl font-bold text-white uppercase tracking-wider">
+                    {program.title[lang]}
+                  </h3>
+                </div>
 
                 <div className="mb-6">
                   <span className="text-4xl font-black text-white">{program.price}</span>
