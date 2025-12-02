@@ -124,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (action === 'check_availability') {
       // Check availability for new days
-      if (!newDays || newDays.length === 0) {
+      if (!newDays || !Array.isArray(newDays) || newDays.length === 0) {
         return res.status(400).json({
           success: false,
           error: 'Please provide new days to check availability'
@@ -145,16 +145,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // Filter to group registrations only
-      const groupBookings = allBookings?.filter(b => b.form_data?.programType === 'group') || [];
+      // Filter to group registrations only (with null safety)
+      const groupBookings = (allBookings || []).filter(b => b.form_data?.programType === 'group');
 
       const availabilityResults = newDays.map(day => {
-        const dayLower = day.toLowerCase();
+        const dayLower = (day || '').toLowerCase();
 
         // Count registrations for this specific day (filter in JS)
         const currentBookings = groupBookings.filter(b => {
           const selectedDays = b.form_data?.groupSelectedDays || [];
-          return selectedDays.map((d: string) => d.toLowerCase()).includes(dayLower);
+          if (!Array.isArray(selectedDays)) return false;
+          return selectedDays.map((d: string) => (d || '').toLowerCase()).includes(dayLower);
         }).length;
 
         const spotsRemaining = Math.max(0, 6 - currentBookings);
@@ -176,7 +177,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (action === 'reschedule') {
       // Validate inputs
-      if (!changeType || !newDays || newDays.length === 0) {
+      if (!changeType || !newDays || !Array.isArray(newDays) || newDays.length === 0) {
         return res.status(400).json({
           success: false,
           error: 'Missing required fields: changeType, newDays'
@@ -198,16 +199,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .select('form_data, id')
         .in('payment_status', ['succeeded', 'verified']);
 
-      const groupCapacityBookings = allCapacityBookings?.filter(b => b.form_data?.programType === 'group') || [];
+      const groupCapacityBookings = (allCapacityBookings || []).filter(b => b.form_data?.programType === 'group');
 
       const capacityChecks = newDays.map(day => {
-        const dayLower = day.toLowerCase();
+        const dayLower = (day || '').toLowerCase();
 
         // Count registrations for this day, excluding current registration
         const currentBookings = groupCapacityBookings.filter(b => {
           if (b.id === registrationId) return false; // Exclude current registration
           const selectedDays = b.form_data?.groupSelectedDays || [];
-          return selectedDays.map((d: string) => d.toLowerCase()).includes(dayLower);
+          if (!Array.isArray(selectedDays)) return false;
+          return selectedDays.map((d: string) => (d || '').toLowerCase()).includes(dayLower);
         }).length;
 
         return {
