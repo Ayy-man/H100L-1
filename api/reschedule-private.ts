@@ -23,6 +23,7 @@ async function notifyScheduleChanged(params: {
     const { parentUserId, playerName, changeType, originalSchedule, newSchedule, registrationId } = params;
     const isPermanent = changeType === 'permanent';
 
+    // Notify parent
     const { error } = await supabase
       .from('notifications')
       .insert({
@@ -45,7 +46,34 @@ async function notifyScheduleChanged(params: {
       });
 
     if (error) {
-      console.error('Error creating notification:', error);
+      console.error('Error creating parent notification:', error);
+    }
+
+    // Notify admin about parent's schedule change
+    const { error: adminError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: 'admin',
+        user_type: 'admin',
+        type: 'schedule_changed',
+        title: 'Parent Rescheduled Training',
+        message: isPermanent
+          ? `${playerName} (Private) permanently changed schedule from ${originalSchedule} to ${newSchedule}.`
+          : `${playerName} (Private) made a one-time schedule change from ${originalSchedule} to ${newSchedule}.`,
+        priority: 'normal',
+        data: {
+          registration_id: registrationId,
+          player_name: playerName,
+          change_type: changeType,
+          program_type: 'private',
+          original_schedule: originalSchedule,
+          new_schedule: newSchedule
+        },
+        action_url: '/admin?tab=schedule'
+      });
+
+    if (adminError) {
+      console.error('Error creating admin notification:', adminError);
     }
   } catch (err) {
     console.error('Exception creating notification:', err);

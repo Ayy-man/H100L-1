@@ -131,6 +131,7 @@ async function notifyScheduleChanged(params: {
   const { parentUserId, playerName, changeType, originalSchedule, newSchedule, registrationId } = params;
   const isPermanent = changeType === 'permanent';
 
+  // Notify parent
   await createNotification({
     userId: parentUserId,
     userType: 'parent',
@@ -148,6 +149,25 @@ async function notifyScheduleChanged(params: {
       new_schedule: newSchedule
     },
     actionUrl: '/schedule'
+  });
+
+  // Notify admin about parent's schedule change
+  await notifyAdmins({
+    type: 'schedule_changed',
+    title: 'Parent Rescheduled Training',
+    message: isPermanent
+      ? `${playerName} (Semi-Private) permanently changed schedule from ${originalSchedule} to ${newSchedule}.`
+      : `${playerName} (Semi-Private) made a one-time schedule change from ${originalSchedule} to ${newSchedule}.`,
+    priority: 'normal',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      change_type: changeType,
+      program_type: 'semi-private',
+      original_schedule: originalSchedule,
+      new_schedule: newSchedule
+    },
+    actionUrl: '/admin?tab=schedule'
   });
 }
 
