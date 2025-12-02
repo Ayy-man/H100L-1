@@ -1,6 +1,51 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifySundayCancelled } from './_lib/notificationHelper';
+
+console.log('[sunday-cancel] Module loaded');
+
+// ============================================================
+// INLINED NOTIFICATION HELPER (to avoid Vercel bundling issues)
+// ============================================================
+
+async function notifySundayCancelled(params: {
+  parentUserId: string;
+  playerName: string;
+  practiceDate: string;
+  registrationId: string;
+}) {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { parentUserId, playerName, practiceDate, registrationId } = params;
+
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: parentUserId,
+        user_type: 'parent',
+        type: 'sunday_booking',
+        title: 'Sunday Practice Cancelled',
+        message: `${playerName}'s Sunday practice booking for ${practiceDate} has been cancelled.`,
+        priority: 'normal',
+        data: {
+          registration_id: registrationId,
+          player_name: playerName,
+          practice_date: practiceDate,
+          cancelled: true
+        },
+        action_url: '/schedule'
+      });
+
+    if (error) {
+      console.error('Error creating notification:', error);
+    }
+  } catch (err) {
+    console.error('Exception creating notification:', err);
+  }
+}
 
 /**
  * Sunday Cancel API Endpoint
