@@ -1,4 +1,16 @@
-import { getSupabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Create Supabase client directly for serverless functions
+const getSupabaseClient = () => {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase credentials');
+  }
+
+  return createClient(url, key);
+};
 
 /**
  * Unified Capacity Manager
@@ -80,7 +92,7 @@ export const checkSlotAvailability = async (
       maxCapacity = MAX_GROUP_CAPACITY;
 
       // Query all active group registrations and filter in JS
-      const supabase = getSupabase();
+      const supabase = getSupabaseClient();
       const { data: groupBookings, error } = await supabase
         .from('registrations')
         .select('form_data')
@@ -106,7 +118,7 @@ export const checkSlotAvailability = async (
       maxCapacity = MAX_PRIVATE_CAPACITY;
 
       // Query all active registrations and filter in JS for private/semi-private
-      const supabase = getSupabase();
+      const supabase = getSupabaseClient();
       const { data: bookings, error } = await supabase
         .from('registrations')
         .select('form_data')
