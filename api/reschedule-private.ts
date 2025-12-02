@@ -140,7 +140,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               const dayMatches = Array.isArray(availability)
                 ? availability.some((d: string) => d.toLowerCase() === day.toLowerCase())
                 : String(availability).toLowerCase() === day.toLowerCase();
-              const timeMatches = b.form_data?.semiPrivateTimeSlot === time;
+              // Handle both semiPrivateTimeSlot and semiPrivateTimeWindows fields
+              const semiTime = b.form_data?.semiPrivateTimeSlot ||
+                (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
+              const timeMatches = semiTime === time;
               return dayMatches && timeMatches;
             }
 
@@ -235,8 +238,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (isSemiPrivate) {
           const availDays = b.form_data?.semiPrivateAvailability || [];
+          // Handle both semiPrivateTimeSlot and semiPrivateTimeWindows fields
+          const semiTime = b.form_data?.semiPrivateTimeSlot ||
+            (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
           return availDays.map((d: string) => d.toLowerCase()).includes(newDay.toLowerCase()) &&
-                 b.form_data?.semiPrivateTimeSlot === newTime;
+                 semiTime === newTime;
         }
 
         return false;
@@ -306,8 +312,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           if (isSemiPrivate) {
             const availDays = b.form_data?.semiPrivateAvailability || [];
+            // Handle both semiPrivateTimeSlot and semiPrivateTimeWindows fields
+            const semiTime = b.form_data?.semiPrivateTimeSlot ||
+              (b.form_data?.semiPrivateTimeWindows && b.form_data?.semiPrivateTimeWindows[0]);
             if (availDays.map((d: string) => d.toLowerCase()).includes(day.toLowerCase()) &&
-                b.form_data?.semiPrivateTimeSlot === newTime) {
+                semiTime === newTime) {
               return true;
             }
           }

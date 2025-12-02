@@ -36,6 +36,21 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
+  // Semi-private suggestions state
+  const [semiPrivateSuggestions, setSemiPrivateSuggestions] = useState<Array<{
+    day: string;
+    time: string;
+    displayTime: string;
+    partnerCount: number;
+  }>>([]);
+  const [blockedTimes, setBlockedTimes] = useState<Array<{
+    day: string;
+    time: string;
+    displayTime: string;
+  }>>([]);
+  const [unpairedPlayersCount, setUnpairedPlayersCount] = useState(0);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+
   const daysOfWeek: { value: WeekDay; label: string }[] = [
     { value: 'monday', label: 'Monday' },
     { value: 'tuesday', label: 'Tuesday' },
@@ -52,6 +67,44 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
       checkAvailability();
     }
   }, [data.programType, data.groupSelectedDays, data.privateSelectedDays]);
+
+  // Fetch semi-private suggestions when semi-private is selected and player category is set
+  useEffect(() => {
+    if (data.programType === 'semi-private' && data.playerCategory) {
+      fetchSemiPrivateSuggestions();
+    }
+  }, [data.programType, data.playerCategory, data.semiPrivateAvailability]);
+
+  const fetchSemiPrivateSuggestions = async () => {
+    setIsLoadingSuggestions(true);
+    try {
+      const selectedDay = data.semiPrivateAvailability?.[0];
+      const response = await fetch('/api/semi-private-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerCategory: data.playerCategory,
+          selectedDay
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch semi-private suggestions');
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setSemiPrivateSuggestions(result.suggestedTimes || []);
+        setBlockedTimes(result.blockedTimes || []);
+        setUnpairedPlayersCount(result.totalUnpairedPlayers || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching semi-private suggestions:', error);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
 
   const checkAvailability = async () => {
     setIsCheckingAvailability(true);
@@ -507,29 +560,83 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                   <p className="text-xs text-gray-400 mb-3">
                     Select all hourly time slots you're available for (the more flexible you are, the faster we can match you)
                   </p>
-                  <p className="text-xs text-green-300 mb-3">
-                    💡 <strong>Suggested times:</strong> 8:00 AM, 10:00 AM, 12:00 PM, 2:00 PM
-                  </p>
+
+                  {/* Dynamic Suggestions based on unpaired players */}
+                  {isLoadingSuggestions ? (
+                    <p className="text-xs text-gray-400 mb-3">
+                      🔄 Loading suggested times...
+                    </p>
+                  ) : semiPrivateSuggestions.length > 0 ? (
+                    <div className="mb-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <p className="text-xs text-green-300 font-semibold mb-2">
+                        💡 <strong>Suggested times with available partners:</strong>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {semiPrivateSuggestions.map(suggestion => (
+                          <span
+                            key={`${suggestion.day}-${suggestion.time}`}
+                            className="px-2 py-1 bg-green-500/20 text-green-300 rounded text-xs cursor-pointer hover:bg-green-500/30"
+                            onClick={() => handleMultiSelectChange('semiPrivateTimeWindows', suggestion.time)}
+                          >
+                            {suggestion.displayTime} ({suggestion.partnerCount} waiting)
+                          </span>
+                        ))}
+                      </div>
+                      {unpairedPlayersCount > 0 && (
+                        <p className="text-xs text-gray-400 mt-2">
+                          {unpairedPlayersCount} player{unpairedPlayersCount !== 1 ? 's' : ''} in your age group looking for partners
+                        </p>
+                      )}
+                    </div>
+                  ) : data.playerCategory ? (
+                    <p className="text-xs text-yellow-300 mb-3">
+                      ℹ️ No players currently waiting in your age group - you'll be first in the matching queue!
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400 mb-3">
+                      💡 Select player age category (Step 1) to see suggested times with available partners
+                    </p>
+                  )}
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'].map(timeSlot => (
-                      <label
-                        key={timeSlot}
-                        className={`p-3 border rounded-lg cursor-pointer text-center text-sm ${
-                          (data.semiPrivateTimeWindows || []).includes(timeSlot)
-                            ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF]'
-                            : 'border-white/20 text-gray-300 hover:border-white/40'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={(data.semiPrivateTimeWindows || []).includes(timeSlot)}
-                          onChange={() => handleMultiSelectChange('semiPrivateTimeWindows', timeSlot)}
-                        />
-                        {timeSlot}
-                      </label>
-                    ))}
+                    {['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'].map(timeSlot => {
+                      const isBlocked = blockedTimes.some(bt => bt.time === timeSlot);
+                      const hasSuggestion = semiPrivateSuggestions.some(s => s.time === timeSlot);
+                      const suggestion = semiPrivateSuggestions.find(s => s.time === timeSlot);
+                      const isSelected = (data.semiPrivateTimeWindows || []).includes(timeSlot);
+
+                      return (
+                        <label
+                          key={timeSlot}
+                          className={`p-3 border rounded-lg text-center text-sm relative ${
+                            isBlocked
+                              ? 'border-red-500/30 bg-red-500/10 text-red-400/60 cursor-not-allowed'
+                              : isSelected
+                              ? 'border-[#9BD4FF] bg-[#9BD4FF]/10 text-[#9BD4FF] cursor-pointer'
+                              : hasSuggestion
+                              ? 'border-green-500/50 bg-green-500/10 text-green-300 hover:border-green-500 cursor-pointer'
+                              : 'border-white/20 text-gray-300 hover:border-white/40 cursor-pointer'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={isSelected}
+                            disabled={isBlocked}
+                            onChange={() => !isBlocked && handleMultiSelectChange('semiPrivateTimeWindows', timeSlot)}
+                          />
+                          <span>{timeSlot}</span>
+                          {isBlocked && (
+                            <span className="block text-[9px] text-red-400 mt-1">Booked</span>
+                          )}
+                          {hasSuggestion && !isBlocked && (
+                            <span className="block text-[9px] text-green-400 mt-1">
+                              {suggestion?.partnerCount} partner{suggestion?.partnerCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
                   </div>
                   <p className="text-xs text-gray-400 mt-2">
                     Selected: {(data.semiPrivateTimeWindows || []).length} time slot{(data.semiPrivateTimeWindows || []).length !== 1 ? 's' : ''}
