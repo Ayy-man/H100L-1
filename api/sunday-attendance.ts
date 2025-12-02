@@ -21,11 +21,17 @@ import { createClient } from '@supabase/supabase-js';
  *   - message: success message
  */
 
-// Initialize Supabase client with service role for admin access
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 export default async function handler(
   req: VercelRequest,
@@ -74,7 +80,7 @@ export default async function handler(
     }
 
     // Call the database function to mark attendance
-    const { data, error } = await supabase.rpc('mark_attendance', {
+    const { data, error } = await getSupabase().rpc('mark_attendance', {
       p_booking_id: bookingId,
       p_attendance_status: attendanceStatus,
       p_admin_email: markedBy,

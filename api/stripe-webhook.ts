@@ -7,10 +7,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 // Helper to convert VercelRequest to buffer
 async function buffer(readable: Readable) {
@@ -109,7 +116,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const customerId = session.customer as string;
 
   // Update registration with Stripe IDs and set payment status to succeeded
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('registrations')
     .update({
       stripe_customer_id: customerId,
@@ -133,7 +140,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   const registrationId = paymentIntent.metadata.registrationId;
   if (!registrationId) return;
 
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('registrations')
     .update({
       payment_status: 'succeeded',
@@ -153,7 +160,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   const registrationId = paymentIntent.metadata.registrationId;
   if (!registrationId) return;
 
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('registrations')
     .update({
       payment_status: 'failed',
@@ -176,7 +183,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   // Update all registrations with this subscription
   // FIXED: Use 'succeeded' instead of 'active'
-  await supabase
+  await getSupabase()
     .from('registrations')
     .update({
       payment_status: 'succeeded',
@@ -191,7 +198,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   const subscriptionId = invoice.subscription as string;
   if (!subscriptionId) return;
 
-  await supabase
+  await getSupabase()
     .from('registrations')
     .update({
       payment_status: 'past_due',
@@ -227,7 +234,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const registrationId = subscription.metadata.registrationId;
   if (!registrationId) return;
 
-  await supabase
+  await getSupabase()
     .from('registrations')
     .update({
       stripe_subscription_id: subscription.id,
@@ -240,7 +247,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('Subscription updated:', subscription.id);
 
-  await supabase
+  await getSupabase()
     .from('registrations')
     .update({
       payment_status: mapStripeStatusToPaymentStatus(subscription.status),
@@ -252,7 +259,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('Subscription deleted:', subscription.id);
 
-  await supabase
+  await getSupabase()
     .from('registrations')
     .update({
       payment_status: 'canceled',

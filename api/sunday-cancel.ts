@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifySundayCancelled } from '../lib/notificationHelper';
+import { notifySundayCancelled } from './_lib/notificationHelper';
 
 /**
  * Sunday Cancel API Endpoint
@@ -21,11 +21,17 @@ import { notifySundayCancelled } from '../lib/notificationHelper';
  *   - code: error code (if failed)
  */
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 export default async function handler(
   req: VercelRequest,
@@ -74,7 +80,7 @@ export default async function handler(
     }
 
     // Call the database function to cancel the booking
-    const { data, error } = await supabase.rpc('cancel_sunday_booking', {
+    const { data, error } = await getSupabase().rpc('cancel_sunday_booking', {
       p_booking_id: bookingId,
       p_registration_id: registrationId,
       p_firebase_uid: firebaseUid,
@@ -108,7 +114,7 @@ export default async function handler(
     // Send notification on successful cancellation
     try {
       // Fetch registration details for notification
-      const { data: registration } = await supabase
+      const { data: registration } = await getSupabase()
         .from('registrations')
         .select('form_data')
         .eq('id', registrationId)

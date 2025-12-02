@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { checkSlotAvailability, getDayAvailability, getAvailableSlots, checkMultiHourAvailability } from '../lib/unifiedCapacityManager';
+import { checkSlotAvailability, getDayAvailability, getAvailableSlots, checkMultiHourAvailability } from './_lib/unifiedCapacityManager';
 
 export default async function handler(
   req: VercelRequest,

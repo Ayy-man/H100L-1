@@ -17,11 +17,17 @@ import { createClient } from '@supabase/supabase-js';
  *   - capacities: object mapping date strings to capacity info
  */
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 export default async function handler(
   req: VercelRequest,
@@ -40,7 +46,7 @@ export default async function handler(
     const end = endDate ? new Date(endDate as string) : new Date(start.getTime() + 90 * 24 * 60 * 60 * 1000);
 
     // Query all Sunday slots in date range
-    const { data: slotsData, error: slotsError } = await supabase
+    const { data: slotsData, error: slotsError } = await getSupabase()
       .from('sunday_practice_slots')
       .select('practice_date, max_capacity, current_bookings')
       .gte('practice_date', start.toISOString().split('T')[0])

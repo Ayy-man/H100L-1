@@ -1,10 +1,17 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Schedule Exceptions API
@@ -36,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`[schedule-exceptions] Fetching for registration: ${registrationId}`);
     console.log(`[schedule-exceptions] Today's date: ${today}`);
 
-    const { data: exceptions, error } = await supabase
+    const { data: exceptions, error } = await getSupabase()
       .from('schedule_exceptions')
       .select('*')
       .eq('registration_id', registrationId)

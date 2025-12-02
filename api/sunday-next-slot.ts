@@ -21,11 +21,17 @@ import { createClient } from '@supabase/supabase-js';
  *   - reason: string (if ineligible, explains why)
  */
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 export default async function handler(
   req: VercelRequest,
@@ -63,7 +69,7 @@ export default async function handler(
     }
 
     // Call the database function
-    const { data, error } = await supabase.rpc('get_next_sunday_slot', {
+    const { data, error } = await getSupabase().rpc('get_next_sunday_slot', {
       p_registration_id: registrationId,
       p_firebase_uid: firebaseUid,
     });

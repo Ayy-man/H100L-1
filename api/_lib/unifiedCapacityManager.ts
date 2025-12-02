@@ -1,4 +1,17 @@
-import { getSupabase } from './supabase';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+// Lazy-initialized Supabase client to avoid issues with process.env at module load time
+let _supabase: SupabaseClient | null = null;
+
+const getSupabase = (): SupabaseClient => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Unified Capacity Manager
@@ -80,8 +93,7 @@ export const checkSlotAvailability = async (
       maxCapacity = MAX_GROUP_CAPACITY;
 
       // Query all active group registrations and filter in JS
-      const supabase = getSupabase();
-      const { data: groupBookings, error } = await supabase
+      const { data: groupBookings, error } = await getSupabase()
         .from('registrations')
         .select('form_data')
         .in('payment_status', ['succeeded', 'verified']);
@@ -106,8 +118,7 @@ export const checkSlotAvailability = async (
       maxCapacity = MAX_PRIVATE_CAPACITY;
 
       // Query all active registrations and filter in JS for private/semi-private
-      const supabase = getSupabase();
-      const { data: bookings, error } = await supabase
+      const { data: bookings, error } = await getSupabase()
         .from('registrations')
         .select('form_data')
         .in('payment_status', ['succeeded', 'verified']);

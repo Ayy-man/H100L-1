@@ -1,18 +1,24 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { notifyNewRegistration } from '../lib/notificationHelper';
+import { notifyNewRegistration } from './_lib/notificationHelper';
 
 // Initialize Stripe with secret key from environment
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-// Initialize Supabase
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 interface SubscriptionRequest {
   paymentMethodId: string;
@@ -119,7 +125,7 @@ export default async function handler(
       paymentIntentId = paymentIntent.id;
 
       // Update Supabase with payment info
-      await supabase
+      await getSupabase()
         .from('registrations')
         .update({
           stripe_customer_id: customer.id,
@@ -161,7 +167,7 @@ export default async function handler(
         : 'pending';
 
       // Update Supabase with subscription info
-      await supabase
+      await getSupabase()
         .from('registrations')
         .update({
           stripe_customer_id: customer.id,
@@ -175,7 +181,7 @@ export default async function handler(
       if (paymentStatus === 'succeeded') {
         try {
           // Get registration details for notification
-          const { data: regData } = await supabase
+          const { data: regData } = await getSupabase()
             .from('registrations')
             .select('form_data')
             .eq('id', registrationId)
@@ -204,7 +210,7 @@ export default async function handler(
       // For semi-private, add player to unpaired list for matching
       if (programType === 'semi-private' && paymentStatus === 'succeeded') {
         // Get registration details for unpaired entry
-        const { data: registration } = await supabase
+        const { data: registration } = await getSupabase()
           .from('registrations')
           .select('form_data')
           .eq('id', registrationId)
@@ -212,7 +218,7 @@ export default async function handler(
 
         if (registration?.form_data) {
           const formData = registration.form_data;
-          await supabase
+          await getSupabase()
             .from('unpaired_semi_private')
             .upsert({
               registration_id: registrationId,

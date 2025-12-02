@@ -1,10 +1,17 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Notifications API
@@ -50,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-      let query = supabase
+      let query = getSupabase()
         .from('notifications')
         .select('*')
         .eq('user_id', userId as string)
@@ -74,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Get unread count
-      const { count: unreadCount } = await supabase
+      const { count: unreadCount } = await getSupabase()
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId as string)
@@ -126,7 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // List notifications
       if (action === 'list') {
-        let query = supabase
+        let query = getSupabase()
           .from('notifications')
           .select('*')
           .eq('user_id', userId)
@@ -144,7 +151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (error) throw error;
 
         // Get unread count
-        const { count: unreadCount } = await supabase
+        const { count: unreadCount } = await getSupabase()
           .from('notifications')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
@@ -161,7 +168,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Get unread count only
       if (action === 'count') {
-        const { count: unreadCount } = await supabase
+        const { count: unreadCount } = await getSupabase()
           .from('notifications')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
@@ -184,7 +191,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        const { data: notification, error } = await supabase
+        const { data: notification, error } = await getSupabase()
           .from('notifications')
           .insert({
             user_id: userId,
@@ -217,7 +224,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        const { error } = await supabase
+        const { error } = await getSupabase()
           .from('notifications')
           .update({
             read: true,
@@ -237,7 +244,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Mark multiple or all notifications as read
       if (action === 'mark_all_read') {
-        let query = supabase
+        let query = getSupabase()
           .from('notifications')
           .update({
             read: true,
@@ -273,7 +280,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        const { error } = await supabase
+        const { error } = await getSupabase()
           .from('notifications')
           .delete()
           .eq('id', notificationId)
@@ -319,12 +326,7 @@ export async function createNotification(params: {
   actionUrl?: string;
   expiresAt?: string;
 }) {
-  const supabaseClient = createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  const { data, error } = await supabaseClient
+  const { data, error } = await getSupabase()
     .from('notifications')
     .insert({
       user_id: params.userId,

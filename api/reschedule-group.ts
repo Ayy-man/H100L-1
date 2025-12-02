@@ -1,6 +1,56 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifyScheduleChanged } from '../lib/notificationHelper';
+
+console.log('[reschedule-group] Module loaded');
+
+// ============================================================
+// INLINED NOTIFICATION HELPER (to avoid Vercel bundling issues)
+// ============================================================
+async function createScheduleNotification(params: {
+  parentUserId: string;
+  playerName: string;
+  changeType: 'one_time' | 'permanent';
+  originalSchedule: string;
+  newSchedule: string;
+  registrationId: string;
+}) {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { parentUserId, playerName, changeType, originalSchedule, newSchedule, registrationId } = params;
+    const isPermanent = changeType === 'permanent';
+
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: parentUserId,
+        user_type: 'parent',
+        type: 'schedule_changed',
+        title: isPermanent ? 'Schedule Updated' : 'One-Time Schedule Change',
+        message: isPermanent
+          ? `${playerName}'s training schedule has been updated from ${originalSchedule} to ${newSchedule}.`
+          : `${playerName}'s training has been moved from ${originalSchedule} to ${newSchedule} for this week.`,
+        priority: 'normal',
+        data: {
+          registration_id: registrationId,
+          player_name: playerName,
+          change_type: changeType,
+          original_schedule: originalSchedule,
+          new_schedule: newSchedule
+        },
+        action_url: '/schedule'
+      });
+
+    if (error) {
+      console.error('Error creating notification:', error);
+    }
+  } catch (err) {
+    console.error('Exception creating notification:', err);
+  }
+}
 
 // Inline date generation to avoid import issues in serverless
 function generateMonthlyDates(selectedDays: string[]): string[] {
@@ -39,10 +89,18 @@ function generateMonthlyDates(selectedDays: string[]): string[] {
   return dates;
 }
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Group Training Rescheduling API
@@ -78,9 +136,13 @@ interface RescheduleRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log('[reschedule-group] Handler invoked, method:', req.method);
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  console.log('[reschedule-group] Starting request processing');
 
   try {
     const {
@@ -97,7 +159,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } = req.body as RescheduleRequest;
 
     // Validate registration ownership
-    const { data: registration, error: regError } = await supabase
+    const { data: registration, error: regError } = await getSupabase()
       .from('registrations')
       .select('*')
       .eq('id', registrationId)
@@ -132,7 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Fetch ALL group registrations once (more efficient)
-      const { data: allBookings, error: fetchError } = await supabase
+      const { data: allBookings, error: fetchError } = await getSupabase()
         .from('registrations')
         .select('form_data, id')
         .in('payment_status', ['succeeded', 'verified']);
@@ -194,7 +256,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Check capacity for all new days - fetch all once and filter in JS
-      const { data: allCapacityBookings } = await supabase
+      const { data: allCapacityBookings } = await getSupabase()
         .from('registrations')
         .select('form_data, id')
         .in('payment_status', ['succeeded', 'verified']);
@@ -230,7 +292,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Create schedule change record
-      const { data: scheduleChange, error: changeError } = await supabase
+      const { data: scheduleChange, error: changeError } = await getSupabase()
         .from('schedule_changes')
         .insert({
           registration_id: registrationId,
@@ -271,7 +333,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           groupMonthlyDates: generateMonthlyDates(normalizedDays)
         };
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await getSupabase()
           .from('registrations')
           .update({
             form_data: updatedFormData,
@@ -296,7 +358,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Process each day swap - check for existing, then update or insert
           for (const swap of daySwaps) {
             // Check if exception already exists for this date
-            const { data: existingException } = await supabase
+            const { data: existingException } = await getSupabase()
               .from('schedule_exceptions')
               .select('id')
               .eq('registration_id', registrationId)
@@ -305,7 +367,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (existingException) {
               // Update existing exception
-              const { error: updateError } = await supabase
+              const { error: updateError } = await getSupabase()
                 .from('schedule_exceptions')
                 .update({
                   replacement_day: swap.newDay,
@@ -325,7 +387,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               }
             } else {
               // Insert new exception
-              const { error: insertError } = await supabase
+              const { error: insertError } = await getSupabase()
                 .from('schedule_exceptions')
                 .insert({
                   registration_id: registrationId,
@@ -352,7 +414,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Legacy support for single specificDate
         else if (specificDate) {
           // Check if exception already exists for this date
-          const { data: existingException } = await supabase
+          const { data: existingException } = await getSupabase()
             .from('schedule_exceptions')
             .select('id')
             .eq('registration_id', registrationId)
@@ -361,7 +423,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           if (existingException) {
             // Update existing exception
-            const { error: updateError } = await supabase
+            const { error: updateError } = await getSupabase()
               .from('schedule_exceptions')
               .update({
                 replacement_day: newDays[0],
@@ -381,7 +443,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
           } else {
             // Insert new exception
-            const { error: insertError } = await supabase
+            const { error: insertError } = await getSupabase()
               .from('schedule_exceptions')
               .insert({
                 registration_id: registrationId,
@@ -421,8 +483,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const newDaysStr = newDays
           .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
           .join(', ');
-
-        await notifyScheduleChanged({
+        await createScheduleNotification({
           parentUserId: firebaseUid,
           playerName: registration.form_data?.playerFullName || 'Your child',
           changeType: changeType,

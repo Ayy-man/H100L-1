@@ -28,11 +28,17 @@ import { createClient } from '@supabase/supabase-js';
  * - Validates cron secret header for additional security
  */
 
-// Initialize Supabase with service role for admin access
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 export default async function handler(
   req: VercelRequest,
@@ -57,7 +63,7 @@ export default async function handler(
     console.log('[CRON] Starting Sunday slots generation...');
 
     // Call the database function to generate slots
-    const { data, error } = await supabase.rpc('generate_sunday_slots', {
+    const { data, error } = await getSupabase().rpc('generate_sunday_slots', {
       p_weeks_ahead: 4, // Generate slots 4 weeks in advance
     });
 

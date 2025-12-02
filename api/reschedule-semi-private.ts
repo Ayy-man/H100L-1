@@ -4,12 +4,19 @@ import {
   notifyPairingCreated,
   notifyPairingDissolved,
   notifyScheduleChanged
-} from '../lib/notificationHelper';
+} from './_lib/notificationHelper';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Semi-Private Training Rescheduling API
@@ -69,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } = req.body as RescheduleRequest;
 
     // Validate registration ownership
-    const { data: registration, error: regError } = await supabase
+    const { data: registration, error: regError } = await getSupabase()
       .from('registrations')
       .select('*')
       .eq('id', registrationId)
@@ -96,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (action === 'get_current_pairing') {
       // Get current pairing info
-      const { data: pairing } = await supabase
+      const { data: pairing } = await getSupabase()
         .from('semi_private_pairings')
         .select(`
           *,
@@ -109,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (!pairing) {
         // Check if player is in the unpaired waiting list
-        const { data: unpairedEntry } = await supabase
+        const { data: unpairedEntry } = await getSupabase()
           .from('unpaired_semi_private')
           .select('*')
           .eq('registration_id', registrationId)
@@ -159,7 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (action === 'get_suggested_times') {
       // Get times where unpaired players exist in same age category
-      const { data: unpairedPlayers } = await supabase
+      const { data: unpairedPlayers } = await getSupabase()
         .from('unpaired_semi_private')
         .select('*')
         .eq('age_category', playerCategory)
@@ -200,7 +207,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (action === 'get_availability') {
       // Get full week availability grid with pairing opportunities
-      const { data: unpairedPlayers } = await supabase
+      const { data: unpairedPlayers } = await getSupabase()
         .from('unpaired_semi_private')
         .select('*')
         .eq('age_category', playerCategory)
@@ -212,7 +219,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const daySlots = await Promise.all(
             AVAILABLE_TIME_SLOTS.map(async (time) => {
               // Check if this specific slot is booked - fetch all and filter in JS
-              const { data: bookings } = await supabase
+              const { data: bookings } = await getSupabase()
                 .from('registrations')
                 .select('form_data, id')
                 .in('payment_status', ['succeeded', 'verified']);
@@ -294,7 +301,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Check if slot is available
-      const { data: bookings } = await supabase
+      const { data: bookings } = await getSupabase()
         .from('registrations')
         .select('form_data, id')
         .in('payment_status', ['succeeded', 'verified'])
@@ -325,7 +332,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
       // Check for unpaired partners at this time
-      const { data: unpairedPartner } = await supabase
+      const { data: unpairedPartner } = await getSupabase()
         .from('unpaired_semi_private')
         .select('*')
         .eq('age_category', playerCategory)
@@ -363,7 +370,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Check if slot is available
-      const { data: bookings } = await supabase
+      const { data: bookings } = await getSupabase()
         .from('registrations')
         .select('form_data, id')
         .in('payment_status', ['succeeded', 'verified'])
@@ -400,7 +407,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Step 1: Check if player has existing pairing and dissolve it
-      const { data: existingPairing } = await supabase
+      const { data: existingPairing } = await getSupabase()
         .from('semi_private_pairings')
         .select('*')
         .or(`player_1_registration_id.eq.${registrationId},player_2_registration_id.eq.${registrationId}`)
@@ -411,7 +418,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (existingPairing) {
         // Dissolve the pairing
-        await supabase
+        await getSupabase()
           .from('semi_private_pairings')
           .update({
             status: 'dissolved',
@@ -426,7 +433,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? existingPairing.player_2_registration_id
           : existingPairing.player_1_registration_id;
 
-        const { data: partnerReg } = await supabase
+        const { data: partnerReg } = await getSupabase()
           .from('registrations')
           .select('form_data')
           .eq('id', partnerId)
@@ -440,7 +447,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           };
 
           // Add partner to unpaired list
-          await supabase
+          await getSupabase()
             .from('unpaired_semi_private')
             .upsert({
               registration_id: partnerId,
@@ -460,7 +467,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Step 2: Try to find a new partner at the new time/day
-      const { data: potentialPartner } = await supabase
+      const { data: potentialPartner } = await getSupabase()
         .from('unpaired_semi_private')
         .select('*')
         .eq('age_category', playerCategory)
@@ -475,7 +482,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (potentialPartner) {
         // Create new pairing
-        const { data: newPairing } = await supabase
+        const { data: newPairing } = await getSupabase()
           .from('semi_private_pairings')
           .insert({
             player_1_registration_id: registrationId,
@@ -488,7 +495,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .single();
 
         // Update both players' unpaired status
-        await supabase
+        await getSupabase()
           .from('unpaired_semi_private')
           .update({
             status: 'paired',
@@ -503,7 +510,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
       } else {
         // No partner found, add to unpaired list
-        await supabase
+        await getSupabase()
           .from('unpaired_semi_private')
           .upsert({
             registration_id: registrationId,
@@ -527,7 +534,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         null;
 
       // Step 3: Create schedule change record
-      const { data: scheduleChange } = await supabase
+      const { data: scheduleChange } = await getSupabase()
         .from('schedule_changes')
         .insert({
           registration_id: registrationId,
@@ -557,7 +564,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           semiPrivateTimeSlot: newTime
         };
 
-        await supabase
+        await getSupabase()
           .from('registrations')
           .update({
             form_data: updatedFormData,
@@ -578,7 +585,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           for (const mapping of exceptionMappings) {
             console.log(`Creating exception: ${mapping.originalDay} (${mapping.date}) -> ${mapping.replacementDay}`);
 
-            const { error: exceptionError } = await supabase
+            const { error: exceptionError } = await getSupabase()
               .from('schedule_exceptions')
               .insert({
                 registration_id: registrationId,
@@ -601,7 +608,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } else if (specificDate) {
           // Fallback: old behavior for backwards compatibility
           console.log('Using legacy exception creation (no mappings provided)');
-          await supabase
+          await getSupabase()
             .from('schedule_exceptions')
             .insert({
               registration_id: registrationId,
@@ -638,7 +645,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // If pairing was dissolved, notify the partner
         if (dissolvedPartnerInfo) {
-          const { data: partnerReg } = await supabase
+          const { data: partnerReg } = await getSupabase()
             .from('registrations')
             .select('firebase_uid')
             .eq('id', dissolvedPartnerInfo.id)
@@ -668,7 +675,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
 
           // Notify the new partner
-          const { data: partnerReg } = await supabase
+          const { data: partnerReg } = await getSupabase()
             .from('registrations')
             .select('firebase_uid')
             .eq('id', potentialPartner.registration_id)
