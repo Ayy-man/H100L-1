@@ -106,6 +106,26 @@ const FormStep3: React.FC<FormStep3Props> = ({ data, errors, handleChange }) => 
             <p className="text-sm text-destructive">{errors.jerseySize}</p>
           )}
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="primaryObjective">
+            Primary Training Objective
+          </Label>
+          <Select
+            value={data.primaryObjective}
+            onValueChange={handleSelectChange('primaryObjective')}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="-- Select Objective --" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Shooting">Shooting</SelectItem>
+              <SelectItem value="Puck Handling">Puck Handling</SelectItem>
+              <SelectItem value="Skating">Skating</SelectItem>
+              <SelectItem value="Endurance">Endurance</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <h3 className="text-xl font-bold text-foreground uppercase tracking-wider border-b border-border pb-2 pt-4">
@@ -155,6 +175,31 @@ const FormStep3: React.FC<FormStep3Props> = ({ data, errors, handleChange }) => 
             name="medicalConditionsDetails"
             value={data.medicalConditionsDetails}
             onChange={handleChange}
+            rows={3}
+          />
+        </div>
+      )}
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="carriesMedication"
+          checked={data.carriesMedication}
+          onCheckedChange={handleCheckboxChange('carriesMedication')}
+        />
+        <Label htmlFor="carriesMedication" className="cursor-pointer">
+          Player carries medication (EpiPen, inhaler, etc.)
+        </Label>
+      </div>
+
+      {data.carriesMedication && (
+        <div className="space-y-2">
+          <Label htmlFor="medicationDetails">Medication Details</Label>
+          <Textarea
+            id="medicationDetails"
+            name="medicationDetails"
+            value={data.medicationDetails}
+            onChange={handleChange}
+            placeholder="Specify medication details"
             rows={3}
           />
         </div>

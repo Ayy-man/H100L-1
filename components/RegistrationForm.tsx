@@ -29,8 +29,9 @@ const initialFormData: FormData = {
   programType: '', groupFrequency: '', groupDay: '', groupSelectedDays: [], groupMonthlyDates: [],
   privateFrequency: '', privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
   semiPrivateTimeSlot: '', semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
-  dominantHand: '', currentLevel: '', jerseySize: '', hasAllergies: false,
+  dominantHand: '', currentLevel: '', jerseySize: '', primaryObjective: '', hasAllergies: false,
   allergiesDetails: '', hasMedicalConditions: false, medicalConditionsDetails: '',
+  carriesMedication: false, medicationDetails: '',
   actionPlan: null, medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
 };
 

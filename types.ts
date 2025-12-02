@@ -80,10 +80,13 @@ export interface FormData {
   dominantHand: 'Left' | 'Right' | '';
   currentLevel: string;
   jerseySize: string;
+  primaryObjective: 'Shooting' | 'Puck Handling' | 'Skating' | 'Endurance' | '';
   hasAllergies: boolean;
   allergiesDetails: string;
   hasMedicalConditions: boolean;
   medicalConditionsDetails: string;
+  carriesMedication: boolean;
+  medicationDetails: string;
   actionPlan: File | null;
   medicalReport: File | null;
   medicalFiles?: MedicalFiles; // Stored URLs after upload

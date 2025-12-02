@@ -121,6 +121,10 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
               <p className="text-muted-foreground">Jersey Size</p>
               <p className="font-medium">{form_data.jerseySize || 'Not specified'}</p>
             </div>
+            <div>
+              <p className="text-muted-foreground">Primary Objective</p>
+              <p className="font-medium">{form_data.primaryObjective || 'Not specified'}</p>
+            </div>
           </div>
         </div>
 
@@ -294,7 +298,7 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
         </div>
 
         {/* Medical Information */}
-        {(form_data.hasAllergies || form_data.hasMedicalConditions) && (
+        {(form_data.hasAllergies || form_data.hasMedicalConditions || form_data.carriesMedication) && (
           <>
             <Separator />
             <div className="space-y-4">
@@ -316,6 +320,14 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
                     <p className="font-semibold text-[#9BD4FF]">Medical Conditions</p>
                     <p className="text-foreground mt-1">
                       {form_data.medicalConditionsDetails}
+                    </p>
+                  </div>
+                )}
+                {form_data.carriesMedication && (
+                  <div className="p-3 rounded-md bg-[#9BD4FF]/10 border border-[#9BD4FF]/20">
+                    <p className="font-semibold text-[#9BD4FF]">Carries Medication</p>
+                    <p className="text-foreground mt-1">
+                      {form_data.medicationDetails || 'Yes - no details provided'}
                     </p>
                   </div>
                 )}

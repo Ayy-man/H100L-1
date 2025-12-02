@@ -160,6 +160,11 @@ const FormStep4: React.FC<FormStep4Props> = ({
             )}
 
             <SummaryItem label="Jersey Size" value={data.jerseySize} />
+            <SummaryItem label="Primary Objective" value={data.primaryObjective || 'Not specified'} />
+            <SummaryItem label="Carries Medication" value={data.carriesMedication ? 'Yes' : 'No'} />
+            {data.carriesMedication && data.medicationDetails && (
+              <SummaryItem label="Medication Details" value={data.medicationDetails} />
+            )}
             <SummaryItem label="Action Plan" value={data.actionPlan?.name || 'Not provided'} />
             <SummaryItem label="Medical Report" value={data.medicalReport?.name || 'Not provided'} />
             <SummaryItem
