@@ -10,5 +10,10 @@
       "path": "/api/cron-generate-sunday-slots",
       "schedule": "0 5 * * 1"
     }
-  ]
+  ],
+  "functions": {
+    "api/*.ts": {
+      "includeFiles": "api/_lib/**"
+    }
+  }
 }
