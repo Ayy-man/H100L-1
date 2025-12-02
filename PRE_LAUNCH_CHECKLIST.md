@@ -186,16 +186,16 @@ Several files referenced legacy fields. Now cleaned up with backward-compatible 
 
 ---
 
-### 8. ⏳ Admin Password Security
+### 8. ✅ Admin Password Security
 **Severity:** LOW
-**Status:** PENDING
+**Status:** FIXED
 
-`AdminDashboard.tsx:301-308` uses a simple prompt with hardcoded password:
-```typescript
-if (password === 'sniperzone2025') {
-```
+**Problem:** `AdminDashboard.tsx` had hardcoded admin passwords in the frontend code.
 
-Consider moving to environment variable or proper auth system.
+**Fix Applied:** Moved all admin passwords to environment variables:
+- `VITE_ADMIN_PASSWORD_LOIC`
+- `VITE_ADMIN_PASSWORD_DARICK`
+- `VITE_ADMIN_PASSWORD_CHRIS`
 
 ---
 
@@ -290,8 +290,8 @@ manually_confirmed_reason?: string;
 |----------|-------|-------|---------|
 | 🔴 Critical | 3 | 3 | 0 |
 | 🟡 Moderate | 3 | 3 | 0 |
-| 🟢 Minor | 4 | 3 | 1 |
-| **Total** | **10** | **9** | **1** |
+| 🟢 Minor | 4 | 4 | 0 |
+| **Total** | **10** | **10** | **0** |
 
 *Note: Issue #11 was not a bug - Sunday ice is intentionally restricted to M7-M15 categories.*
 
@@ -313,7 +313,7 @@ manually_confirmed_reason?: string;
 
 | Issue | File | Severity | Notes |
 |-------|------|----------|-------|
-| Hardcoded admin passwords | AdminDashboard.tsx:172-176 | HIGH | Move to Firebase Auth post-launch |
+| ~~Hardcoded admin passwords~~ | ~~AdminDashboard.tsx~~ | ~~HIGH~~ | ✅ FIXED - Now uses env variables |
 | Missing admin auth on endpoints | admin-confirm-payment.ts | HIGH | All admin APIs need token verification |
 | No user auth on verify-payment | verify-payment.ts:31-35 | MEDIUM | Add Firebase token check |
 
@@ -346,3 +346,4 @@ manually_confirmed_reason?: string;
 | 2024-12-01 | 2x/week reschedule 1 slot only | ✅ FIXED | Use frequency field properly, pass days array to modal |
 | 2024-12-01 | Semi-private reschedule syntax | ✅ FIXED | Fixed JSONB query syntax in availability check |
 | 2024-12-01 | Homepage icons | ✅ ADDED | Hockey puck, coach, skates icons on program cards |
+| 2024-12-02 | #8 Admin Password Security | ✅ FIXED | Passwords moved to environment variables |
