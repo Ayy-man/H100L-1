@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifyPaymentConfirmed } from '../lib/notificationHelper';
+import { notifyPaymentConfirmed } from './_lib/notificationHelper';
 
 // Lazy-initialized Supabase client to avoid cold start issues
 let _supabase: ReturnType<typeof createClient> | null = null;

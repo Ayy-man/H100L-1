@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifyScheduleChanged } from '../lib/notificationHelper';
+import { notifyScheduleChanged } from './_lib/notificationHelper';
 
 // Lazy-initialized Supabase client to avoid cold start issues
 let _supabase: ReturnType<typeof createClient> | null = null;

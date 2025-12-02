@@ -4,7 +4,7 @@ import {
   notifyPairingCreated,
   notifyPairingDissolved,
   notifyScheduleChanged
-} from '../lib/notificationHelper';
+} from './_lib/notificationHelper';
 
 // Lazy-initialized Supabase client to avoid cold start issues
 let _supabase: ReturnType<typeof createClient> | null = null;

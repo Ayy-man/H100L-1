@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifySundayCancelled } from '../lib/notificationHelper';
+import { notifySundayCancelled } from './_lib/notificationHelper';
 
 /**
  * Sunday Cancel API Endpoint
