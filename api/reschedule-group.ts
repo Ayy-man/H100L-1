@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifyScheduleChanged } from '../lib/notificationHelper';
+// TEMPORARILY DISABLED to debug crash
+// import { notifyScheduleChanged } from '../lib/notificationHelper';
 
 console.log('[reschedule-group] Module loaded');
 
@@ -427,27 +428,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Send notification to parent about schedule change
-      try {
-        const originalDaysStr = (originalDays || registration.form_data?.groupSelectedDays || [])
-          .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
-          .join(', ');
-        const newDaysStr = newDays
-          .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
-          .join(', ');
-
-        await notifyScheduleChanged({
-          parentUserId: firebaseUid,
-          playerName: registration.form_data?.playerFullName || 'Your child',
-          changeType: changeType,
-          originalSchedule: originalDaysStr,
-          newSchedule: newDaysStr,
-          registrationId,
-        });
-      } catch (notifyError) {
-        console.error('Failed to send schedule change notification:', notifyError);
-        // Don't fail the whole request for notification errors
-      }
+      // TEMPORARILY DISABLED - notification import was causing crash
+      // try {
+      //   const originalDaysStr = (originalDays || registration.form_data?.groupSelectedDays || [])
+      //     .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
+      //     .join(', ');
+      //   const newDaysStr = newDays
+      //     .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
+      //     .join(', ');
+      //   await notifyScheduleChanged({
+      //     parentUserId: firebaseUid,
+      //     playerName: registration.form_data?.playerFullName || 'Your child',
+      //     changeType: changeType,
+      //     originalSchedule: originalDaysStr,
+      //     newSchedule: newDaysStr,
+      //     registrationId,
+      //   });
+      // } catch (notifyError) {
+      //   console.error('Failed to send schedule change notification:', notifyError);
+      // }
 
       return res.status(200).json({
         success: true,
