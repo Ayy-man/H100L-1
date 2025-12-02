@@ -121,12 +121,12 @@ const FormStep4: React.FC<FormStep4Props> = ({
 
             {data.programType === 'private' && (
               <>
-                <SummaryItem label="Session Frequency" value={data.privateFrequency} />
+                <SummaryItem label="Session Type" value="Single Session" />
                 <SummaryItem
-                  label="Preferred Days"
+                  label="Training Day"
                   value={
                     data.privateSelectedDays && data.privateSelectedDays.length > 0
-                      ? data.privateSelectedDays.join(', ')
+                      ? data.privateSelectedDays[0]
                       : 'Not specified'
                   }
                 />

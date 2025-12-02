@@ -63,9 +63,10 @@ export interface FormData {
   groupSelectedDays: WeekDay[]; // Preferred: Selected days of the week for recurring training
   groupMonthlyDates: string[]; // Generated dates for the current month (ISO format: YYYY-MM-DD)
 
-  // Private Details
+  // Private Details (sold by unity - one session at a time)
+  /** @deprecated Private sessions are now always 'one-time'. Kept for backward compatibility. */
   privateFrequency: '1x' | '2x' | 'one-time' | '';
-  privateSelectedDays: string[];
+  privateSelectedDays: string[]; // Single day for private session
   privateTimeSlot: string;
 
   // Semi-Private Details

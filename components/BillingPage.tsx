@@ -82,16 +82,16 @@ const BillingPage: React.FC = () => {
     fetchRegistration();
   }, [selectedProfileId, user]);
 
-  // Calculate monthly price
+  // Calculate price (monthly for subscriptions, per session for private)
   const getMonthlyPrice = () => {
     if (!registration) return '$0.00';
 
-    const { programType, groupFrequency, privateFrequency } = registration.form_data;
+    const { programType, groupFrequency } = registration.form_data;
 
     if (programType === 'group') {
       return groupFrequency === '1x' ? '$249.99' : '$399.99';
     } else if (programType === 'private') {
-      return privateFrequency === '1x' ? '$499.99' : '$799.99';
+      return 'Per session'; // Private sessions sold individually
     } else if (programType === 'semi-private') {
       return '$349.99';
     }
@@ -248,16 +248,20 @@ const BillingPage: React.FC = () => {
                     <p className="text-sm text-muted-foreground mt-1">
                       {registration.form_data.programType === 'group' &&
                         `${registration.form_data.groupFrequency?.toUpperCase()} per week`}
-                      {registration.form_data.programType === 'private' &&
-                        registration.form_data.privateFrequency}
+                      {registration.form_data.programType === 'private' && 'Single session'}
                       {registration.form_data.programType === 'semi-private' && 'Custom schedule'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Monthly Cost</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {registration.form_data.programType === 'private' ? 'Session Cost' : 'Monthly Cost'}
+                    </p>
                     <p className="text-3xl font-bold text-primary">{monthlyPrice}</p>
-                    <p className="text-sm text-muted-foreground mt-1">Billed monthly</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {registration.form_data.programType === 'private' ? 'Per session' : 'Billed monthly'}
+                    </p>
                   </div>
+                  {registration.form_data.programType !== 'private' && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Next Billing Date</p>
                     <p className="text-xl font-bold text-foreground">
@@ -273,6 +277,7 @@ const BillingPage: React.FC = () => {
                       {monthlyPrice} will be charged
                     </p>
                   </div>
+                  )}
                 </div>
 
                 <Separator />

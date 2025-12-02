@@ -200,7 +200,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       setFormData(prev => ({ ...prev, [name]: files ? files[0] : null }));
     }
     else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      // Special handling: when private program is selected, auto-set frequency to 'one-time'
+      // (Private sessions are sold individually by unity)
+      if (name === 'programType' && value === 'private') {
+        setFormData(prev => ({ ...prev, [name]: value, privateFrequency: 'one-time' }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
     }
   };
 

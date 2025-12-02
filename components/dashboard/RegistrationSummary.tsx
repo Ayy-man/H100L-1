@@ -47,7 +47,7 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
       case 'group':
         return `Group Training ${form_data.groupFrequency?.toUpperCase()}`;
       case 'private':
-        return `Private Training ${form_data.privateFrequency?.toUpperCase()}`;
+        return 'Private Training (Single Session)';
       case 'semi-private':
         return 'Semi-Private Training';
       default:
@@ -63,16 +63,16 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
       .join(', ');
   };
 
-  // Get monthly price based on program
+  // Get price based on program (private is per session, others are monthly)
   const getMonthlyPrice = () => {
-    const { programType, groupFrequency, privateFrequency } = form_data;
+    const { programType, groupFrequency } = form_data;
 
     if (programType === 'group') {
-      return groupFrequency === '1x' ? '$249.99' : '$399.99';
+      return groupFrequency === '1x' ? '$249.99/month' : '$399.99/month';
     } else if (programType === 'private') {
-      return privateFrequency === '1x' ? '$499.99' : '$799.99';
+      return 'Per session'; // Price set in Stripe
     } else if (programType === 'semi-private') {
-      return '$349.99';
+      return '$349.99/month';
     }
     return '$0.00';
   };

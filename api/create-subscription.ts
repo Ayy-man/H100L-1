@@ -182,40 +182,78 @@ export default async function handler(
     let paymentIntentId = null;
 
     // Step 3: Create subscription or one-time payment
-    if (frequency === 'one-time') {
-      // One-time payment for private training
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: getPriceAmount(programType, frequency),
-        currency: 'cad',
+    // Private sessions are sold by unity (one session at a time)
+    if (programType === 'private') {
+      // One-time payment for private training using Stripe Price
+      // Create an invoice with the price and pay it immediately
+      // Create invoice item with the price (result stored for audit trail, not used directly)
+      await stripe.invoiceItems.create({
         customer: customer.id,
-        payment_method: paymentMethodId,
-        off_session: true,
-        confirm: true,
-        description: `${programType} training - one-time session`,
+        price: priceId,
         metadata: {
           registrationId,
           programType,
-          frequency,
         },
       });
 
-      paymentIntentId = paymentIntent.id;
+      const invoice = await stripe.invoices.create({
+        customer: customer.id,
+        auto_advance: true, // Auto-finalize
+        collection_method: 'charge_automatically',
+        default_payment_method: paymentMethodId,
+        metadata: {
+          registrationId,
+          programType,
+          frequency: 'one-time',
+        },
+      });
+
+      // Finalize and pay the invoice
+      await stripe.invoices.finalizeInvoice(invoice.id);
+      const paidInvoice = await stripe.invoices.pay(invoice.id);
+
+      paymentIntentId = paidInvoice.payment_intent as string;
 
       // Update Supabase with payment info
       await getSupabase()
         .from('registrations')
         .update({
           stripe_customer_id: customer.id,
-          payment_status: paymentIntent.status === 'succeeded' ? 'succeeded' : 'pending',
+          payment_status: paidInvoice.status === 'paid' ? 'succeeded' : 'pending',
           updated_at: new Date().toISOString(),
         })
         .eq('id', registrationId);
 
+      // Notify admin about new private session registration
+      if (paidInvoice.status === 'paid') {
+        try {
+          const { data: regData } = await getSupabase()
+            .from('registrations')
+            .select('form_data')
+            .eq('id', registrationId)
+            .single();
+
+          if (regData?.form_data) {
+            const formData = regData.form_data;
+            await notifyNewRegistration({
+              playerName: formData.playerFullName || 'Unknown Player',
+              playerCategory: formData.playerCategory || 'Unknown',
+              programType: 'Private Training (Single Session)',
+              parentEmail: formData.parentEmail || customerEmail,
+              registrationId,
+            });
+          }
+        } catch (notifyError) {
+          console.error('Failed to send new registration notification:', notifyError);
+        }
+      }
+
       return res.status(200).json({
         success: true,
         customerId: customer.id,
+        invoiceId: paidInvoice.id,
         paymentIntentId,
-        status: paymentIntent.status,
+        status: paidInvoice.status,
       });
     } else {
       // Create recurring subscription and charge immediately
@@ -338,14 +376,13 @@ function getPriceId(programType: string, frequency: string): string | null {
   const priceMap: Record<string, string | undefined> = {
     'group-1x': process.env.VITE_STRIPE_PRICE_GROUP_1X,
     'group-2x': process.env.VITE_STRIPE_PRICE_GROUP_2X,
-    'private-1x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_1X,
-    'private-2x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_2X,
-    'private-3x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_3X, // Requires separate price config
+    'private-one-time': process.env.VITE_STRIPE_PRICE_PRIVATE_SESSION, // Single private session (sold by unity)
     'semi-private-monthly': process.env.VITE_STRIPE_PRICE_SEMI_PRIVATE,
   };
 
-  if (frequency === 'one-time') {
-    return null;
+  // Private sessions are sold by unity (one-time payments)
+  if (programType === 'private') {
+    return priceMap['private-one-time'] || null;
   }
 
   // Handle semi-private which doesn't have frequency in the same way

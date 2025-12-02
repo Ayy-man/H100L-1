@@ -383,16 +383,10 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                   </p>
                 </div>
 
-                <FormSelect label="Session Frequency" name="privateFrequency" value={data.privateFrequency} handleChange={handleChange} error={errors.privateFrequency} required>
-                  <option value="">-- Select Frequency --</option>
-                  <option value="1x/week">1x / week</option>
-                  <option value="2x/week">2x / week</option>
-                  <option value="3x/week">3x / week</option>
-                </FormSelect>
-
+                {/* Private sessions are sold by unity - 1 day at a time */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Days <span className="text-red-500">*</span></label>
-                  <p className="text-xs text-gray-400 mb-3">Available all 7 days a week - Select all days you're available</p>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Select Your Training Day <span className="text-red-500">*</span></label>
+                  <p className="text-xs text-gray-400 mb-3">Private sessions are sold individually - choose 1 day for your session</p>
 
                   {/* Check Availability Button */}
                   <button
@@ -425,11 +419,17 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                           }`}
                         >
                           <input
-                            type="checkbox"
+                            type="radio"
+                            name="privateSelectedDay"
                             className="sr-only"
                             checked={isChecked}
                             disabled={!isAllowed || dayCapacity?.isFull}
-                            onChange={() => isAllowed && !dayCapacity?.isFull && handleMultiSelectChange('privateSelectedDays', day)}
+                            onChange={() => {
+                              if (isAllowed && !dayCapacity?.isFull) {
+                                // Single selection - replace array with just this day
+                                handleChange({ target: { name: 'privateSelectedDays', value: [day] } } as any);
+                              }
+                            }}
                           />
                           <span>{day}</span>
 
@@ -453,7 +453,7 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                       );
                     })}
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">Select all days you're available for private sessions</p>
+                  <p className="text-xs text-gray-400 mt-2">Each private session is booked individually</p>
                 </div>
 
                 <FormSelect label="Preferred Time Slot" name="privateTimeSlot" value={data.privateTimeSlot} handleChange={handleChange}>
