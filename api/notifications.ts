@@ -57,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-      let query = supabase
+      let query = getSupabase()
         .from('notifications')
         .select('*')
         .eq('user_id', userId as string)
@@ -133,7 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // List notifications
       if (action === 'list') {
-        let query = supabase
+        let query = getSupabase()
           .from('notifications')
           .select('*')
           .eq('user_id', userId)
@@ -244,7 +244,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Mark multiple or all notifications as read
       if (action === 'mark_all_read') {
-        let query = supabase
+        let query = getSupabase()
           .from('notifications')
           .update({
             read: true,
@@ -326,12 +326,7 @@ export async function createNotification(params: {
   actionUrl?: string;
   expiresAt?: string;
 }) {
-  const supabaseClient = createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  const { data, error } = await getSupabase()Client
+  const { data, error } = await getSupabase()
     .from('notifications')
     .insert({
       user_id: params.userId,
