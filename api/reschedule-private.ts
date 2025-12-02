@@ -2,10 +2,17 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { notifyScheduleChanged } from '../lib/notificationHelper';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Private Training Rescheduling API
@@ -68,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } = req.body as RescheduleRequest;
 
     // Validate registration ownership
-    const { data: registration, error: regError } = await supabase
+    const { data: registration, error: regError } = await getSupabase()
       .from('registrations')
       .select('*')
       .eq('id', registrationId)
@@ -92,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (action === 'get_availability') {
       // Get all private and semi-private bookings ONCE (not per slot - more efficient)
-      const { data: allBookings, error: bookingsError } = await supabase
+      const { data: allBookings, error: bookingsError } = await getSupabase()
         .from('registrations')
         .select('form_data, id')
         .in('payment_status', ['succeeded', 'verified']);
@@ -210,7 +217,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Check if slot is available - fetch all and filter in JS
-      const { data: bookings, error } = await supabase
+      const { data: bookings, error } = await getSupabase()
         .from('registrations')
         .select('form_data, id')
         .in('payment_status', ['succeeded', 'verified']);
@@ -287,7 +294,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Check if slot is available - fetch all and filter in JS
-      const { data: bookings } = await supabase
+      const { data: bookings } = await getSupabase()
         .from('registrations')
         .select('form_data, id')
         .in('payment_status', ['succeeded', 'verified']);
@@ -333,7 +340,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Create schedule change record
-      const { data: scheduleChange, error: changeError } = await supabase
+      const { data: scheduleChange, error: changeError } = await getSupabase()
         .from('schedule_changes')
         .insert({
           registration_id: registrationId,
@@ -375,7 +382,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           privateTimeSlot: newTime
         };
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await getSupabase()
           .from('registrations')
           .update({
             form_data: updatedFormData,
@@ -404,7 +411,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           for (const mapping of exceptionMappings) {
             console.log(`Creating exception: ${mapping.originalDay} (${mapping.date}) -> ${mapping.replacementDay}`);
 
-            const { error: exceptionError } = await supabase
+            const { error: exceptionError } = await getSupabase()
               .from('schedule_exceptions')
               .insert({
                 registration_id: registrationId,
@@ -428,7 +435,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Fallback: old behavior for backwards compatibility
           console.log('Using legacy exception creation (no mappings provided)');
           for (const day of daysToSet) {
-            const { error: exceptionError } = await supabase
+            const { error: exceptionError } = await getSupabase()
               .from('schedule_exceptions')
               .insert({
                 registration_id: registrationId,

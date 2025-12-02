@@ -16,11 +16,17 @@ import { createClient } from '@supabase/supabase-js';
  *     Date, Time Slot, Age Group, Player Name, Category, Parent Name, Email, Phone, Attendance Status
  */
 
-// Initialize Supabase client with service role for admin access
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 export default async function handler(
   req: VercelRequest,
@@ -44,7 +50,7 @@ export default async function handler(
     }
 
     // Get roster data using the database function
-    const { data, error } = await supabase.rpc('get_sunday_roster', {
+    const { data, error } = await getSupabase().rpc('get_sunday_roster', {
       p_practice_date: date,
     });
 

@@ -6,10 +6,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 // Group training capacity
 const MAX_GROUP_CAPACITY = 6;
@@ -29,7 +36,7 @@ async function validateSlotAvailability(
   }
 
   // Fetch all CONFIRMED registrations (succeeded or verified) - NOT including the current one
-  const { data: confirmedBookings, error } = await supabase
+  const { data: confirmedBookings, error } = await getSupabase()
     .from('registrations')
     .select('id, form_data')
     .in('payment_status', ['succeeded', 'verified'])
@@ -207,7 +214,7 @@ export default async function handler(
       : session.subscription?.id;
 
     // CRITICAL: Fetch registration and validate slot availability BEFORE confirming payment
-    const { data: registration, error: fetchError } = await supabase
+    const { data: registration, error: fetchError } = await getSupabase()
       .from('registrations')
       .select('*')
       .eq('id', registrationId)
@@ -228,7 +235,7 @@ export default async function handler(
       console.error(`❌ Slot no longer available for registration ${registrationId}: ${slotValidation.message}`);
 
       // Mark registration as failed due to slot unavailability
-      await supabase
+      await getSupabase()
         .from('registrations')
         .update({
           payment_status: 'slot_unavailable',
@@ -247,7 +254,7 @@ export default async function handler(
     }
 
     // Update registration in database
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('registrations')
       .update({
         stripe_customer_id: customerId,

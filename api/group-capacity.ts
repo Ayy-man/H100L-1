@@ -1,10 +1,17 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Group Capacity API
@@ -32,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Fetch capacity for each day
     const capacityResults = await Promise.all(
       dayList.map(async (day) => {
-        const { data: bookings, error } = await supabase
+        const { data: bookings, error } = await getSupabase()
           .from('registrations')
           .select('form_data, id')
           .in('payment_status', ['succeeded', 'verified'])

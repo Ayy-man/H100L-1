@@ -7,10 +7,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Cancel Subscription API
@@ -31,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Get registration from database
-    const { data: registration, error: fetchError } = await supabase
+    const { data: registration, error: fetchError } = await getSupabase()
       .from('registrations')
       .select('*')
       .eq('id', registrationId)
@@ -64,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const billingPeriodEnd = new Date(canceledSubscription.current_period_end * 1000);
 
     // Update registration in database
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabase()
       .from('registrations')
       .update({
         payment_status: 'canceled',
@@ -79,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Cancel all Sunday practice bookings AFTER the billing period end
     // User keeps bookings they've already paid for (during current billing period)
-    const { data: canceledBookings, error: bookingError } = await supabase
+    const { data: canceledBookings, error: bookingError } = await getSupabase()
       .from('sunday_bookings')
       .update({
         booking_status: 'cancelled',

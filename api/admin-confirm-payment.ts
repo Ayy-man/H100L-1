@@ -2,10 +2,17 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { notifyPaymentConfirmed } from '../lib/notificationHelper';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Admin Confirm Payment API
@@ -37,7 +44,7 @@ export default async function handler(
     }
 
     // Verify registration exists
-    const { data: registration, error: fetchError } = await supabase
+    const { data: registration, error: fetchError } = await getSupabase()
       .from('registrations')
       .select('*')
       .eq('id', registrationId)
@@ -49,7 +56,7 @@ export default async function handler(
 
     // Update registration with manual confirmation
     // Set status to 'verified' - one step above 'succeeded'
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('registrations')
       .update({
         payment_status: 'verified',

@@ -18,11 +18,17 @@ import { createClient } from '@supabase/supabase-js';
  *   - count: Number of children
  */
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 export default async function handler(
   req: VercelRequest,
@@ -55,7 +61,7 @@ export default async function handler(
     }
 
     // Fetch all registrations for this firebase_uid
-    const { data: registrations, error } = await supabase
+    const { data: registrations, error } = await getSupabase()
       .from('registrations')
       .select(`
         id,

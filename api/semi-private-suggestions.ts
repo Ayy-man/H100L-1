@@ -1,10 +1,17 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy-initialized Supabase client to avoid cold start issues
+let _supabase: ReturnType<typeof createClient> | null = null;
+const getSupabase = () => {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabase;
+};
 
 /**
  * Semi-Private Suggestions API
@@ -57,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 1. Get unpaired players in the same age category
-    const { data: unpairedPlayers, error: unpairedError } = await supabase
+    const { data: unpairedPlayers, error: unpairedError } = await getSupabase()
       .from('unpaired_semi_private')
       .select('*')
       .eq('age_category', playerCategory)
@@ -68,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 2. Get all booked slots (private + semi-private with succeeded/verified payment)
-    const { data: bookings, error: bookingsError } = await supabase
+    const { data: bookings, error: bookingsError } = await getSupabase()
       .from('registrations')
       .select('form_data')
       .in('payment_status', ['succeeded', 'verified']);
