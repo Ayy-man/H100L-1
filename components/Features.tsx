@@ -31,11 +31,11 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ iconSrc, iconAlt, title, desc
     className="bg-gray-800 p-8 rounded-xl border border-gray-700 text-center"
     variants={cardVariants}
   >
-    <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+    <div className="w-28 h-28 mx-auto mb-6 flex items-center justify-center">
       <img
         src={iconSrc}
         alt={iconAlt}
-        className="w-14 h-14 object-contain"
+        className="w-24 h-24 object-contain"
       />
     </div>
     <h3 className="text-2xl font-bold mb-2 text-white">{title}</h3>
