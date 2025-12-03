@@ -57,14 +57,14 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
   const [unpairedPlayersCount, setUnpairedPlayersCount] = useState(0);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
-  const daysOfWeek: { value: WeekDay; label: string }[] = [
-    { value: 'monday', label: 'Monday' },
-    { value: 'tuesday', label: 'Tuesday' },
-    { value: 'wednesday', label: 'Wednesday' },
-    { value: 'thursday', label: 'Thursday' },
-    { value: 'friday', label: 'Friday' },
-    { value: 'saturday', label: 'Saturday' },
-    { value: 'sunday', label: 'Sunday' },
+  const daysOfWeek: { value: WeekDay; label: string; short: string }[] = [
+    { value: 'monday', label: 'Monday', short: 'Mon' },
+    { value: 'tuesday', label: 'Tuesday', short: 'Tue' },
+    { value: 'wednesday', label: 'Wednesday', short: 'Wed' },
+    { value: 'thursday', label: 'Thursday', short: 'Thu' },
+    { value: 'friday', label: 'Friday', short: 'Fri' },
+    { value: 'saturday', label: 'Saturday', short: 'Sat' },
+    { value: 'sunday', label: 'Sunday', short: 'Sun' },
   ];
 
   // Check availability when program type or selected days change
@@ -275,57 +275,60 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                       {isCheckingAvailability ? '🔄 Checking...' : '🔍 Check Availability'}
                     </button>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                         {daysOfWeek.map(day => {
                           const isSelected = data.groupSelectedDays.includes(day.value);
                           const isAllowedDay = isDayAvailable(day.value);
                           const dayCapacity = getDayCapacity(day.label);
-                          const isDisabled = !isSelected && (!canSelectMore || !isAllowedDay);
+                          // Check if slot is full (either API says so, or 0 available spots)
+                          const isFull = dayCapacity?.isFull || (dayCapacity && dayCapacity.availableSpots === 0);
+                          // Disable if: not selected AND (can't select more OR not allowed OR slot is full)
+                          const isDisabled = !isSelected && (!canSelectMore || !isAllowedDay || isFull);
 
                           return (
                             <button
                               key={day.value}
                               type="button"
-                              onClick={() => isAllowedDay && !isDisabled && handleDayToggle(day.value)}
+                              onClick={() => isAllowedDay && !isDisabled && !isFull && handleDayToggle(day.value)}
                               disabled={isDisabled || !isAllowedDay}
-                              className={`p-2 sm:p-3 border-2 rounded-lg text-center font-semibold text-xs sm:text-sm transition-all min-h-[60px] flex flex-col items-center justify-center relative overflow-hidden ${
+                              className={`p-2 sm:p-3 border-2 rounded-lg text-center font-semibold text-xs sm:text-sm transition-all min-h-[70px] flex flex-col items-center justify-center ${
                                 isSelected
                                   ? 'border-[#9BD4FF] bg-[#9BD4FF]/20 text-[#9BD4FF]'
                                   : !isAllowedDay
                                   ? 'border-white/10 bg-gray-700/30 text-gray-600 cursor-not-allowed'
+                                  : isFull
+                                  ? 'border-red-500/50 bg-red-500/10 text-red-400 cursor-not-allowed'
                                   : isDisabled
                                   ? 'border-white/10 bg-white/5 text-gray-600 cursor-not-allowed'
-                                  : dayCapacity?.isFull
-                                  ? 'border-red-500/50 bg-red-500/10 text-red-400 cursor-not-allowed'
                                   : 'border-white/20 bg-white/5 text-white hover:border-[#9BD4FF]/50 cursor-pointer'
                               }`}
                             >
-                              <div className="flex items-center justify-center gap-0.5 mb-1 w-full overflow-hidden">
+                              <div className="flex items-center justify-center gap-1 mb-1">
                                 {isSelected && (
                                   <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
                                 )}
-                                <span className="truncate text-[11px] sm:text-sm">{day.label}</span>
+                                {/* Short name on mobile, full name on sm+ */}
+                                <span className="sm:hidden text-xs">{day.short}</span>
+                                <span className="hidden sm:inline">{day.label}</span>
                               </div>
 
                               {/* Capacity Badge */}
                               {isAllowedDay && dayCapacity && (
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                  dayCapacity.isFull
+                                  isFull
                                     ? 'bg-red-500 text-white'
                                     : dayCapacity.availableSpots <= 2
                                     ? 'bg-yellow-500 text-black'
                                     : 'bg-green-500 text-white'
                                 }`}>
-                                  {dayCapacity.isFull ? 'FULL' : `${dayCapacity.availableSpots}/${dayCapacity.totalCapacity}`}
+                                  {isFull ? 'FULL' : `${dayCapacity.availableSpots}/${dayCapacity.totalCapacity}`}
                                 </span>
                               )}
 
                               {!isAllowedDay && (
-                                <span className="text-[9px] text-gray-500 absolute bottom-1">
-                                  Not available
-                                </span>
+                                <span className="text-[9px] text-gray-500 mt-1">N/A</span>
                               )}
                             </button>
                           );
