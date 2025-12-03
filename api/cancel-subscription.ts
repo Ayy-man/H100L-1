@@ -1,7 +1,59 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { createNotification, notifyAdmins } from './_lib/notificationHelper';
+
+console.log('[cancel-subscription] Module loaded');
+
+// ============================================================
+// INLINED NOTIFICATION HELPERS (to avoid Vercel bundling issues)
+// ============================================================
+
+interface CreateNotificationParams {
+  userId: string;
+  userType: 'parent' | 'admin';
+  type: string;
+  title: string;
+  message: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  data?: Record<string, any>;
+  actionUrl?: string;
+}
+
+async function createNotification(params: CreateNotificationParams) {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: params.userId,
+        user_type: params.userType,
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        priority: params.priority || 'normal',
+        data: params.data || null,
+        action_url: params.actionUrl || null,
+      });
+
+    if (error) {
+      console.error('Error creating notification:', error);
+    }
+  } catch (err) {
+    console.error('Exception creating notification:', err);
+  }
+}
+
+async function notifyAdmins(params: Omit<CreateNotificationParams, 'userId' | 'userType'>) {
+  return createNotification({
+    ...params,
+    userId: 'admin',
+    userType: 'admin'
+  });
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',

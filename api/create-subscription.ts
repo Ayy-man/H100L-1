@@ -1,7 +1,84 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { notifyNewRegistration } from './_lib/notificationHelper';
+
+console.log('[create-subscription] Module loaded');
+
+// ============================================================
+// INLINED NOTIFICATION HELPERS (to avoid Vercel bundling issues)
+// ============================================================
+
+interface CreateNotificationParams {
+  userId: string;
+  userType: 'parent' | 'admin';
+  type: string;
+  title: string;
+  message: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  data?: Record<string, any>;
+  actionUrl?: string;
+}
+
+async function createNotification(params: CreateNotificationParams) {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: params.userId,
+        user_type: params.userType,
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        priority: params.priority || 'normal',
+        data: params.data || null,
+        action_url: params.actionUrl || null,
+      });
+
+    if (error) {
+      console.error('Error creating notification:', error);
+    }
+  } catch (err) {
+    console.error('Exception creating notification:', err);
+  }
+}
+
+async function notifyAdmins(params: Omit<CreateNotificationParams, 'userId' | 'userType'>) {
+  return createNotification({
+    ...params,
+    userId: 'admin',
+    userType: 'admin'
+  });
+}
+
+async function notifyNewRegistration(params: {
+  playerName: string;
+  playerCategory: string;
+  programType: string;
+  parentEmail: string;
+  registrationId: string;
+}) {
+  const { playerName, playerCategory, programType, parentEmail, registrationId } = params;
+
+  await notifyAdmins({
+    type: 'system',
+    title: 'New Registration',
+    message: `${playerName} (${playerCategory}) registered for ${programType} training. Contact: ${parentEmail}`,
+    priority: 'normal',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      player_category: playerCategory,
+      program_type: programType,
+      parent_email: parentEmail
+    },
+    actionUrl: '/admin'
+  });
+}
 
 // Initialize Stripe with secret key from environment
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -105,40 +182,78 @@ export default async function handler(
     let paymentIntentId = null;
 
     // Step 3: Create subscription or one-time payment
-    if (frequency === 'one-time') {
-      // One-time payment for private training
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: getPriceAmount(programType, frequency),
-        currency: 'cad',
+    // Private sessions are sold by unity (one session at a time)
+    if (programType === 'private') {
+      // One-time payment for private training using Stripe Price
+      // Create an invoice with the price and pay it immediately
+      // Create invoice item with the price (result stored for audit trail, not used directly)
+      await stripe.invoiceItems.create({
         customer: customer.id,
-        payment_method: paymentMethodId,
-        off_session: true,
-        confirm: true,
-        description: `${programType} training - one-time session`,
+        price: priceId,
         metadata: {
           registrationId,
           programType,
-          frequency,
         },
       });
 
-      paymentIntentId = paymentIntent.id;
+      const invoice = await stripe.invoices.create({
+        customer: customer.id,
+        auto_advance: true, // Auto-finalize
+        collection_method: 'charge_automatically',
+        default_payment_method: paymentMethodId,
+        metadata: {
+          registrationId,
+          programType,
+          frequency: 'one-time',
+        },
+      });
+
+      // Finalize and pay the invoice
+      await stripe.invoices.finalizeInvoice(invoice.id);
+      const paidInvoice = await stripe.invoices.pay(invoice.id);
+
+      paymentIntentId = paidInvoice.payment_intent as string;
 
       // Update Supabase with payment info
       await getSupabase()
         .from('registrations')
         .update({
           stripe_customer_id: customer.id,
-          payment_status: paymentIntent.status === 'succeeded' ? 'succeeded' : 'pending',
+          payment_status: paidInvoice.status === 'paid' ? 'succeeded' : 'pending',
           updated_at: new Date().toISOString(),
         })
         .eq('id', registrationId);
 
+      // Notify admin about new private session registration
+      if (paidInvoice.status === 'paid') {
+        try {
+          const { data: regData } = await getSupabase()
+            .from('registrations')
+            .select('form_data')
+            .eq('id', registrationId)
+            .single();
+
+          if (regData?.form_data) {
+            const formData = regData.form_data;
+            await notifyNewRegistration({
+              playerName: formData.playerFullName || 'Unknown Player',
+              playerCategory: formData.playerCategory || 'Unknown',
+              programType: 'Private Training (Single Session)',
+              parentEmail: formData.parentEmail || customerEmail,
+              registrationId,
+            });
+          }
+        } catch (notifyError) {
+          console.error('Failed to send new registration notification:', notifyError);
+        }
+      }
+
       return res.status(200).json({
         success: true,
         customerId: customer.id,
+        invoiceId: paidInvoice.id,
         paymentIntentId,
-        status: paymentIntent.status,
+        status: paidInvoice.status,
       });
     } else {
       // Create recurring subscription and charge immediately
@@ -261,14 +376,13 @@ function getPriceId(programType: string, frequency: string): string | null {
   const priceMap: Record<string, string | undefined> = {
     'group-1x': process.env.VITE_STRIPE_PRICE_GROUP_1X,
     'group-2x': process.env.VITE_STRIPE_PRICE_GROUP_2X,
-    'private-1x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_1X,
-    'private-2x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_2X,
-    'private-3x/week': process.env.VITE_STRIPE_PRICE_PRIVATE_3X, // Requires separate price config
+    'private-one-time': process.env.VITE_STRIPE_PRICE_PRIVATE_SESSION, // Single private session (sold by unity)
     'semi-private-monthly': process.env.VITE_STRIPE_PRICE_SEMI_PRIVATE,
   };
 
-  if (frequency === 'one-time') {
-    return null;
+  // Private sessions are sold by unity (one-time payments)
+  if (programType === 'private') {
+    return priceMap['private-one-time'] || null;
   }
 
   // Handle semi-private which doesn't have frequency in the same way

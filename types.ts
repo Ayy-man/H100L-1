@@ -63,9 +63,10 @@ export interface FormData {
   groupSelectedDays: WeekDay[]; // Preferred: Selected days of the week for recurring training
   groupMonthlyDates: string[]; // Generated dates for the current month (ISO format: YYYY-MM-DD)
 
-  // Private Details
+  // Private Details (sold by unity - one session at a time)
+  /** @deprecated Private sessions are now always 'one-time'. Kept for backward compatibility. */
   privateFrequency: '1x' | '2x' | 'one-time' | '';
-  privateSelectedDays: string[];
+  privateSelectedDays: string[]; // Single day for private session
   privateTimeSlot: string;
 
   // Semi-Private Details
@@ -80,10 +81,13 @@ export interface FormData {
   dominantHand: 'Left' | 'Right' | '';
   currentLevel: string;
   jerseySize: string;
+  primaryObjective: 'Shooting' | 'Puck Handling' | 'Skating' | 'Endurance' | '';
   hasAllergies: boolean;
   allergiesDetails: string;
   hasMedicalConditions: boolean;
   medicalConditionsDetails: string;
+  carriesMedication: boolean;
+  medicationDetails: string;
   actionPlan: File | null;
   medicalReport: File | null;
   medicalFiles?: MedicalFiles; // Stored URLs after upload

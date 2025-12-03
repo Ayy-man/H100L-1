@@ -449,22 +449,23 @@ const ProfilePage: React.FC = () => {
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Frequency</Label>
+                    <Label>Session Type</Label>
                     <p className="text-foreground font-medium">
                       {registration.form_data.programType === 'group' &&
                         `${registration.form_data.groupFrequency?.toUpperCase()} per week`}
-                      {registration.form_data.programType === 'private' &&
-                        registration.form_data.privateFrequency}
+                      {registration.form_data.programType === 'private' && 'Single Session'}
                       {registration.form_data.programType === 'semi-private' && 'Custom schedule'}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Training Days</Label>
+                    <Label>Training Day{registration.form_data.programType === 'group' ? 's' : ''}</Label>
                     <p className="text-foreground font-medium">
                       {registration.form_data.programType === 'group' &&
                         registration.form_data.groupSelectedDays?.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
                       {registration.form_data.programType === 'private' &&
-                        registration.form_data.privateSelectedDays?.join(', ')}
+                        (registration.form_data.privateSelectedDays?.[0]
+                          ? registration.form_data.privateSelectedDays[0].charAt(0).toUpperCase() + registration.form_data.privateSelectedDays[0].slice(1)
+                          : 'Not selected')}
                       {registration.form_data.programType === 'semi-private' &&
                         registration.form_data.semiPrivateAvailability?.join(', ')}
                     </p>

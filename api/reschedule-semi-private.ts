@@ -1,10 +1,175 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import {
-  notifyPairingCreated,
-  notifyPairingDissolved,
-  notifyScheduleChanged
-} from './_lib/notificationHelper';
+
+console.log('[reschedule-semi-private] Module loaded');
+
+// ============================================================
+// INLINED NOTIFICATION HELPERS (to avoid Vercel bundling issues)
+// ============================================================
+
+interface CreateNotificationParams {
+  userId: string;
+  userType: 'parent' | 'admin';
+  type: string;
+  title: string;
+  message: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  data?: Record<string, any>;
+  actionUrl?: string;
+}
+
+async function createNotification(params: CreateNotificationParams) {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: params.userId,
+        user_type: params.userType,
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        priority: params.priority || 'normal',
+        data: params.data || null,
+        action_url: params.actionUrl || null,
+      });
+
+    if (error) {
+      console.error('Error creating notification:', error);
+    }
+  } catch (err) {
+    console.error('Exception creating notification:', err);
+  }
+}
+
+async function notifyAdmins(params: Omit<CreateNotificationParams, 'userId' | 'userType'>) {
+  return createNotification({
+    ...params,
+    userId: 'admin',
+    userType: 'admin'
+  });
+}
+
+async function notifyPairingCreated(params: {
+  parentUserId: string;
+  playerName: string;
+  partnerName: string;
+  scheduledDay: string;
+  scheduledTime: string;
+  registrationId: string;
+}) {
+  const { parentUserId, playerName, partnerName, scheduledDay, scheduledTime, registrationId } = params;
+
+  await createNotification({
+    userId: parentUserId,
+    userType: 'parent',
+    type: 'pairing_created',
+    title: 'Training Partner Found!',
+    message: `${playerName} has been paired with ${partnerName} for semi-private training on ${scheduledDay}s at ${scheduledTime}.`,
+    priority: 'high',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      partner_name: partnerName,
+      scheduled_day: scheduledDay,
+      scheduled_time: scheduledTime
+    },
+    actionUrl: '/schedule'
+  });
+
+  await notifyAdmins({
+    type: 'pairing_created',
+    title: 'New Semi-Private Pairing',
+    message: `${playerName} and ${partnerName} have been paired for ${scheduledDay} at ${scheduledTime}.`,
+    priority: 'normal',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      partner_name: partnerName
+    }
+  });
+}
+
+async function notifyPairingDissolved(params: {
+  parentUserId: string;
+  playerName: string;
+  partnerName: string;
+  reason?: string;
+  registrationId: string;
+}) {
+  const { parentUserId, playerName, partnerName, reason, registrationId } = params;
+
+  await createNotification({
+    userId: parentUserId,
+    userType: 'parent',
+    type: 'pairing_dissolved',
+    title: 'Training Pairing Update',
+    message: `Your pairing with ${partnerName} has ended. ${reason || 'You will be matched with a new partner soon.'}`,
+    priority: 'high',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      partner_name: partnerName,
+      reason
+    },
+    actionUrl: '/schedule'
+  });
+}
+
+async function notifyScheduleChanged(params: {
+  parentUserId: string;
+  playerName: string;
+  changeType: 'one_time' | 'permanent';
+  originalSchedule: string;
+  newSchedule: string;
+  registrationId: string;
+}) {
+  const { parentUserId, playerName, changeType, originalSchedule, newSchedule, registrationId } = params;
+  const isPermanent = changeType === 'permanent';
+
+  // Notify parent
+  await createNotification({
+    userId: parentUserId,
+    userType: 'parent',
+    type: 'schedule_changed',
+    title: isPermanent ? 'Schedule Updated' : 'One-Time Schedule Change',
+    message: isPermanent
+      ? `${playerName}'s training schedule has been updated from ${originalSchedule} to ${newSchedule}.`
+      : `${playerName}'s training has been moved from ${originalSchedule} to ${newSchedule} for this week.`,
+    priority: 'normal',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      change_type: changeType,
+      original_schedule: originalSchedule,
+      new_schedule: newSchedule
+    },
+    actionUrl: '/schedule'
+  });
+
+  // Notify admin about parent's schedule change
+  await notifyAdmins({
+    type: 'schedule_changed',
+    title: 'Parent Rescheduled Training',
+    message: isPermanent
+      ? `${playerName} (Semi-Private) permanently changed schedule from ${originalSchedule} to ${newSchedule}.`
+      : `${playerName} (Semi-Private) made a one-time schedule change from ${originalSchedule} to ${newSchedule}.`,
+    priority: 'normal',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      change_type: changeType,
+      program_type: 'semi-private',
+      original_schedule: originalSchedule,
+      new_schedule: newSchedule
+    },
+    actionUrl: '/admin?tab=schedule'
+  });
+}
 
 // Lazy-initialized Supabase client to avoid cold start issues
 let _supabase: ReturnType<typeof createClient> | null = null;

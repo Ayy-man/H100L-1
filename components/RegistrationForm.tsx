@@ -29,8 +29,9 @@ const initialFormData: FormData = {
   programType: '', groupFrequency: '', groupDay: '', groupSelectedDays: [], groupMonthlyDates: [],
   privateFrequency: '', privateSelectedDays: [], privateTimeSlot: '', semiPrivateAvailability: [],
   semiPrivateTimeSlot: '', semiPrivateTimeWindows: [], semiPrivateMatchingPreference: '', position: '',
-  dominantHand: '', currentLevel: '', jerseySize: '', hasAllergies: false,
+  dominantHand: '', currentLevel: '', jerseySize: '', primaryObjective: '', hasAllergies: false,
   allergiesDetails: '', hasMedicalConditions: false, medicalConditionsDetails: '',
+  carriesMedication: false, medicationDetails: '',
   actionPlan: null, medicalReport: null, photoVideoConsent: false, policyAcceptance: false,
 };
 
@@ -199,7 +200,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       setFormData(prev => ({ ...prev, [name]: files ? files[0] : null }));
     }
     else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      // Special handling: when private program is selected, auto-set frequency to 'one-time'
+      // (Private sessions are sold individually by unity)
+      if (name === 'programType' && value === 'private') {
+        setFormData(prev => ({ ...prev, [name]: value, privateFrequency: 'one-time' }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
     }
   };
 

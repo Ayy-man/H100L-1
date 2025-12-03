@@ -58,12 +58,10 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
             : import.meta.env.VITE_STRIPE_PRICE_GROUP_2X,
       };
     } else if (programType === 'private') {
+      // Private sessions sold individually (by unity)
       return {
-        amount: privateFrequency === '1x' ? '$499.99' : '$799.99',
-        priceId:
-          privateFrequency === '1x'
-            ? import.meta.env.VITE_STRIPE_PRICE_PRIVATE_1X
-            : import.meta.env.VITE_STRIPE_PRICE_PRIVATE_2X,
+        amount: 'Per session',
+        priceId: import.meta.env.VITE_STRIPE_PRICE_PRIVATE_SESSION,
       };
     } else if (programType === 'semi-private') {
       return {
@@ -270,18 +268,27 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
               <span className="text-sm text-muted-foreground">Program</span>
               <span className="font-medium">
                 {form_data.programType === 'group' && `Group ${form_data.groupFrequency?.toUpperCase()}`}
-                {form_data.programType === 'private' && `Private ${form_data.privateFrequency?.toUpperCase()}`}
+                {form_data.programType === 'private' && 'Private (Single Session)'}
                 {form_data.programType === 'semi-private' && 'Semi-Private'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Monthly Cost</span>
+              <span className="text-sm text-muted-foreground">
+                {form_data.programType === 'private' ? 'Session Cost' : 'Monthly Cost'}
+              </span>
               <span className="text-2xl font-bold text-primary">{amount}</span>
             </div>
             <div className="pt-2 border-t border-border">
-              <p className="text-xs text-muted-foreground">
-                • Billed monthly, cancel anytime
-              </p>
+              {form_data.programType !== 'private' && (
+                <p className="text-xs text-muted-foreground">
+                  • Billed monthly, cancel anytime
+                </p>
+              )}
+              {form_data.programType === 'private' && (
+                <p className="text-xs text-muted-foreground">
+                  • One-time payment per session
+                </p>
+              )}
               {form_data.programType === 'group' && (
                 <p className="text-xs text-muted-foreground">
                   • Includes Sunday ice practice

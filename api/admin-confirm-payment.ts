@@ -1,6 +1,96 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifyPaymentConfirmed } from './_lib/notificationHelper';
+
+console.log('[admin-confirm-payment] Module loaded');
+
+// ============================================================
+// INLINED NOTIFICATION HELPER (to avoid Vercel bundling issues)
+// ============================================================
+
+interface CreateNotificationParams {
+  userId: string;
+  userType: 'parent' | 'admin';
+  type: string;
+  title: string;
+  message: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  data?: Record<string, any>;
+  actionUrl?: string;
+}
+
+async function createNotification(params: CreateNotificationParams) {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: params.userId,
+        user_type: params.userType,
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        priority: params.priority || 'normal',
+        data: params.data || null,
+        action_url: params.actionUrl || null,
+      });
+
+    if (error) {
+      console.error('Error creating notification:', error);
+    }
+  } catch (err) {
+    console.error('Exception creating notification:', err);
+  }
+}
+
+async function notifyAdmins(params: Omit<CreateNotificationParams, 'userId' | 'userType'>) {
+  return createNotification({
+    ...params,
+    userId: 'admin',
+    userType: 'admin'
+  });
+}
+
+async function notifyPaymentConfirmed(params: {
+  parentUserId: string;
+  playerName: string;
+  amount?: string;
+  registrationId: string;
+  confirmedBy: string;
+}) {
+  const { parentUserId, playerName, amount, registrationId, confirmedBy } = params;
+
+  await createNotification({
+    userId: parentUserId,
+    userType: 'parent',
+    type: 'payment_confirmed',
+    title: 'Payment Confirmed',
+    message: `Your payment for ${playerName}'s training has been verified${amount ? ` (${amount})` : ''}. Training access is now active.`,
+    priority: 'high',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      amount,
+      confirmed_by: confirmedBy
+    },
+    actionUrl: '/dashboard'
+  });
+
+  await notifyAdmins({
+    type: 'payment_confirmed',
+    title: 'Payment Manually Confirmed',
+    message: `Payment confirmed for ${playerName} by ${confirmedBy}.`,
+    priority: 'low',
+    data: {
+      registration_id: registrationId,
+      player_name: playerName,
+      confirmed_by: confirmedBy
+    }
+  });
+}
 
 // Lazy-initialized Supabase client to avoid cold start issues
 let _supabase: ReturnType<typeof createClient> | null = null;

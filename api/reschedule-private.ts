@@ -1,6 +1,84 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { notifyScheduleChanged } from './_lib/notificationHelper';
+
+console.log('[reschedule-private] Module loaded');
+
+// ============================================================
+// INLINED NOTIFICATION HELPER (to avoid Vercel bundling issues)
+// ============================================================
+async function notifyScheduleChanged(params: {
+  parentUserId: string;
+  playerName: string;
+  changeType: 'one_time' | 'permanent';
+  originalSchedule: string;
+  newSchedule: string;
+  registrationId: string;
+}) {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { parentUserId, playerName, changeType, originalSchedule, newSchedule, registrationId } = params;
+    const isPermanent = changeType === 'permanent';
+
+    // Notify parent
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: parentUserId,
+        user_type: 'parent',
+        type: 'schedule_changed',
+        title: isPermanent ? 'Schedule Updated' : 'One-Time Schedule Change',
+        message: isPermanent
+          ? `${playerName}'s training schedule has been updated from ${originalSchedule} to ${newSchedule}.`
+          : `${playerName}'s training has been moved from ${originalSchedule} to ${newSchedule} for this week.`,
+        priority: 'normal',
+        data: {
+          registration_id: registrationId,
+          player_name: playerName,
+          change_type: changeType,
+          original_schedule: originalSchedule,
+          new_schedule: newSchedule
+        },
+        action_url: '/schedule'
+      });
+
+    if (error) {
+      console.error('Error creating parent notification:', error);
+    }
+
+    // Notify admin about parent's schedule change
+    const { error: adminError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: 'admin',
+        user_type: 'admin',
+        type: 'schedule_changed',
+        title: 'Parent Rescheduled Training',
+        message: isPermanent
+          ? `${playerName} (Private) permanently changed schedule from ${originalSchedule} to ${newSchedule}.`
+          : `${playerName} (Private) made a one-time schedule change from ${originalSchedule} to ${newSchedule}.`,
+        priority: 'normal',
+        data: {
+          registration_id: registrationId,
+          player_name: playerName,
+          change_type: changeType,
+          program_type: 'private',
+          original_schedule: originalSchedule,
+          new_schedule: newSchedule
+        },
+        action_url: '/admin?tab=schedule'
+      });
+
+    if (adminError) {
+      console.error('Error creating admin notification:', adminError);
+    }
+  } catch (err) {
+    console.error('Exception creating notification:', err);
+  }
+}
 
 // Lazy-initialized Supabase client to avoid cold start issues
 let _supabase: ReturnType<typeof createClient> | null = null;
