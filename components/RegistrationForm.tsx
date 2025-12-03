@@ -106,6 +106,15 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
 
     if (currentStep === 2) {
       if (!formData.programType) newErrors.programType = 'Please select a program type.';
+
+      // Block private and semi-private programs (Coming Soon)
+      if (formData.programType === 'private') {
+        newErrors.programType = 'Private Training is coming soon. Please select Group Training.';
+      }
+      if (formData.programType === 'semi-private') {
+        newErrors.programType = 'Semi-Private Training is coming soon. Please select Group Training.';
+      }
+
       if (formData.programType === 'group') {
         if (!formData.groupFrequency) newErrors.groupFrequency = 'Please select a frequency.';
 
