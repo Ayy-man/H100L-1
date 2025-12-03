@@ -677,20 +677,18 @@ const SchedulePage: React.FC = () => {
                   <p className="text-sm text-muted-foreground">
                     {registration.form_data.programType === 'group' &&
                       `${registration.form_data.groupFrequency?.toUpperCase()} per week`}
-                    {registration.form_data.programType === 'private' &&
-                      `${registration.form_data.privateFrequency} sessions`}
+                    {registration.form_data.programType === 'private' && 'Single session'}
                     {registration.form_data.programType === 'semi-private' && 'Custom schedule'}
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription>Training Days</CardDescription>
+                  <CardDescription>Training Day{registration.form_data.programType === 'group' ? 's' : ''}</CardDescription>
                   <CardTitle className="text-3xl">
                     {registration.form_data.programType === 'group' &&
                       registration.form_data.groupSelectedDays?.length}
-                    {registration.form_data.programType === 'private' &&
-                      registration.form_data.privateSelectedDays?.length}
+                    {registration.form_data.programType === 'private' && '1'}
                     {/* Semi-private is always 1x per week */}
                     {registration.form_data.programType === 'semi-private' && 1}
                   </CardTitle>
