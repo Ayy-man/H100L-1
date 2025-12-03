@@ -12,15 +12,16 @@ interface FormSelectProps {
 }
 
 const FormSelect: React.FC<FormSelectProps> = ({ label, name, value, error, handleChange, children, required }) => {
-  // Parse children to extract options
+  // Parse children to extract options (including disabled state)
   const options = React.Children.toArray(children).map((child) => {
     if (React.isValidElement(child) && child.type === 'option') {
       return {
         value: (child.props.value as string) || '',
-        label: child.props.children as string
+        label: child.props.children as string,
+        disabled: child.props.disabled === true
       };
     }
-    return { value: '', label: '' };
+    return { value: '', label: '', disabled: false };
   });
 
   // Convert the onChange handler to work with CustomSelect

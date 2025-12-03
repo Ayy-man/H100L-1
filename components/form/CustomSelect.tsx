@@ -6,7 +6,7 @@ interface CustomSelectProps {
   value: string;
   error?: string;
   onChange: (value: string) => void;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
   required?: boolean;
   placeholder?: string;
 }
@@ -95,8 +95,10 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     }
   };
 
-  const handleOptionClick = (optionValue: string) => {
-    onChange(optionValue);
+  const handleOptionClick = (option: { value: string; label: string; disabled?: boolean }) => {
+    // Don't allow selecting disabled options
+    if (option.disabled) return;
+    onChange(option.value);
     setIsOpen(false);
   };
 
@@ -149,14 +151,17 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
             {options.map((option) => (
               <div
                 key={option.value}
-                onClick={() => handleOptionClick(option.value)}
-                className={`px-4 py-3 cursor-pointer transition-colors
-                           ${value === option.value
-                             ? 'bg-[#9BD4FF]/20 text-[#9BD4FF]'
-                             : 'text-white hover:bg-white/10'}
+                onClick={() => handleOptionClick(option)}
+                className={`px-4 py-3 transition-colors
+                           ${option.disabled
+                             ? 'text-gray-500 cursor-not-allowed bg-gray-800/50'
+                             : value === option.value
+                             ? 'bg-[#9BD4FF]/20 text-[#9BD4FF] cursor-pointer'
+                             : 'text-white hover:bg-white/10 cursor-pointer'}
                            ${option.value === '' ? 'text-gray-400' : ''}`}
                 role="option"
                 aria-selected={value === option.value}
+                aria-disabled={option.disabled}
               >
                 {option.label}
               </div>
