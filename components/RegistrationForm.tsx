@@ -49,6 +49,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
   const [errors, setErrors] = useState<Partial<Record<keyof FormData | 'password' | 'confirmPassword' | 'email', string>>>({});
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
 
   // New: Password fields for account creation
   const [password, setPassword] = useState('');
@@ -412,7 +413,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                     className="absolute top-8 left-8 right-8"
                 >
                     {currentStep === 1 && <FormStep1 data={formData} errors={errors} handleChange={handleChange} language={language || Language.FR} />}
-                    {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} />}
+                    {currentStep === 2 && <FormStep2 data={formData} errors={errors} handleChange={handleChange} handleMultiSelectChange={handleMultiSelectChange} onAvailabilityCheckChange={setIsCheckingAvailability} />}
                     {currentStep === 3 && <FormStep3 data={formData} errors={errors} handleChange={handleChange} />}
                     {currentStep === 4 && (
                       <FormStep4
@@ -438,8 +439,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
                 Back
             </button>
             {currentStep < 4 ? (
-                <button onClick={nextStep} className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition">
-                    Next
+                <button
+                  onClick={nextStep}
+                  disabled={currentStep === 2 && isCheckingAvailability}
+                  className="bg-[#9BD4FF] text-black font-bold py-2 px-6 rounded-lg hover:shadow-[0_0_15px_#9BD4FF] transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                >
+                    {currentStep === 2 && isCheckingAvailability ? 'Checking...' : 'Next'}
                 </button>
             ) : (
                 <button

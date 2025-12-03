@@ -10,6 +10,7 @@ interface FormStep2Props {
   errors: Partial<Record<keyof FormData, string>>;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleMultiSelectChange: (name: keyof FormData, option: string) => void;
+  onAvailabilityCheckChange?: (isChecking: boolean) => void;
 }
 
 interface SlotAvailability {
@@ -31,10 +32,15 @@ const slideDown = {
 const GROUP_TRAINING_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']; // Available daily
 const PRIVATE_TRAINING_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']; // Available all 7 days
 
-const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handleMultiSelectChange }) => {
+const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handleMultiSelectChange, onAvailabilityCheckChange }) => {
   const [availability, setAvailability] = useState<SlotAvailability[]>([]);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+
+  // Notify parent when availability check state changes
+  useEffect(() => {
+    onAvailabilityCheckChange?.(isCheckingAvailability);
+  }, [isCheckingAvailability, onAvailabilityCheckChange]);
 
   // Semi-private suggestions state
   const [semiPrivateSuggestions, setSemiPrivateSuggestions] = useState<Array<{
