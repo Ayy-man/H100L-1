@@ -17,6 +17,7 @@ interface ProgramCard {
   features: { en: string[]; fr: string[] };
   popular?: boolean;
   icon: string;
+  comingSoon?: boolean; // Programs not yet available for registration
 }
 
 const programs: ProgramCard[] = [
@@ -77,10 +78,11 @@ const programs: ProgramCard[] = [
     id: 'private-1x',
     programType: 'private',
     frequency: '1x',
-    title: { en: 'Private Training - 1x/week', fr: 'Entraînement Privé - 1x/semaine' },
-    price: '$499.99',
-    period: { en: '/month', fr: '/mois' },
+    title: { en: 'Private Training', fr: 'Entraînement Privé' },
+    price: '$89.99',
+    period: { en: '/session', fr: '/session' },
     icon: '/images/coach-icon.png',
+    comingSoon: true,
     features: {
       en: [
         'One-on-one coaching',
@@ -99,33 +101,6 @@ const programs: ProgramCard[] = [
     },
   },
   {
-    id: 'private-2x',
-    programType: 'private',
-    frequency: '2x',
-    title: { en: 'Private Training - 2x/week', fr: 'Entraînement Privé - 2x/semaine' },
-    price: '$799.99',
-    period: { en: '/month', fr: '/mois' },
-    icon: '/images/coach-icon.png',
-    features: {
-      en: [
-        'Twice weekly one-on-one',
-        'Elite customized program',
-        'Flexible day selection',
-        'Intensive skill development',
-        'Video analysis & reports',
-        'Direct coach communication',
-      ],
-      fr: [
-        'Sessions individuelles bi-hebdomadaires',
-        'Programme personnalisé élite',
-        'Sélection de jour flexible',
-        'Développement intensif des compétences',
-        'Analyse vidéo et rapports',
-        'Communication directe avec l\'entraîneur',
-      ],
-    },
-  },
-  {
     id: 'semi-private',
     programType: 'semi-private',
     frequency: '',
@@ -133,6 +108,7 @@ const programs: ProgramCard[] = [
     price: '$349.99',
     period: { en: '/month', fr: '/mois' },
     icon: '/images/hockey-skates-icon.png',
+    comingSoon: true,
     features: {
       en: [
         '1 session per week',
@@ -196,14 +172,24 @@ const ProgramCards: React.FC<ProgramCardsProps> = ({ language, onProgramSelect }
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ scale: 1.05, y: -5 }}
+              whileHover={program.comingSoon ? {} : { scale: 1.05, y: -5 }}
               className={`relative bg-black rounded-2xl border-2 p-8 flex flex-col ${
-                program.popular
+                program.comingSoon
+                  ? 'border-white/10 opacity-60'
+                  : program.popular
                   ? 'border-[#9BD4FF] shadow-2xl shadow-[#9BD4FF]/20'
                   : 'border-white/10 hover:border-[#9BD4FF]/50'
               }`}
             >
-              {program.popular && (
+              {/* Coming Soon Badge */}
+              {program.comingSoon && (
+                <span className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black text-xs font-bold px-4 py-1 rounded-full uppercase">
+                  {lang === 'en' ? 'Coming Soon' : 'Bientôt Disponible'}
+                </span>
+              )}
+
+              {/* Popular Badge */}
+              {program.popular && !program.comingSoon && (
                 <span className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-[#9BD4FF] text-black text-xs font-bold px-4 py-1 rounded-full uppercase">
                   {lang === 'en' ? 'Most Popular' : 'Plus Populaire'}
                 </span>
@@ -214,7 +200,7 @@ const ProgramCards: React.FC<ProgramCardsProps> = ({ language, onProgramSelect }
                   <img
                     src={program.icon}
                     alt=""
-                    className="w-12 h-12 object-contain"
+                    className={`w-12 h-12 object-contain ${program.comingSoon ? 'grayscale' : ''}`}
                   />
                   <h3 className="text-xl font-bold text-white uppercase tracking-wider">
                     {program.title[lang]}
@@ -237,14 +223,19 @@ const ProgramCards: React.FC<ProgramCardsProps> = ({ language, onProgramSelect }
               </div>
 
               <button
-                onClick={() => onProgramSelect(program.programType, program.frequency)}
+                onClick={() => !program.comingSoon && onProgramSelect(program.programType, program.frequency)}
+                disabled={program.comingSoon}
                 className={`w-full font-bold py-3 px-6 rounded-lg text-sm uppercase tracking-wider transition-all duration-300 ${
-                  program.popular
+                  program.comingSoon
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : program.popular
                     ? 'bg-[#9BD4FF] text-black hover:shadow-[0_0_15px_rgba(155,212,255,0.8)]'
                     : 'bg-white/10 text-white hover:bg-[#9BD4FF] hover:text-black'
                 }`}
               >
-                {lang === 'en' ? 'Select Program' : 'Choisir Programme'}
+                {program.comingSoon
+                  ? (lang === 'en' ? 'Coming Soon' : 'Bientôt')
+                  : (lang === 'en' ? 'Select Program' : 'Choisir Programme')}
               </button>
             </motion.div>
           ))}

@@ -202,8 +202,8 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
       <FormSelect label="Select Program Type" name="programType" value={data.programType} handleChange={handleChange} error={errors.programType} required>
         <option value="">-- Choose a Program --</option>
         <option value="group">Group Training</option>
-        <option value="private">Private Training</option>
-        <option value="semi-private">Semi-Private Training</option>
+        <option value="private" disabled>Private Training (Coming Soon)</option>
+        <option value="semi-private" disabled>Semi-Private Training (Coming Soon)</option>
       </FormSelect>
 
       <AnimatePresence>
