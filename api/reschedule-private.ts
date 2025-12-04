@@ -1,7 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-console.log('[reschedule-private] Module loaded');
 
 // ============================================================
 // INLINED NOTIFICATION HELPER (to avoid Vercel bundling issues)
@@ -196,8 +195,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         b.form_data?.programType === 'semi-private'
       ) || [];
 
-      console.log('Private reschedule - found bookings:', relevantBookings.length);
-      console.log('Current registration form_data:', JSON.stringify(registration.form_data, null, 2));
 
       // Build availability grid
       const weekAvailability = AVAILABLE_DAYS.map(day => {
@@ -257,7 +254,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Log sample availability for debugging
       const mondaySlots = weekAvailability.find(d => d.day === 'monday');
-      console.log('Monday slots sample:', JSON.stringify(mondaySlots, null, 2));
 
       return res.status(200).json({
         success: true,
@@ -452,7 +448,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (changeType === 'permanent') {
         // Use all the days provided (supports both 1x and 2x/week)
         const updatedDays = daysToSet.map(d => d.toLowerCase());
-        console.log(`Updating days to: ${updatedDays.join(', ')} at ${newTime}`);
 
         const updatedFormData = {
           ...registration.form_data,
@@ -479,15 +474,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // For one-time changes, create schedule exception(s)
       if (changeType === 'one_time') {
-        console.log('Creating one-time exceptions...');
-        console.log('- exceptionMappings:', JSON.stringify(exceptionMappings));
-        console.log('- specificDate:', specificDate);
-        console.log('- daysToSet:', daysToSet);
 
         // Use detailed mappings if provided (new approach)
         if (exceptionMappings && exceptionMappings.length > 0) {
           for (const mapping of exceptionMappings) {
-            console.log(`Creating exception: ${mapping.originalDay} (${mapping.date}) -> ${mapping.replacementDay}`);
 
             const { error: exceptionError } = await getSupabase()
               .from('schedule_exceptions')
@@ -506,12 +496,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (exceptionError) {
               console.error('Error creating exception:', exceptionError);
             } else {
-              console.log('Exception created successfully!');
             }
           }
         } else if (specificDate) {
           // Fallback: old behavior for backwards compatibility
-          console.log('Using legacy exception creation (no mappings provided)');
           for (const day of daysToSet) {
             const { error: exceptionError } = await getSupabase()
               .from('schedule_exceptions')

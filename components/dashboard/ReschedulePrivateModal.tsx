@@ -77,7 +77,6 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
 
   const loadAvailability = async () => {
     setIsLoadingAvailability(true);
-    console.log('ReschedulePrivateModal: Loading availability for registration:', registrationId);
     try {
       const response = await fetch('/api/reschedule-private', {
         method: 'POST',
@@ -89,7 +88,6 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         })
       });
 
-      console.log('ReschedulePrivateModal: Response status:', response.status);
 
       // Check if response is OK
       if (!response.ok) {
@@ -108,13 +106,10 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
       }
 
       const data = await response.json();
-      console.log('ReschedulePrivateModal: API response:', data);
-      console.log('ReschedulePrivateModal: Current schedule from API:', data.currentSchedule);
 
       if (data.success) {
         // Log sample availability
         const mondayData = data.availability?.find((d: DayAvailability) => d.day === 'monday');
-        console.log('ReschedulePrivateModal: Monday slots:', mondayData?.slots);
 
         setWeekAvailability(data.availability);
 
@@ -130,7 +125,6 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         const freq = apiFreq || propsFreq || inferredFreq;
         setPrivateFrequency(freq);
 
-        console.log('ReschedulePrivateModal: Current days:', apiDays, 'Time:', data.currentSchedule?.timeSlot, 'API Freq:', apiFreq, 'Props Freq:', propsFreq, 'Final:', freq);
       } else {
         setError(data.error || 'Failed to load availability');
       }
@@ -198,7 +192,6 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
       // Warn if different times selected (private training uses single time for all days)
       const allSameTime = selectedSlots.every(s => s.time === newTime);
       if (!allSameTime) {
-        console.log('Note: Different times selected. Using time from first slot:', newTime);
       }
 
       // Helper to get next occurrence of a day
@@ -238,11 +231,6 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
         // Find days being added (in new but not in original)
         const daysBeingAdded = newDaysLower.filter(d => !originalDaysLower.includes(d));
 
-        console.log('ONE-TIME RESCHEDULE DEBUG:');
-        console.log('- Original days:', originalDaysLower);
-        console.log('- New days:', newDaysLower);
-        console.log('- Days being replaced:', daysBeingReplaced);
-        console.log('- Days being added:', daysBeingAdded);
 
         // Build exception mappings: each replaced day maps to an added day
         const exceptionMappings: Array<{originalDay: string, replacementDay: string, date: string}> = [];
@@ -258,7 +246,6 @@ export const ReschedulePrivateModal: React.FC<ReschedulePrivateModalProps> = ({
             date: exceptionDate
           });
 
-          console.log(`- Exception: ${originalDay} (${exceptionDate}) -> ${replacementDay}`);
         }
 
         // Send the mappings to the API

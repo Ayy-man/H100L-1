@@ -61,19 +61,16 @@ export const exportToCSV = (options: ExportOptions) => {
 // Excel Export
 export const exportToExcel = (options: ExportOptions | ExportOptions[]) => {
   try {
-    console.log('Starting Excel export...', options);
 
     const workbook = XLSX.utils.book_new();
 
     // Support single or multiple sheets
     const sheets = Array.isArray(options) ? options : [options];
 
-    console.log(`Creating ${sheets.length} sheet(s)`);
 
     sheets.forEach((sheet, index) => {
       const { fields, data, title } = sheet;
 
-      console.log(`Sheet ${index + 1}: ${title || 'Untitled'}, ${data.length} rows, ${fields.length} fields`);
 
       // Create worksheet data
       const wsData: any[][] = [];
@@ -103,7 +100,6 @@ export const exportToExcel = (options: ExportOptions | ExportOptions[]) => {
         }
       });
 
-      console.log(`Worksheet data prepared: ${wsData.length} rows total`);
 
       // Create worksheet
       const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -117,7 +113,6 @@ export const exportToExcel = (options: ExportOptions | ExportOptions[]) => {
       // Add worksheet to workbook
       const sheetName = title || `Sheet${index + 1}`;
       const safeName = sheetName.slice(0, 31); // Max 31 chars
-      console.log(`Adding sheet: ${safeName}`);
       XLSX.utils.book_append_sheet(workbook, ws, safeName);
     });
 
@@ -126,12 +121,10 @@ export const exportToExcel = (options: ExportOptions | ExportOptions[]) => {
       ? 'SniperZone_Export'
       : options.filename;
 
-    console.log(`Writing file: ${filename}.xlsx`);
 
     // Write file
     XLSX.writeFile(workbook, `${filename}.xlsx`);
 
-    console.log('Excel export completed successfully!');
   } catch (error) {
     console.error('Excel export failed:', error);
     throw new Error(`Excel export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

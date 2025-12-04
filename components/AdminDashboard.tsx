@@ -718,7 +718,6 @@ const AdminDashboard: React.FC = () => {
         .eq('id', id)
         .select();
 
-      console.log('Delete response:', { data, error });
 
       if (error) {
         console.error('Delete error:', error);

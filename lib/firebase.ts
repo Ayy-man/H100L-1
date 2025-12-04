@@ -46,7 +46,6 @@ let auth;
 if (validateFirebaseConfig()) {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  console.log('✅ Firebase initialized successfully');
 } else {
   console.warn('⚠️ Firebase not initialized - check environment variables');
 }

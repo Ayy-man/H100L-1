@@ -40,8 +40,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    console.log(`[schedule-exceptions] Fetching for registration: ${registrationId}`);
-    console.log(`[schedule-exceptions] Today's date: ${today}`);
 
     const { data: exceptions, error } = await getSupabase()
       .from('schedule_exceptions')
@@ -59,9 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    console.log(`[schedule-exceptions] Found ${exceptions?.length || 0} exceptions:`);
     exceptions?.forEach((exc, i) => {
-      console.log(`  [${i}] date: ${exc.exception_date}, replacement_day: ${exc.replacement_day}, status: ${exc.status}`);
     });
 
     return res.status(200).json({

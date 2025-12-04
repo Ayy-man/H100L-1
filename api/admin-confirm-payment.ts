@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-console.log('[admin-confirm-payment] Module loaded');
 
 // ============================================================
 // INLINED NOTIFICATION HELPER (to avoid Vercel bundling issues)
@@ -168,7 +167,6 @@ export default async function handler(
       });
     }
 
-    console.log(`✅ Payment manually confirmed for registration ${registrationId} by ${adminEmail}`);
 
     // Send notification to parent
     try {

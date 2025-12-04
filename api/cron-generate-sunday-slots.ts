@@ -60,7 +60,6 @@ export default async function handler(
   }
 
   try {
-    console.log('[CRON] Starting Sunday slots generation...');
 
     // Call the database function to generate slots
     const { data, error } = await getSupabase().rpc('generate_sunday_slots', {
@@ -77,7 +76,6 @@ export default async function handler(
     }
 
     // Log the result
-    console.log('[CRON] Slot generation result:', data);
 
     if (!data.success) {
       console.error('[CRON] Generation failed:', data.error);
@@ -89,7 +87,6 @@ export default async function handler(
     }
 
     // Success
-    console.log(`[CRON] Successfully generated ${data.slots_created} slots`);
 
     return res.status(200).json({
       success: true,
