@@ -137,20 +137,9 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
     // Helper to check if there's an exception for a given date
     const getExceptionForDate = (dateStr: string) => {
-        date: e.exception_date,
-        replacement_day: e.replacement_day,
-        status: e.status,
-        type: e.exception_type
-      })));
-
       const exception = scheduleExceptions.find(
         (exc) => exc.exception_date === dateStr && exc.status === 'applied'
       );
-
-      if (exception) {
-      } else {
-      }
-
       return exception;
     };
 
