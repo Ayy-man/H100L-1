@@ -91,7 +91,6 @@ export default async function handler(
         break;
 
       default:
-        console.log(`Unhandled event type ${event.type}`);
     }
 
     return res.json({ received: true });
@@ -103,7 +102,6 @@ export default async function handler(
 
 // Event handlers
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  console.log('Checkout session completed:', session.id);
 
   const registrationId = session.client_reference_id || session.metadata?.registrationId;
   if (!registrationId) {
@@ -131,11 +129,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     throw new Error(`Database update failed: ${error.message}`);
   }
 
-  console.log(`Updated registration ${registrationId} with subscription ${subscriptionId}`);
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
-  console.log('PaymentIntent succeeded:', paymentIntent.id);
 
   const registrationId = paymentIntent.metadata.registrationId;
   if (!registrationId) return;
@@ -155,7 +151,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 }
 
 async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
-  console.log('PaymentIntent failed:', paymentIntent.id);
 
   const registrationId = paymentIntent.metadata.registrationId;
   if (!registrationId) return;
@@ -175,7 +170,6 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  console.log('Invoice payment succeeded:', invoice.id);
 
   // Get subscription from invoice
   const subscriptionId = invoice.subscription as string;
@@ -193,7 +187,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  console.log('Invoice payment failed:', invoice.id);
 
   const subscriptionId = invoice.subscription as string;
   if (!subscriptionId) return;
@@ -229,7 +222,6 @@ function mapStripeStatusToPaymentStatus(stripeStatus: string): string {
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  console.log('Subscription created:', subscription.id);
 
   const registrationId = subscription.metadata.registrationId;
   if (!registrationId) return;
@@ -245,7 +237,6 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  console.log('Subscription updated:', subscription.id);
 
   await getSupabase()
     .from('registrations')
@@ -257,7 +248,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  console.log('Subscription deleted:', subscription.id);
 
   await getSupabase()
     .from('registrations')

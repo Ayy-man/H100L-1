@@ -1,7 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-console.log('[reschedule-group] Module loaded');
 
 // ============================================================
 // INLINED NOTIFICATION HELPER (to avoid Vercel bundling issues)
@@ -164,13 +163,11 @@ interface RescheduleRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log('[reschedule-group] Handler invoked, method:', req.method);
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  console.log('[reschedule-group] Starting request processing');
 
   try {
     const {

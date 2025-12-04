@@ -57,7 +57,6 @@ export default async function handler(
       });
     }
 
-    console.log('[DEV-PAYMENT] Processing dev mode payment for:', { registrationId, firebaseUid });
 
     // Initialize Supabase with service role
     const supabase = createClient(
@@ -83,7 +82,6 @@ export default async function handler(
 
     // Check if already paid
     if (registration.payment_status === 'succeeded') {
-      console.log('[DEV-PAYMENT] Payment already succeeded');
       return res.status(200).json({
         success: true,
         message: 'Payment already completed',
@@ -117,7 +115,6 @@ export default async function handler(
       });
     }
 
-    console.log('[DEV-PAYMENT] ✅ Payment completed successfully', {
       registrationId,
       customerId: fakeCustomerId,
       subscriptionId: fakeSubscriptionId,

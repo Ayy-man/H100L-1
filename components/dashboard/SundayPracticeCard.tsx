@@ -89,7 +89,6 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
 
       const data = await response.json();
 
-      console.log('Sunday upcoming slots response:', data);
 
       if (!response.ok) {
         console.error('API error:', data);

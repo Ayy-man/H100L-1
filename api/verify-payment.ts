@@ -274,7 +274,6 @@ export default async function handler(
       });
     }
 
-    console.log(`✅ Payment verified for registration ${registrationId} - slot validated`);
 
     return res.status(200).json({
       success: true,

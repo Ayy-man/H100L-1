@@ -137,24 +137,9 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
     // Helper to check if there's an exception for a given date
     const getExceptionForDate = (dateStr: string) => {
-      console.log(`[getExceptionForDate] Looking for exception on date: ${dateStr}`);
-      console.log(`[getExceptionForDate] Available exceptions:`, scheduleExceptions.map(e => ({
-        date: e.exception_date,
-        replacement_day: e.replacement_day,
-        status: e.status,
-        type: e.exception_type
-      })));
-
       const exception = scheduleExceptions.find(
         (exc) => exc.exception_date === dateStr && exc.status === 'applied'
       );
-
-      if (exception) {
-        console.log(`[getExceptionForDate] FOUND exception: ${dateStr} -> ${exception.replacement_day}`);
-      } else {
-        console.log(`[getExceptionForDate] No exception found for ${dateStr}`);
-      }
-
       return exception;
     };
 
@@ -303,11 +288,9 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
       const day = semiPrivatePairing?.scheduled_day || form_data.semiPrivateAvailability?.[0];
 
       if (!day) {
-        console.log('No semi-private day found (no pairing and no availability)');
         return sessions;
       }
 
-      console.log('Semi-private scheduled day:', day, 'from pairing:', !!semiPrivatePairing);
 
       for (let week = 0; week < weeksToShow; week++) {
         const targetDay = dayMap[day.toLowerCase()];
@@ -385,18 +368,11 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
     const fetchScheduleExceptions = async () => {
       if (!id) return;
       try {
-        console.log('=== FETCHING SCHEDULE EXCEPTIONS ===');
-        console.log('Registration ID:', id);
         const response = await fetch(
           `/api/schedule-exceptions?registrationId=${id}`
         );
         if (response.ok) {
           const data = await response.json();
-          console.log('=== EXCEPTIONS RESPONSE ===');
-          console.log('Success:', data.success);
-          console.log('Count:', data.exceptions?.length || 0);
-          console.log('Debug info:', data.debug);
-          console.log('Full exceptions:', JSON.stringify(data.exceptions, null, 2));
           if (data.success && data.exceptions) {
             setScheduleExceptions(data.exceptions);
           }
@@ -419,7 +395,6 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
       if (form_data.programType !== 'semi-private' || !id || !firebase_uid) return;
 
       try {
-        console.log('=== FETCHING SEMI-PRIVATE PAIRING ===');
         const response = await fetch('/api/reschedule-semi-private', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -432,7 +407,6 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
 
         if (response.ok) {
           const data = await response.json();
-          console.log('Pairing response:', data);
           if (data.success && data.paired && data.pairing) {
             setSemiPrivatePairing({
               scheduled_day: data.pairing.scheduledDay,
@@ -441,15 +415,12 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
             });
             setIsWaitingForPartner(false);
             setWaitingInfo(null);
-            console.log('Set semi-private pairing:', data.pairing.scheduledDay, data.pairing.scheduledTime);
           } else if (data.success && data.waiting && data.waitingInfo) {
             // Player is waiting to be paired
             setIsWaitingForPartner(true);
             setWaitingInfo(data.waitingInfo);
             setSemiPrivatePairing(null);
-            console.log('Player is waiting for partner since:', data.waitingInfo.waitingSince);
           } else {
-            console.log('Not paired and not waiting, using availability preferences');
             setIsWaitingForPartner(false);
             setWaitingInfo(null);
           }
@@ -496,7 +467,6 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
         );
         const data = await response.json();
 
-        console.log('TrainingSchedule - Sunday status:', data);
 
         if (response.ok && data.success) {
           setSundayStatus(data);
@@ -587,10 +557,8 @@ const TrainingSchedule: React.FC<TrainingScheduleProps> = ({ registration }) => 
   };
 
   const handleRescheduleSuccess = () => {
-    console.log('RESCHEDULE SUCCESS - waiting 7s before refresh so you can copy logs...');
     setRefreshKey(prev => prev + 1);
     setTimeout(() => {
-      console.log('Now refreshing page...');
       window.location.reload();
     }, 7000);
   };

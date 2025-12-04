@@ -233,9 +233,6 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
         // The exception_date must be the ORIGINAL day's date for calendar lookup to work
         const originalDay = currentSchedule.day?.toLowerCase() || currentPairing?.scheduledDay?.toLowerCase();
 
-        console.log('SEMI-PRIVATE ONE-TIME DEBUG:');
-        console.log('- Original day:', originalDay);
-        console.log('- New day:', selectedDay);
 
         if (originalDay) {
           // Calculate the date of the original day (this is the date we're swapping FROM)
@@ -251,12 +248,9 @@ export const RescheduleSemiPrivateModal: React.FC<RescheduleSemiPrivateModalProp
           // Also keep specificDate for backwards compatibility
           requestBody.specificDate = originalDayDate;
 
-          console.log('- Exception mapping:', JSON.stringify(requestBody.exceptionMappings));
-          console.log('- Original day date:', originalDayDate);
         } else {
           // Fallback if no original day found - shouldn't happen
           requestBody.specificDate = getNextOccurrence(selectedDay);
-          console.log('- Fallback: Using selected day date:', requestBody.specificDate);
         }
       } else {
         requestBody.effectiveDate = formatLocalDate(new Date());

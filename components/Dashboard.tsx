@@ -143,7 +143,6 @@ const Dashboard: React.FC = () => {
           filter: `id=eq.${selectedProfileId}`,
         },
         (payload) => {
-          console.log('Registration updated:', payload);
           if (payload.new.id === selectedProfileId) {
             setRegistration(payload.new as Registration);
 

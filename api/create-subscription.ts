@@ -2,7 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-console.log('[create-subscription] Module loaded');
 
 // ============================================================
 // INLINED NOTIFICATION HELPERS (to avoid Vercel bundling issues)

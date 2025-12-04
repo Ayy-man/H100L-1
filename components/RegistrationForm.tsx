@@ -270,17 +270,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
           throw new Error('You must be logged in to add a child. Please log in and try again.');
         }
         firebaseUid = currentUser.uid;
-        console.log('Adding child to existing account:', firebaseUid);
       } else {
         // New-parent mode: create new Firebase user
-        console.log('Creating Firebase user...');
         const userCredential = await createFirebaseUser(
           formData.parentEmail,
           password,
           formData.parentFullName
         );
         firebaseUid = userCredential.user.uid;
-        console.log('Firebase user created:', firebaseUid);
       }
 
       // Step 2: Upload files to Supabase Storage if any are provided
@@ -289,7 +286,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
 
       if (formData.actionPlan || formData.medicalReport) {
         try {
-          console.log('Uploading medical files...');
           uploadedFiles = await uploadMedicalFiles(
             {
               actionPlan: formData.actionPlan,
@@ -312,7 +308,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         dataToSubmit.medicalFiles = uploadedFiles;
       }
 
-      console.log('Saving registration to Supabase...');
       const { data: registrationData, error: insertError } = await supabase
         .from('registrations')
         .insert({
@@ -329,7 +324,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         throw insertError || new Error('Failed to create registration');
       }
 
-      console.log('Registration created:', registrationData.id);
 
       // Success! Clear form data
       localStorage.removeItem('registrationFormData');
@@ -337,7 +331,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       // Handle success based on mode
       if (mode === 'add-child') {
         // Add-child mode: refresh profiles and select new child
-        console.log('Refreshing profiles and selecting new child...');
         await refreshProfiles();
         selectProfile(registrationData.id);
 

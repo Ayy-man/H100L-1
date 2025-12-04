@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-console.log('[sunday-cancel] Module loaded');
 
 // ============================================================
 // INLINED NOTIFICATION HELPER (to avoid Vercel bundling issues)

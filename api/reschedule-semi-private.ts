@@ -1,7 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-console.log('[reschedule-semi-private] Module loaded');
 
 // ============================================================
 // INLINED NOTIFICATION HELPERS (to avoid Vercel bundling issues)
@@ -740,15 +739,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Step 5: For one-time changes, create exception(s)
       if (changeType === 'one_time') {
-        console.log('Creating one-time semi-private exceptions...');
-        console.log('- exceptionMappings:', JSON.stringify(exceptionMappings));
-        console.log('- specificDate:', specificDate);
-        console.log('- newDay:', newDay);
 
         // Use detailed mappings if provided (same approach as private training)
         if (exceptionMappings && exceptionMappings.length > 0) {
           for (const mapping of exceptionMappings) {
-            console.log(`Creating exception: ${mapping.originalDay} (${mapping.date}) -> ${mapping.replacementDay}`);
 
             const { error: exceptionError } = await getSupabase()
               .from('schedule_exceptions')
@@ -767,12 +761,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (exceptionError) {
               console.error('Error creating exception:', exceptionError);
             } else {
-              console.log('Exception created successfully!');
             }
           }
         } else if (specificDate) {
           // Fallback: old behavior for backwards compatibility
-          console.log('Using legacy exception creation (no mappings provided)');
           await getSupabase()
             .from('schedule_exceptions')
             .insert({

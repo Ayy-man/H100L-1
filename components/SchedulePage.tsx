@@ -184,18 +184,11 @@ const SchedulePage: React.FC = () => {
     const fetchScheduleExceptions = async () => {
       if (!registration?.id) return;
       try {
-        console.log('=== SchedulePage: FETCHING SCHEDULE EXCEPTIONS ===');
-        console.log('Registration ID:', registration.id);
         const response = await fetch(
           `/api/schedule-exceptions?registrationId=${registration.id}`
         );
         if (response.ok) {
           const data = await response.json();
-          console.log('=== SchedulePage: EXCEPTIONS RESPONSE ===');
-          console.log('Success:', data.success);
-          console.log('Count:', data.exceptions?.length || 0);
-          console.log('Debug info:', data.debug);
-          console.log('Full exceptions:', JSON.stringify(data.exceptions, null, 2));
           if (data.success && data.exceptions) {
             setScheduleExceptions(data.exceptions);
           }
@@ -216,7 +209,6 @@ const SchedulePage: React.FC = () => {
       if (!registration || registration.form_data?.programType !== 'semi-private') return;
 
       try {
-        console.log('=== SchedulePage: FETCHING SEMI-PRIVATE PAIRING ===');
         const response = await fetch('/api/reschedule-semi-private', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -229,7 +221,6 @@ const SchedulePage: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('SchedulePage pairing response:', data);
           if (data.success && data.paired && data.pairing) {
             setSemiPrivatePairing({
               scheduled_day: data.pairing.scheduledDay,
@@ -238,15 +229,12 @@ const SchedulePage: React.FC = () => {
             });
             setIsWaitingForPartner(false);
             setWaitingInfo(null);
-            console.log('Set semi-private pairing:', data.pairing.scheduledDay, data.pairing.scheduledTime);
           } else if (data.success && data.waiting && data.waitingInfo) {
             // Player is waiting to be paired
             setIsWaitingForPartner(true);
             setWaitingInfo(data.waitingInfo);
             setSemiPrivatePairing(null);
-            console.log('Player is waiting for partner since:', data.waitingInfo.waitingSince);
           } else {
-            console.log('Not paired and not waiting, using availability preferences');
             setIsWaitingForPartner(false);
             setWaitingInfo(null);
           }
@@ -358,9 +346,6 @@ const SchedulePage: React.FC = () => {
         }
       });
     } else if (form_data.programType === 'private' && form_data.privateSelectedDays) {
-      console.log('=== SchedulePage: Generating PRIVATE sessions ===');
-      console.log('Private selected days:', form_data.privateSelectedDays);
-      console.log('Schedule exceptions available:', scheduleExceptions.length);
 
       form_data.privateSelectedDays.forEach((day) => {
         const targetDay = dayMap[day.toLowerCase()];
@@ -374,12 +359,10 @@ const SchedulePage: React.FC = () => {
 
           while (currentDate <= lastDay) {
             const dateStr = formatDate(currentDate);
-            console.log(`[SchedulePage] Checking date ${dateStr} for day ${day}`);
             const exception = getExceptionForDate(dateStr);
 
             if (exception && exception.exception_type === 'swap') {
               // Replace with the exception day
-              console.log(`[SchedulePage] FOUND EXCEPTION: ${dateStr} -> ${exception.replacement_day}`);
               const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
               if (replacementDayNum !== undefined) {
                 const replacementDate = new Date(currentDate);
@@ -408,10 +391,6 @@ const SchedulePage: React.FC = () => {
         }
       });
     } else if (form_data.programType === 'semi-private') {
-      console.log('=== SchedulePage: Generating SEMI-PRIVATE sessions ===');
-      console.log('Semi-private pairing:', semiPrivatePairing);
-      console.log('Semi-private availability (fallback):', form_data.semiPrivateAvailability);
-      console.log('Schedule exceptions available:', scheduleExceptions.length);
 
       // Use pairing's scheduled day/time if paired, otherwise fall back to form data
       // This is CRITICAL - semiPrivateAvailability is PREFERENCES, not the actual schedule!
@@ -422,11 +401,9 @@ const SchedulePage: React.FC = () => {
       const day = semiPrivatePairing?.scheduled_day || form_data.semiPrivateAvailability?.[0];
 
       if (!day) {
-        console.log('No semi-private day found (no pairing and no availability)');
         return sessions;
       }
 
-      console.log('Semi-private scheduled day (1x/week):', day, 'from pairing:', !!semiPrivatePairing);
 
       const targetDay = dayMap[day.toLowerCase()];
       if (targetDay !== undefined) {
@@ -439,12 +416,10 @@ const SchedulePage: React.FC = () => {
 
         while (currentDate <= lastDay) {
           const dateStr = formatDate(currentDate);
-          console.log(`[SchedulePage] Checking semi-private date ${dateStr} for day ${day}`);
           const exception = getExceptionForDate(dateStr);
 
           if (exception && exception.exception_type === 'swap') {
             // Replace with the exception day
-            console.log(`[SchedulePage] FOUND SEMI-PRIVATE EXCEPTION: ${dateStr} -> ${exception.replacement_day}`);
             const replacementDayNum = dayMap[exception.replacement_day.toLowerCase()];
             if (replacementDayNum !== undefined) {
               const replacementDate = new Date(currentDate);
@@ -1011,7 +986,6 @@ const SchedulePage: React.FC = () => {
                   playerCategory: registration.form_data.playerCategory || ''
                 }}
                 onSuccess={() => {
-                  console.log('RESCHEDULE SUCCESS - waiting 7s before refresh...');
                   setTimeout(() => window.location.reload(), 7000);
                 }}
               />
