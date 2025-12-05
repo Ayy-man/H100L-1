@@ -1,7 +1,7 @@
 # SniperZone Pre-Launch Checklist
 
-**Last Updated:** November 2024
-**Status:** In Progress
+**Last Updated:** December 5, 2025
+**Status:** Ready for Launch
 
 ---
 
@@ -347,3 +347,9 @@ manually_confirmed_reason?: string;
 | 2024-12-01 | Semi-private reschedule syntax | ✅ FIXED | Fixed JSONB query syntax in availability check |
 | 2024-12-01 | Homepage icons | ✅ ADDED | Hockey puck, coach, skates icons on program cards |
 | 2024-12-02 | #8 Admin Password Security | ✅ FIXED | Passwords moved to environment variables |
+| 2025-12-05 | Dead code cleanup | ✅ FIXED | Deleted 5 .old/.backup files |
+| 2025-12-05 | Console.log cleanup | ✅ FIXED | Removed all debug logs from 24+ files |
+| 2025-12-05 | Day selection UX | ✅ FIXED | Short names on mobile, proper full slot blocking |
+| 2025-12-05 | Next button disable | ✅ FIXED | Disabled during availability check |
+| 2025-12-05 | Program card features | ✅ FIXED | Updated per Yasmine's request (Sunday practice text, removed day restrictions) |
+| 2025-12-05 | Private/Semi-private blocking | ✅ ADDED | Coming Soon badges, disabled selection for launch |

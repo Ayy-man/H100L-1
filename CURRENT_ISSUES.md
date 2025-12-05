@@ -1,4 +1,4 @@
-# CURRENT ISSUES CHECKLIST - 2025-11-25
+# CURRENT ISSUES CHECKLIST - 2025-12-05
 
 ## Critical Issues
 
@@ -52,6 +52,40 @@
 
 ---
 
+---
+
+## Recent Fixes (Dec 5, 2025)
+
+### 5. [x] Dead Code Cleanup
+- **Status:** FIXED
+- **Fix:** Deleted 5 unused .old/.backup files
+- **Files Removed:** PaymentForm.old.tsx, FormStep1-4.old.tsx, FormStep2.backup.tsx
+
+### 6. [x] Console.log Cleanup
+- **Status:** FIXED
+- **Fix:** Removed all console.log debug statements from 24+ files
+- **Kept:** console.error for production error tracking
+
+### 7. [x] Day Selection UX Issues
+- **Status:** FIXED
+- **Fix:**
+  - Short day names (Mon, Tue, etc.) on mobile to prevent truncation
+  - Proper full slot detection and blocking
+  - Next button disabled during availability check
+
+### 8. [x] Program Card Updates
+- **Status:** FIXED
+- **Fix:** Per Yasmine's request:
+  - Changed "Pratique dominicale mensuelle" to "Pratique optionnelle sur glace chaque dimanche, sur réservation seulement"
+  - Removed "(Mar & Ven)" day restrictions since training is now available daily
+
+### 9. [x] Private/Semi-Private Blocking
+- **Status:** FIXED
+- **Fix:** Added "Coming Soon" badges and disabled selection for private and semi-private programs for launch
+
+---
+
 ## Notes
 - Stripe errors (r.stripe.com blocked) are caused by ad blocker - NOT a code issue
 - Permissions-Policy header warning is from browser - NOT a code issue
+- Private and Semi-Private programs are blocked for initial launch (Group only)

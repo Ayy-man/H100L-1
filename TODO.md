@@ -1,6 +1,6 @@
 # Codebase Issues & Improvements TODO
 
-**Last Updated:** 2025-11-21
+**Last Updated:** 2025-12-05
 **Total Issues:** 43 issues identified across security, bugs, data flow, performance, and quality
 
 ---
@@ -212,8 +212,8 @@
 
 ### Code Quality Issues
 
-- [ ] **30. Delete Dead Code Files**
-  - Files to delete:
+- [x] **30. Delete Dead Code Files** ✅ FIXED (2025-12-05)
+  - Files deleted:
     - `components/PaymentForm.old.tsx`
     - `components/form/FormStep1.old.tsx`
     - `components/form/FormStep3.old.tsx`
@@ -227,19 +227,10 @@
     - `components/BillingPage.tsx` (lines 74-88)
   - **Fix:** Export from stripe.ts, import everywhere else
 
-- [ ] **32. Remove Console.log Statements**
-  - Found in 29 files across codebase
-  - Examples:
-    - `components/Login.tsx` (lines 38, 44, 48)
-    - `components/RegistrationForm.tsx` (lines 229, 237, 245, 269, 286)
-    - `api/stripe-webhook.ts` (multiple lines)
-  - **Fix:**
-    ```typescript
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Debug info:', data);
-    }
-    // Or use proper logging service (Sentry)
-    ```
+- [x] **32. Remove Console.log Statements** ✅ FIXED (2025-12-05)
+  - Removed all console.log statements from 24+ files
+  - Kept console.error for production error tracking
+  - Cleaned: API endpoints, components, lib utilities
 
 - [ ] **33. Standardize Error Handling**
   - Issue: Three different patterns used
@@ -304,12 +295,17 @@
 
 ---
 
-## ✅ Recently Fixed (2025-11-21)
+## ✅ Recently Fixed (2025-12-05)
 
 1. ✅ Added input validation to create-checkout-session API
 2. ✅ Fixed payment status inconsistency (changed 'paid' to 'succeeded')
 3. ✅ Added error handling to all webhook database updates
 4. ✅ Added proper error propagation in webhook handlers
+5. ✅ Deleted dead code files (.old, .backup files)
+6. ✅ Removed all console.log debug statements from production code
+7. ✅ Fixed day selection button UX (short names on mobile, full slot blocking)
+8. ✅ Added Next button disable during availability check
+9. ✅ Updated program card features per client request
 
 ---
 
