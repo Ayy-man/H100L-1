@@ -2,6 +2,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { Readable } from 'stream';
+import type {
+  CreditPurchaseMetadata,
+  SessionPurchaseMetadata,
+  CreditPackageType,
+  SessionType,
+} from '../types/credits';
+import { CREDIT_PRICING } from '../types/credits';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
@@ -102,7 +109,20 @@ export default async function handler(
 
 // Event handlers
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  const metadata = session.metadata;
 
+  // Route to appropriate handler based on metadata type
+  if (metadata?.type === 'credit_purchase') {
+    await handleCreditPurchase(session, metadata as unknown as CreditPurchaseMetadata);
+    return;
+  }
+
+  if (metadata?.type === 'session_purchase') {
+    await handleSessionPurchase(session, metadata as unknown as SessionPurchaseMetadata);
+    return;
+  }
+
+  // Legacy: Handle subscription-based checkout (backward compatibility)
   const registrationId = session.client_reference_id || session.metadata?.registrationId;
   if (!registrationId) {
     console.error('No registration ID found in checkout session');
@@ -128,7 +148,198 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.error(`Failed to update registration ${registrationId}:`, error);
     throw new Error(`Database update failed: ${error.message}`);
   }
+}
 
+// =============================================================================
+// NEW CREDIT SYSTEM HANDLERS
+// =============================================================================
+
+/**
+ * Handle credit package purchase
+ * Creates credit_purchase record and updates parent_credits balance
+ */
+async function handleCreditPurchase(
+  session: Stripe.Checkout.Session,
+  metadata: CreditPurchaseMetadata
+) {
+  const supabase = getSupabase();
+  const { firebase_uid, package_type, credits } = metadata;
+  const creditsNum = parseInt(credits, 10);
+
+  // Get price paid from session
+  const pricePaid = (session.amount_total || 0) / 100; // Convert from cents
+
+  // Calculate expiry date (12 months from now)
+  const expiresAt = new Date();
+  expiresAt.setMonth(expiresAt.getMonth() + 12);
+
+  // Ensure parent_credits record exists
+  const { data: existingCredits } = await supabase
+    .from('parent_credits')
+    .select('id, total_credits')
+    .eq('firebase_uid', firebase_uid)
+    .single();
+
+  const currentBalance = existingCredits?.total_credits || 0;
+
+  if (!existingCredits) {
+    // Create parent_credits record
+    const { error: createError } = await supabase
+      .from('parent_credits')
+      .insert({
+        firebase_uid,
+        total_credits: creditsNum,
+      });
+
+    if (createError) {
+      console.error('Failed to create parent_credits:', createError);
+      throw new Error(`Failed to create credit account: ${createError.message}`);
+    }
+  } else {
+    // Update existing balance
+    const { error: updateError } = await supabase
+      .from('parent_credits')
+      .update({
+        total_credits: currentBalance + creditsNum,
+      })
+      .eq('firebase_uid', firebase_uid);
+
+    if (updateError) {
+      console.error('Failed to update parent_credits:', updateError);
+      throw new Error(`Failed to update credit balance: ${updateError.message}`);
+    }
+  }
+
+  // Create credit_purchase record
+  const { error: purchaseError } = await supabase
+    .from('credit_purchases')
+    .insert({
+      firebase_uid,
+      package_type: package_type as CreditPackageType,
+      credits_purchased: creditsNum,
+      price_paid: pricePaid,
+      currency: session.currency || 'cad',
+      stripe_payment_intent_id: session.payment_intent as string,
+      stripe_checkout_session_id: session.id,
+      expires_at: expiresAt.toISOString(),
+      credits_remaining: creditsNum,
+      status: 'active',
+    });
+
+  if (purchaseError) {
+    console.error('Failed to create credit_purchase:', purchaseError);
+    throw new Error(`Failed to record purchase: ${purchaseError.message}`);
+  }
+
+  // Create notification for user
+  await supabase
+    .from('notifications')
+    .insert({
+      user_id: firebase_uid,
+      user_type: 'parent',
+      type: 'payment_confirmed',
+      title: 'Credits Purchased',
+      message: `${creditsNum} credit(s) have been added to your account. They expire on ${expiresAt.toLocaleDateString()}.`,
+      priority: 'normal',
+      data: {
+        credits: creditsNum,
+        package_type,
+        expires_at: expiresAt.toISOString(),
+      },
+    });
+}
+
+/**
+ * Handle direct session purchase (Sunday, Private, Semi-Private)
+ * Creates booking record with payment info
+ */
+async function handleSessionPurchase(
+  session: Stripe.Checkout.Session,
+  metadata: SessionPurchaseMetadata
+) {
+  const supabase = getSupabase();
+  const { firebase_uid, registration_id, session_type, session_date, time_slot } = metadata;
+
+  // Get price paid from session
+  const pricePaid = (session.amount_total || 0) / 100; // Convert from cents
+
+  // Check for existing booking (prevent duplicates from webhook retries)
+  const { data: existingBooking } = await supabase
+    .from('session_bookings')
+    .select('id')
+    .eq('registration_id', registration_id)
+    .eq('session_date', session_date)
+    .eq('time_slot', time_slot)
+    .eq('session_type', session_type)
+    .neq('status', 'cancelled')
+    .single();
+
+  if (existingBooking) {
+    // Booking already exists, just update payment info if needed
+    await supabase
+      .from('session_bookings')
+      .update({
+        stripe_payment_intent_id: session.payment_intent as string,
+        price_paid: pricePaid,
+      })
+      .eq('id', existingBooking.id);
+    return;
+  }
+
+  // Create booking record
+  const { error: bookingError } = await supabase
+    .from('session_bookings')
+    .insert({
+      firebase_uid,
+      registration_id,
+      session_type: session_type as SessionType,
+      session_date,
+      time_slot,
+      credits_used: 0, // Direct purchase, no credits used
+      price_paid: pricePaid,
+      stripe_payment_intent_id: session.payment_intent as string,
+      is_recurring: false,
+      status: 'booked',
+    });
+
+  if (bookingError) {
+    console.error('Failed to create session booking:', bookingError);
+    throw new Error(`Failed to create booking: ${bookingError.message}`);
+  }
+
+  // Get player name for notification
+  const { data: registration } = await supabase
+    .from('registrations')
+    .select('form_data')
+    .eq('id', registration_id)
+    .single();
+
+  const playerName = registration?.form_data?.playerFullName || 'Your child';
+
+  // Create notification
+  const sessionTypeDisplay = {
+    sunday: 'Sunday Ice Practice',
+    private: 'Private Training',
+    semi_private: 'Semi-Private Training',
+  }[session_type] || session_type;
+
+  await supabase
+    .from('notifications')
+    .insert({
+      user_id: firebase_uid,
+      user_type: 'parent',
+      type: 'sunday_booking',
+      title: 'Session Booked',
+      message: `${playerName}'s ${sessionTypeDisplay} on ${session_date} at ${time_slot} has been confirmed.`,
+      priority: 'normal',
+      data: {
+        registration_id,
+        session_type,
+        session_date,
+        time_slot,
+        price_paid: pricePaid,
+      },
+    });
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
