@@ -30,13 +30,8 @@ CREATE POLICY "Users can view own credits"
     FOR SELECT
     USING (firebase_uid = auth.uid()::text);
 
--- Service role can do everything (for API operations)
-DROP POLICY IF EXISTS "Service role full access to parent_credits" ON parent_credits;
-CREATE POLICY "Service role full access to parent_credits"
-    ON parent_credits
-    FOR ALL
-    USING (auth.role() = 'service_role')
-    WITH CHECK (auth.role() = 'service_role');
+-- Service role bypasses RLS automatically, but we add anon insert for initial record creation
+-- Note: Service role (used by API) bypasses RLS by default in Supabase
 
 -- ============================================================================
 -- RLS POLICIES: credit_purchases
@@ -49,13 +44,7 @@ CREATE POLICY "Users can view own purchases"
     FOR SELECT
     USING (firebase_uid = auth.uid()::text);
 
--- Service role can do everything
-DROP POLICY IF EXISTS "Service role full access to credit_purchases" ON credit_purchases;
-CREATE POLICY "Service role full access to credit_purchases"
-    ON credit_purchases
-    FOR ALL
-    USING (auth.role() = 'service_role')
-    WITH CHECK (auth.role() = 'service_role');
+-- Note: Service role bypasses RLS by default in Supabase
 
 -- ============================================================================
 -- RLS POLICIES: session_bookings
@@ -83,13 +72,7 @@ CREATE POLICY "Users can update own bookings"
     USING (firebase_uid = auth.uid()::text)
     WITH CHECK (firebase_uid = auth.uid()::text);
 
--- Service role can do everything
-DROP POLICY IF EXISTS "Service role full access to session_bookings" ON session_bookings;
-CREATE POLICY "Service role full access to session_bookings"
-    ON session_bookings
-    FOR ALL
-    USING (auth.role() = 'service_role')
-    WITH CHECK (auth.role() = 'service_role');
+-- Note: Service role bypasses RLS by default in Supabase
 
 -- ============================================================================
 -- RLS POLICIES: recurring_schedules
@@ -110,13 +93,7 @@ CREATE POLICY "Users can manage own recurring"
     USING (firebase_uid = auth.uid()::text)
     WITH CHECK (firebase_uid = auth.uid()::text);
 
--- Service role can do everything
-DROP POLICY IF EXISTS "Service role full access to recurring_schedules" ON recurring_schedules;
-CREATE POLICY "Service role full access to recurring_schedules"
-    ON recurring_schedules
-    FOR ALL
-    USING (auth.role() = 'service_role')
-    WITH CHECK (auth.role() = 'service_role');
+-- Note: Service role bypasses RLS by default in Supabase
 
 -- ============================================================================
 -- RLS POLICIES: credit_adjustments
@@ -129,35 +106,53 @@ CREATE POLICY "Users can view own adjustments"
     FOR SELECT
     USING (firebase_uid = auth.uid()::text);
 
--- Only service role can create adjustments (admin only)
-DROP POLICY IF EXISTS "Service role full access to credit_adjustments" ON credit_adjustments;
-CREATE POLICY "Service role full access to credit_adjustments"
-    ON credit_adjustments
-    FOR ALL
-    USING (auth.role() = 'service_role')
-    WITH CHECK (auth.role() = 'service_role');
+-- Note: Service role bypasses RLS by default in Supabase
+-- Only admins via service role can create adjustments
 
 -- ============================================================================
 -- ENABLE SUPABASE REALTIME ON CREDIT TABLES
 -- ============================================================================
--- Note: Run these commands to enable realtime subscriptions
+-- Note: These commands enable realtime subscriptions (idempotent - safe to re-run)
 
--- Enable realtime for parent_credits (balance updates)
-ALTER PUBLICATION supabase_realtime ADD TABLE parent_credits;
+-- Use DO block to safely add tables to publication (won't fail if already added)
+DO $$
+BEGIN
+    -- Enable realtime for parent_credits (balance updates)
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime' AND tablename = 'parent_credits'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE parent_credits;
+    END IF;
 
--- Enable realtime for session_bookings (booking changes affect capacity)
-ALTER PUBLICATION supabase_realtime ADD TABLE session_bookings;
+    -- Enable realtime for session_bookings (booking changes affect capacity)
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime' AND tablename = 'session_bookings'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE session_bookings;
+    END IF;
 
--- Enable realtime for credit_purchases (new purchase confirmations)
-ALTER PUBLICATION supabase_realtime ADD TABLE credit_purchases;
+    -- Enable realtime for credit_purchases (new purchase confirmations)
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime' AND tablename = 'credit_purchases'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE credit_purchases;
+    END IF;
 
--- Enable realtime for recurring_schedules (status updates)
-ALTER PUBLICATION supabase_realtime ADD TABLE recurring_schedules;
+    -- Enable realtime for recurring_schedules (status updates)
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime' AND tablename = 'recurring_schedules'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE recurring_schedules;
+    END IF;
+END $$;
 
--- Verify notifications already has realtime (if not, uncomment)
+-- Note: notifications and sunday_practice_slots should already have realtime enabled
+-- Run these only if needed:
 -- ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
-
--- Verify sunday_practice_slots already has realtime (if not, uncomment)
 -- ALTER PUBLICATION supabase_realtime ADD TABLE sunday_practice_slots;
 
 -- ============================================================================
@@ -192,20 +187,32 @@ GRANT SELECT ON public_slot_capacity TO anon;
 -- Admin users can view all data for customer support
 
 -- Function to check if user is admin (based on custom claim or separate table)
+-- Made STABLE for better query planning since it only reads settings
 CREATE OR REPLACE FUNCTION is_admin()
 RETURNS BOOLEAN AS $$
+DECLARE
+    v_claims json;
 BEGIN
+    -- Get JWT claims safely
+    v_claims := current_setting('request.jwt.claims', true)::json;
+
+    -- Return false if no claims (unauthenticated request)
+    IF v_claims IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
     -- Check if user has admin role in JWT custom claims
     -- This assumes you set custom claims in Firebase/Supabase auth
-    RETURN (
-        current_setting('request.jwt.claims', true)::json->>'role' = 'admin'
-        OR current_setting('request.jwt.claims', true)::json->'app_metadata'->>'role' = 'admin'
+    RETURN COALESCE(
+        v_claims->>'role' = 'admin'
+        OR v_claims->'app_metadata'->>'role' = 'admin',
+        FALSE
     );
 EXCEPTION
     WHEN OTHERS THEN
         RETURN FALSE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 -- Admin can view all parent_credits
 DROP POLICY IF EXISTS "Admin can view all credits" ON parent_credits;
@@ -303,11 +310,14 @@ RETURNS TRIGGER AS $$
 DECLARE
     v_player_name TEXT;
 BEGIN
-    -- Get player name from registration
-    SELECT form_data->>'playerFullName'
+    -- Get player name from registration (with fallback for missing data)
+    SELECT COALESCE(form_data->>'playerFullName', 'Player')
     INTO v_player_name
     FROM registrations
     WHERE id = NEW.registration_id;
+
+    -- Handle case where registration not found
+    v_player_name := COALESCE(v_player_name, 'Player');
 
     -- Create booking confirmation notification
     INSERT INTO notifications (
@@ -351,11 +361,14 @@ DECLARE
     v_player_name TEXT;
 BEGIN
     IF NEW.is_active = FALSE AND NEW.paused_reason = 'insufficient_credits' AND OLD.is_active = TRUE THEN
-        -- Get player name
-        SELECT form_data->>'playerFullName'
+        -- Get player name (with fallback for missing data)
+        SELECT COALESCE(form_data->>'playerFullName', 'Player')
         INTO v_player_name
         FROM registrations
         WHERE id = NEW.registration_id;
+
+        -- Handle case where registration not found
+        v_player_name := COALESCE(v_player_name, 'Player');
 
         INSERT INTO notifications (
             user_id,
