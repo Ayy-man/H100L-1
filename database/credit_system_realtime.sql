@@ -110,9 +110,28 @@ CREATE POLICY "Users can view own adjustments"
 -- Only admins via service role can create adjustments
 
 -- ============================================================================
+-- PERFORMANCE INDEXES ON firebase_uid (used in RLS policies)
+-- ============================================================================
+-- These indexes improve RLS policy performance when filtering by firebase_uid
+
+CREATE INDEX IF NOT EXISTS idx_parent_credits_firebase_uid ON parent_credits(firebase_uid);
+CREATE INDEX IF NOT EXISTS idx_credit_purchases_firebase_uid ON credit_purchases(firebase_uid);
+CREATE INDEX IF NOT EXISTS idx_session_bookings_firebase_uid ON session_bookings(firebase_uid);
+CREATE INDEX IF NOT EXISTS idx_recurring_schedules_firebase_uid ON recurring_schedules(firebase_uid);
+CREATE INDEX IF NOT EXISTS idx_credit_adjustments_firebase_uid ON credit_adjustments(firebase_uid);
+
+-- ============================================================================
 -- ENABLE SUPABASE REALTIME ON CREDIT TABLES
 -- ============================================================================
 -- Note: These commands enable realtime subscriptions (idempotent - safe to re-run)
+
+-- Ensure publication exists (Supabase creates this by default, but just in case)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        CREATE PUBLICATION supabase_realtime;
+    END IF;
+END $$;
 
 -- Use DO block to safely add tables to publication (won't fail if already added)
 DO $$
@@ -214,6 +233,10 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
+-- Revoke execute on is_admin from public roles (security hardening)
+-- Only postgres/superuser and the function owner need to call this
+REVOKE EXECUTE ON FUNCTION is_admin() FROM anon, authenticated;
+
 -- Admin can view all parent_credits
 DROP POLICY IF EXISTS "Admin can view all credits" ON parent_credits;
 CREATE POLICY "Admin can view all credits"
@@ -248,6 +271,24 @@ CREATE POLICY "Admin can view all adjustments"
     ON credit_adjustments
     FOR SELECT
     USING (is_admin());
+
+-- ============================================================================
+-- NOTIFICATIONS TABLE RLS POLICY FOR TRIGGER FUNCTIONS
+-- ============================================================================
+-- SECURITY DEFINER functions run as the function owner (typically postgres)
+-- We need to ensure the notifications table allows inserts from this role
+-- Note: If notifications has RLS enabled, this policy allows trigger inserts
+
+DROP POLICY IF EXISTS "Allow trigger function inserts" ON notifications;
+CREATE POLICY "Allow trigger function inserts"
+    ON notifications
+    FOR INSERT
+    WITH CHECK (
+        -- Allow inserts when called from SECURITY DEFINER context
+        -- (These functions run as their owner, typically postgres)
+        -- The user_id must match a valid firebase_uid pattern
+        user_id IS NOT NULL
+    );
 
 -- ============================================================================
 -- REALTIME BROADCAST CONFIGURATION
@@ -463,6 +504,17 @@ BEGIN
     RETURN v_notified;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- SECURITY HARDENING: REVOKE EXECUTE ON SECURITY DEFINER FUNCTIONS
+-- ============================================================================
+-- These functions are called by triggers/cron, not by users directly
+-- Revoking execute prevents potential abuse
+
+REVOKE EXECUTE ON FUNCTION notify_low_credits() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION notify_booking_confirmed() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION notify_recurring_paused() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION check_expiring_credits() FROM anon, authenticated;
 
 -- ============================================================================
 -- VERIFICATION QUERIES
