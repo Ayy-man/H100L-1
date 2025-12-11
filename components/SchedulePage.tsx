@@ -529,7 +529,7 @@ const SchedulePage: React.FC = () => {
   const today = new Date();
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requireProfile={false}>
       {loading ? (
         <DashboardLayout user={user || ({ email: 'loading...', uid: '' } as any)}>
           <div className="space-y-6">

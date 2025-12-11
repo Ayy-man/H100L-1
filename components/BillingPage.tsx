@@ -113,7 +113,7 @@ const BillingPage: React.FC = () => {
   const totalSpent = history?.purchases.reduce((sum, p) => sum + Number(p.price_paid), 0) || 0;
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requireProfile={false}>
       {creditLoading || historyLoading ? (
         <DashboardLayout user={user || ({ email: 'loading...', uid: '' } as any)}>
           <div className="space-y-6">
