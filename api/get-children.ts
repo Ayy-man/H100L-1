@@ -128,10 +128,49 @@ export default async function handler(
       };
     });
 
+    // NEW: Fetch credit balance for this parent (credit system)
+    let creditBalance = 0;
+    let creditInfo = null;
+    const { data: parentCredits } = await getSupabase()
+      .from('parent_credits')
+      .select('total_credits')
+      .eq('firebase_uid', firebaseUid)
+      .single();
+
+    if (parentCredits) {
+      creditBalance = parentCredits.total_credits;
+
+      // Get expiring credits info
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+      const { data: expiringPurchases } = await getSupabase()
+        .from('credit_purchases')
+        .select('credits_remaining, expires_at')
+        .eq('firebase_uid', firebaseUid)
+        .eq('status', 'active')
+        .gt('credits_remaining', 0)
+        .lte('expires_at', thirtyDaysFromNow.toISOString())
+        .gt('expires_at', new Date().toISOString());
+
+      const expiringCredits = (expiringPurchases || []).reduce(
+        (sum, p) => sum + p.credits_remaining,
+        0
+      );
+
+      creditInfo = {
+        total_credits: creditBalance,
+        expiring_soon: expiringCredits,
+        has_credits: creditBalance > 0,
+      };
+    }
+
     return res.status(200).json({
       success: true,
       children,
       count: children.length,
+      // NEW: Include credit balance for parent
+      credits: creditInfo,
     });
   } catch (error: any) {
     console.error('Get children error:', error);
