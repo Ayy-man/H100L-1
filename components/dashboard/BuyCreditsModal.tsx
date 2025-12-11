@@ -168,8 +168,30 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
             })}
           </div>
 
+          {/* Other Session Types */}
+          <div className="border-t pt-4 mt-4">
+            <p className="text-sm font-medium mb-3">Other Sessions (Pay Per Session)</p>
+            <div className="grid grid-cols-1 gap-2 text-sm">
+              <div className="flex justify-between items-center p-2 rounded bg-muted/30">
+                <span>Semi-Private Training</span>
+                <span className="font-semibold">$69/session</span>
+              </div>
+              <div className="flex justify-between items-center p-2 rounded bg-muted/30">
+                <span>Private Training</span>
+                <span className="font-semibold">$89.99/session</span>
+              </div>
+              <div className="flex justify-between items-center p-2 rounded bg-muted/30">
+                <span>Sunday Ice Practice</span>
+                <span className="font-semibold">$50/session</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 italic">
+              Book these via "Book" button on your player cards
+            </p>
+          </div>
+
           {/* Info */}
-          <div className="text-xs text-muted-foreground space-y-1">
+          <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
             <p>• Credits expire 12 months after purchase</p>
             <p>• No refunds on credit purchases</p>
             <p>• Secure payment via Stripe</p>

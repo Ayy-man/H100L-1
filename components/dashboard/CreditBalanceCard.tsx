@@ -214,13 +214,17 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
             size="lg"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Buy Credits
+            Buy Sessions
           </Button>
 
-          {/* Pricing hint */}
-          <p className="text-xs text-center text-muted-foreground">
-            1 session = $45 | 10 sessions = $350 | 20 sessions = $500
-          </p>
+          {/* All Session Pricing */}
+          <div className="text-xs text-muted-foreground space-y-1 border-t pt-3">
+            <p className="font-medium text-foreground mb-2">Session Pricing:</p>
+            <p>• Group: $45 | 10 for $350 | 20 for $500</p>
+            <p>• Semi-Private: $69/session</p>
+            <p>• Private: $89.99/session</p>
+            <p>• Sunday Ice: $50/session</p>
+          </div>
         </CardContent>
       </Card>
 
