@@ -11,6 +11,7 @@ import {
   Clock,
   User,
 } from 'lucide-react';
+import SetupRecurringModal from './SetupRecurringModal';
 import {
   Card,
   CardContent,
@@ -61,6 +62,7 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
   const { user } = useProfile();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [showSetupModal, setShowSetupModal] = useState(false);
 
   // Get child name by registration ID
   const getChildName = (registrationId: string) => {
@@ -191,14 +193,26 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
                 Automatic weekly bookings (uses 1 credit per session)
               </CardDescription>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onRefresh}
-              className="h-8 w-8"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onRefresh}
+                className="h-8 w-8"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              {schedules.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSetupModal(true)}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -212,9 +226,9 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
               <p className="text-sm text-muted-foreground mb-4">
                 Set up automatic weekly bookings for consistent training
               </p>
-              <Button variant="outline" disabled>
+              <Button variant="outline" onClick={() => setShowSetupModal(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Coming Soon
+                Set Up Recurring
               </Button>
             </div>
           ) : (
@@ -333,6 +347,14 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Setup Recurring Modal */}
+      <SetupRecurringModal
+        open={showSetupModal}
+        onClose={() => setShowSetupModal(false)}
+        children={children}
+        onSuccess={onRefresh}
+      />
     </>
   );
 };
