@@ -13,7 +13,7 @@
 // =============================================================================
 
 /** Credit package types available for purchase */
-export type CreditPackageType = 'single' | '20_pack';
+export type CreditPackageType = 'single' | '10_pack' | '20_pack';
 
 /** Session types that can be booked */
 export type SessionType = 'group' | 'sunday' | 'private' | 'semi_private';
@@ -38,9 +38,17 @@ export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'frida
 export const CREDIT_PRICING = {
   single: {
     credits: 1,
-    price: 4000, // $40.00 CAD in cents
-    priceFormatted: '$40.00',
-    description: 'Single Credit',
+    price: 4500, // $45.00 CAD in cents
+    priceFormatted: '$45.00',
+    description: 'Single Session',
+    validityMonths: 12,
+  },
+  '10_pack': {
+    credits: 10,
+    price: 35000, // $350.00 CAD in cents
+    priceFormatted: '$350.00',
+    perCreditPrice: 3500, // $35.00 per credit
+    description: '10-Session Package',
     validityMonths: 12,
   },
   '20_pack': {
@@ -48,7 +56,7 @@ export const CREDIT_PRICING = {
     price: 50000, // $500.00 CAD in cents
     priceFormatted: '$500.00',
     perCreditPrice: 2500, // $25.00 per credit
-    description: '20-Credit Package',
+    description: '20-Session Package',
     validityMonths: 12,
   },
 } as const;
@@ -437,7 +445,7 @@ export function isSessionType(value: string): value is SessionType {
 
 /** Type guard for CreditPackageType */
 export function isCreditPackageType(value: string): value is CreditPackageType {
-  return ['single', '20_pack'].includes(value);
+  return ['single', '10_pack', '20_pack'].includes(value);
 }
 
 /** Type guard for BookingStatus */

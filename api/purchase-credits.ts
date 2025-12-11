@@ -29,6 +29,7 @@ const getSupabase = () => {
 // Credit package price IDs (to be set in environment)
 const CREDIT_PRICE_IDS: Record<CreditPackageType, string> = {
   single: process.env.VITE_STRIPE_PRICE_CREDIT_SINGLE || '',
+  '10_pack': process.env.VITE_STRIPE_PRICE_CREDIT_10PACK || '',
   '20_pack': process.env.VITE_STRIPE_PRICE_CREDIT_20PACK || '',
 };
 

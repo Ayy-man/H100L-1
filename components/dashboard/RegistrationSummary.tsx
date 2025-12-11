@@ -63,18 +63,18 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
       .join(', ');
   };
 
-  // Get price based on program (private is per session, others are monthly)
-  const getMonthlyPrice = () => {
-    const { programType, groupFrequency } = form_data;
+  // Get session pricing info
+  const getSessionPricing = () => {
+    const { programType } = form_data;
 
     if (programType === 'group') {
-      return groupFrequency === '1x' ? '$249.99/month' : '$399.99/month';
+      return 'From $25/session';
     } else if (programType === 'private') {
-      return 'Per session'; // Price set in Stripe
+      return '$89.99/session';
     } else if (programType === 'semi-private') {
-      return '$349.99/month';
+      return '$69/session';
     }
-    return '$0.00';
+    return 'Per session';
   };
 
   return (
@@ -153,8 +153,8 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
               <Badge className="mt-1">{getProgramLabel()}</Badge>
             </div>
             <div>
-              <p className="text-muted-foreground">Monthly Cost</p>
-              <p className="font-bold text-lg text-primary">{getMonthlyPrice()}/month</p>
+              <p className="text-muted-foreground">Session Pricing</p>
+              <p className="font-bold text-lg text-primary">{getSessionPricing()}</p>
             </div>
             {form_data.programType === 'group' && (() => {
               const assignedSlot = form_data.playerCategory
@@ -220,7 +220,7 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
               <div className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-primary mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-semibold text-foreground">Sunday Ice Practice Included</p>
+                  <p className="font-semibold text-foreground">Sunday Ice Practice Available</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Every Sunday on real ice at:
                   </p>
@@ -228,7 +228,7 @@ const RegistrationSummary: React.FC<RegistrationSummaryProps> = ({
                     7515 Boulevard Henri-Bourassa E, Montreal, Quebec H1E 1N9
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Included free with your monthly subscription
+                    Book from your dashboard • $50/session
                   </p>
                 </div>
               </div>

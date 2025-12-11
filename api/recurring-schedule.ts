@@ -106,10 +106,10 @@ async function handlePost(
       });
     }
 
-    // Validate session type (only group allowed for recurring)
-    if (!isSessionType(session_type) || session_type !== 'group') {
+    // Validate session type
+    if (!isSessionType(session_type)) {
       return res.status(400).json({
-        error: 'Recurring schedules are only available for group sessions',
+        error: 'Invalid session_type',
       });
     }
 

@@ -176,6 +176,7 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
           open={!!bookingChild}
           onClose={() => setBookingChild(null)}
           child={bookingChild}
+          allChildren={children}
         />
       )}
     </>

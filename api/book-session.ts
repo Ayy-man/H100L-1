@@ -52,14 +52,16 @@ export default async function handler(
       });
     }
 
-    // Only group sessions can be booked with credits
-    if (session_type !== 'group') {
+    // Check if this session type uses credits or direct payment
+    const creditsRequired = CREDITS_PER_SESSION[session_type];
+
+    // If no credits required, redirect to purchase-session endpoint
+    if (creditsRequired === 0) {
       return res.status(400).json({
-        error: `${session_type} sessions must be purchased directly. Use /api/purchase-session endpoint.`,
+        error: `${session_type} sessions are purchased directly. Use /api/purchase-session endpoint.`,
+        redirect: '/api/purchase-session',
       });
     }
-
-    const creditsRequired = CREDITS_PER_SESSION[session_type];
     const supabase = getSupabase();
 
     // Verify registration belongs to this user

@@ -84,44 +84,27 @@ export default async function handler(
       });
     }
 
-    // Transform registrations into child objects with profile display names
+    // Transform registrations into child objects
+    // NOTE: All session types are available to all registered players
+    // programType is kept for legacy compatibility but not used for access control
     const children = registrations.map((reg: any) => {
       const formData = reg.form_data;
-      const programType = formData.programType || 'unknown';
       const playerName = formData.playerFullName || 'Unknown Player';
+      const playerCategory = formData.playerCategory || 'Unknown';
 
-      // Generate profile display name
-      let profileDisplayName = playerName;
-
-      if (programType === 'group') {
-        const frequency = (formData.groupFrequency || '').toUpperCase();
-        profileDisplayName = `${playerName} - Group ${frequency}`;
-      } else if (programType === 'private') {
-        const frequency = formData.privateFrequency;
-        if (frequency && frequency !== 'one-time') {
-          profileDisplayName = `${playerName} - Private ${frequency.toUpperCase()}`;
-        } else {
-          profileDisplayName = `${playerName} - Private`;
-        }
-      } else if (programType === 'semi-private') {
-        profileDisplayName = `${playerName} - Semi-Private`;
-      } else {
-        profileDisplayName = `${playerName} - ${programType.charAt(0).toUpperCase() + programType.slice(1)}`;
-      }
+      // Simple display name: just player name and category
+      const profileDisplayName = `${playerName} (${playerCategory})`;
 
       return {
         registrationId: reg.id,
         profileDisplayName,
         playerName,
-        playerCategory: formData.playerCategory || 'Unknown',
-        programType,
-        frequency: programType === 'group'
-          ? formData.groupFrequency
-          : programType === 'private'
-          ? formData.privateFrequency
-          : null,
+        playerCategory,
+        // Legacy fields - kept for compatibility but not used for restrictions
+        programType: formData.programType || 'all',
+        frequency: null,
         paymentStatus: reg.payment_status || 'pending',
-        hasActiveSubscription: reg.payment_status === 'succeeded' || reg.payment_status === 'verified',
+        hasActiveSubscription: true, // All registered players can book any session
         isCanceled: reg.canceled_at !== null,
         createdAt: reg.created_at,
         stripeSubscriptionId: reg.stripe_subscription_id,

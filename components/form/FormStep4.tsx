@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { FormData } from '../../types';
-import { calculatePrice, formatPrice } from '../../lib/stripe';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,7 +40,6 @@ const FormStep4: React.FC<FormStep4Props> = ({
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const pricing = calculatePrice(data);
 
   return (
     <div className="space-y-6">
@@ -180,7 +178,7 @@ const FormStep4: React.FC<FormStep4Props> = ({
         </CardContent>
       </Card>
 
-      {/* Pricing Summary */}
+      {/* Session Packages Info */}
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -197,22 +195,32 @@ const FormStep4: React.FC<FormStep4Props> = ({
                 d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            Pricing Summary
+            How It Works
           </CardTitle>
-          <CardDescription>Your monthly subscription cost</CardDescription>
+          <CardDescription>Pay-per-session training packages</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">{pricing.description}</span>
-              <span className="text-2xl font-bold text-foreground">{formatPrice(pricing.amount)}</span>
+            <div className="text-sm text-muted-foreground">
+              <p className="mb-2">Registration is <strong className="text-foreground">free</strong>. Purchase session packages from your dashboard:</p>
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Billing</span>
-              <span className="text-foreground">
-                {pricing.interval === 'month' ? 'Billed monthly (cancel anytime)' : 'One-time payment'}
-              </span>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 rounded-lg bg-background border">
+                <p className="font-bold text-foreground">$45</p>
+                <p className="text-xs text-muted-foreground">1 Session</p>
+              </div>
+              <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                <p className="font-bold text-foreground">$350</p>
+                <p className="text-xs text-muted-foreground">10 Sessions</p>
+              </div>
+              <div className="p-2 rounded-lg bg-primary/10 border border-primary/30">
+                <p className="font-bold text-foreground">$500</p>
+                <p className="text-xs text-muted-foreground">20 Sessions</p>
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Sessions are valid for 12 months • No subscriptions • Pay as you go
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -238,7 +246,7 @@ const FormStep4: React.FC<FormStep4Props> = ({
               Create Your Account
             </CardTitle>
             <CardDescription>
-              Set up your account to access your dashboard and complete payment
+              Set up your account to access your dashboard and buy sessions
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -320,7 +328,7 @@ const FormStep4: React.FC<FormStep4Props> = ({
 
               <div className="pt-4 border-t border-border">
                 <p className="text-sm text-muted-foreground">
-                  ✅ After creating your account, you'll be redirected to your dashboard where you can complete payment and manage your registration.
+                  ✅ After creating your account, you'll be redirected to your dashboard where you can purchase session packages and book training times.
                 </p>
               </div>
             </div>
