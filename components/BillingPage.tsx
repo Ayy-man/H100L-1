@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Coins,
   CreditCard,
-  Check,
-  X,
-  AlertCircle,
   Calendar,
   Download,
   Info,
+  AlertCircle,
+  Plus,
+  Clock,
+  TrendingUp,
+  CheckCircle,
 } from 'lucide-react';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from './dashboard/DashboardLayout';
+import BuyCreditsModal from './dashboard/BuyCreditsModal';
 import {
   Card,
   CardContent,
@@ -22,431 +26,349 @@ import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
-import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/contexts/ProfileContext';
-import { Registration } from '@/types';
 import { toast } from 'sonner';
+import type {
+  CreditPurchase,
+  CreditUsageRecord,
+  CreditHistoryResponse,
+} from '@/types/credits';
+import { formatPrice, CREDIT_PRICING, SESSION_PRICING } from '@/lib/stripe';
 
 /**
- * Billing Page Component
+ * Billing Page Component (Credit System)
  *
- * View subscription and payment information:
- * - Current subscription status
- * - Payment method
- * - Billing history
- * - Subscription management
+ * View credit balance and purchase history:
+ * - Current credit balance
+ * - Purchase history with expiry dates
+ * - Credit usage history
+ * - Buy more credits
  */
 const BillingPage: React.FC = () => {
-  const { user, selectedProfile, selectedProfileId } = useProfile();
-  const [registration, setRegistration] = useState<Registration | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user, creditBalance, creditLoading, refreshCredits } = useProfile();
+  const [history, setHistory] = useState<CreditHistoryResponse | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [showBuyModal, setShowBuyModal] = useState(false);
 
-  // Fetch selected child's registration data
+  // Fetch credit history
   useEffect(() => {
-    const fetchRegistration = async () => {
-      if (!selectedProfileId || !user) {
-        setLoading(false);
-        return;
-      }
+    const fetchHistory = async () => {
+      if (!user) return;
 
       try {
-        setLoading(true);
-        setError(null);
+        setHistoryLoading(true);
+        const response = await fetch(`/api/credit-history?firebase_uid=${user.uid}&limit=50`);
 
-        const { data, error: fetchError } = await supabase
-          .from('registrations')
-          .select('*')
-          .eq('id', selectedProfileId)
-          .eq('firebase_uid', user.uid) // Verify ownership
-          .single();
-
-        if (fetchError) {
-          if (fetchError.code === 'PGRST116') {
-            setError('Registration not found.');
-          } else {
-            throw fetchError;
-          }
-        } else {
-          setRegistration(data as Registration);
+        if (!response.ok) {
+          throw new Error('Failed to fetch credit history');
         }
+
+        const data: CreditHistoryResponse = await response.json();
+        setHistory(data);
       } catch (err) {
-        console.error('Error fetching registration:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load billing data');
-        toast.error('Failed to load billing data');
+        console.error('Error fetching history:', err);
+        toast.error('Failed to load billing history');
       } finally {
-        setLoading(false);
+        setHistoryLoading(false);
       }
     };
 
-    fetchRegistration();
-  }, [selectedProfileId, user]);
+    fetchHistory();
+  }, [user]);
 
-  // Calculate price (monthly for subscriptions, per session for private)
-  const getMonthlyPrice = () => {
-    if (!registration) return '$0.00';
-
-    const { programType, groupFrequency } = registration.form_data;
-
-    if (programType === 'group') {
-      return groupFrequency === '1x' ? '$249.99' : '$399.99';
-    } else if (programType === 'private') {
-      return 'Per session'; // Private sessions sold individually
-    } else if (programType === 'semi-private') {
-      return '$349.99';
-    }
-
-    return '$0.00';
-  };
-
-  // Get payment status details
-  const getPaymentStatusBadge = () => {
-    if (!registration) return null;
-
-    const status = registration.payment_status;
-
-    if (status === 'succeeded') {
-      return (
-        <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
-          <Check className="mr-1 h-3 w-3" />
-          Active
-        </Badge>
-      );
-    } else if (status === 'failed') {
-      return (
-        <Badge variant="destructive">
-          <X className="mr-1 h-3 w-3" />
-          Failed
-        </Badge>
-      );
-    } else if (status === 'canceled') {
-      return (
-        <Badge variant="secondary">
-          <AlertCircle className="mr-1 h-3 w-3" />
-          Canceled
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/30">
-          <AlertCircle className="mr-1 h-3 w-3" />
-          Pending
-        </Badge>
-      );
-    }
-  };
-
-  // Generate mock billing history (in production, this would come from Stripe API)
-  const generateBillingHistory = () => {
-    if (!registration || registration.payment_status !== 'succeeded') return [];
-
-    const history = [];
-    const createdDate = new Date(registration.created_at);
-    const today = new Date();
-    const monthlyPrice = getMonthlyPrice();
-
-    // Add initial payment
-    history.push({
-      date: createdDate,
-      amount: monthlyPrice,
-      status: 'succeeded',
-      description: 'Initial subscription payment',
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
-
-    // Add monthly payments
-    let currentDate = new Date(createdDate);
-    currentDate.setMonth(currentDate.getMonth() + 1);
-
-    while (currentDate <= today) {
-      history.push({
-        date: new Date(currentDate),
-        amount: monthlyPrice,
-        status: 'succeeded',
-        description: 'Monthly subscription payment',
-      });
-      currentDate.setMonth(currentDate.getMonth() + 1);
-    }
-
-    return [...history].reverse(); // Most recent first (non-mutating)
   };
 
-  const billingHistory = generateBillingHistory();
-  const monthlyPrice = getMonthlyPrice();
+  // Get package label
+  const getPackageLabel = (packageType: string) => {
+    return packageType === '20_pack' ? '20-Credit Package' : 'Single Credit';
+  };
+
+  // Get session type label
+  const getSessionTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      group: 'Group Training',
+      sunday: 'Sunday Ice',
+      private: 'Private',
+      semi_private: 'Semi-Private',
+    };
+    return labels[type] || type;
+  };
+
+  // Check if purchase is expiring soon (within 30 days)
+  const isExpiringSoon = (expiresAt: string) => {
+    const daysUntilExpiry = Math.ceil(
+      (new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
+  };
+
+  // Calculate total spent
+  const totalSpent = history?.purchases.reduce((sum, p) => sum + Number(p.price_paid), 0) || 0;
 
   return (
     <ProtectedRoute>
-      {loading ? (
+      {creditLoading || historyLoading ? (
         <DashboardLayout user={user || ({ email: 'loading...', uid: '' } as any)}>
           <div className="space-y-6">
             <Skeleton className="h-12 w-64" />
-            <Skeleton className="h-32" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+            </div>
             <Skeleton className="h-96" />
           </div>
-        </DashboardLayout>
-      ) : error ? (
-        <DashboardLayout user={user!}>
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error Loading Billing Information</AlertTitle>
-            <AlertDescription>
-              {error}
-              <div className="mt-4">
-                <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-                  Refresh Page
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        </DashboardLayout>
-      ) : !registration ? (
-        <DashboardLayout user={user!}>
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertTitle>No Billing Information</AlertTitle>
-            <AlertDescription>
-              {!selectedProfile
-                ? 'Please select a child profile to view billing information.'
-                : 'Complete your registration to view billing information.'}
-            </AlertDescription>
-          </Alert>
         </DashboardLayout>
       ) : (
         <DashboardLayout user={user!}>
           <div className="space-y-6">
             {/* Page Header */}
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Billing & Subscription</h1>
-              <p className="text-muted-foreground mt-1">
-                Manage your subscription and view payment history
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Billing & Credits</h1>
+                <p className="text-muted-foreground mt-1">
+                  Manage your credits and view purchase history
+                </p>
+              </div>
+              <Button onClick={() => setShowBuyModal(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Buy Credits
+              </Button>
             </div>
 
-            {/* Current Subscription */}
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Current Balance */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Coins className="h-4 w-4" />
+                    Credit Balance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-primary">{creditBalance}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    credit{creditBalance !== 1 ? 's' : ''} available
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Total Purchases */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Total Spent
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{formatPrice(totalSpent * 100)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    across {history?.purchases.length || 0} purchase{history?.purchases.length !== 1 ? 's' : ''}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Sessions Used */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Credits Used
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{history?.usage.length || 0}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    training sessions booked
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Pricing Info */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5 text-primary" />
-                      Current Subscription
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      Your active training program subscription
-                    </CardDescription>
-                  </div>
-                  {getPaymentStatusBadge()}
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Info className="h-5 w-5 text-primary" />
+                  Credit Pricing
+                </CardTitle>
+                <CardDescription>
+                  Buy credits for group training sessions
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Subscription Details */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Program Type</p>
-                    <p className="text-xl font-bold text-foreground capitalize">
-                      {registration.form_data.programType}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {registration.form_data.programType === 'group' &&
-                        `${registration.form_data.groupFrequency?.toUpperCase()} per week`}
-                      {registration.form_data.programType === 'private' && 'Single session'}
-                      {registration.form_data.programType === 'semi-private' && 'Custom schedule'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      {registration.form_data.programType === 'private' ? 'Session Cost' : 'Monthly Cost'}
-                    </p>
-                    <p className="text-3xl font-bold text-primary">{monthlyPrice}</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {registration.form_data.programType === 'private' ? 'Per session' : 'Billed monthly'}
-                    </p>
-                  </div>
-                  {registration.form_data.programType !== 'private' && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Next Billing Date</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {new Date(
-                        new Date().setMonth(new Date().getMonth() + 1)
-                      ).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {monthlyPrice} will be charged
-                    </p>
-                  </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Subscription Benefits */}
-                <div>
-                  <p className="font-semibold text-sm mb-3">What's Included</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>
-                        {registration.form_data.programType === 'group' &&
-                          `${registration.form_data.groupSelectedDays?.length} training sessions per week`}
-                        {registration.form_data.programType === 'private' &&
-                          'Personalized 1-on-1 training'}
-                        {registration.form_data.programType === 'semi-private' &&
-                          'Small group training'}
-                      </span>
-                    </div>
-                    {registration.form_data.programType === 'group' && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <span>Sunday real ice practice (free)</span>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Single Credit */}
+                  <div className="p-4 rounded-lg border bg-card">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Single Credit</p>
+                        <p className="text-sm text-muted-foreground">1 group training session</p>
                       </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>Professional coaching staff</span>
+                      <p className="text-xl font-bold text-primary">$40</p>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>Progress tracking and reports</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>Access to training facility</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span>Cancel anytime</span>
+                  </div>
+
+                  {/* 20-Pack */}
+                  <div className="p-4 rounded-lg border bg-primary/5 border-primary/30 relative">
+                    <Badge className="absolute -top-2 right-3 bg-primary">Best Value</Badge>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">20-Credit Package</p>
+                        <p className="text-sm text-muted-foreground">$25/credit • Save $300</p>
+                      </div>
+                      <p className="text-xl font-bold text-primary">$500</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Subscription Actions */}
-                {registration.payment_status === 'pending' ? (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Payment Pending</AlertTitle>
-                    <AlertDescription className="mt-2">
-                      Complete your payment on the Dashboard to activate your subscription.
-                      <Button variant="link" asChild className="p-0 h-auto ml-1">
-                        <a href="/dashboard">Go to Dashboard</a>
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button variant="outline" disabled>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Update Payment Method
-                    </Button>
-                    <Button variant="outline" disabled>
-                      Cancel Subscription
-                    </Button>
-                    <p className="text-xs text-muted-foreground ml-auto">
-                      Contact support to manage subscription
-                    </p>
-                  </div>
-                )}
+                <Separator className="my-4" />
+
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p><strong>Other Sessions (Direct Purchase):</strong></p>
+                  <p>• Sunday Ice Practice: $50/session</p>
+                  <p>• Semi-Private Training: $69/session</p>
+                  <p>• Private Training: $89.99/session</p>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Billing History */}
+            {/* Purchase History */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
-                  Billing History
+                  Purchase History
                 </CardTitle>
                 <CardDescription>
-                  {billingHistory.length > 0
-                    ? `${billingHistory.length} payment${billingHistory.length > 1 ? 's' : ''} on record`
-                    : 'No payment history yet'}
+                  {history?.purchases.length || 0} credit purchase{(history?.purchases.length || 0) !== 1 ? 's' : ''}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {billingHistory.length === 0 ? (
+                {!history?.purchases.length ? (
                   <div className="text-center py-8">
-                    <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                     <p className="text-muted-foreground">
-                      No billing history available yet
+                      No purchases yet
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Your payment history will appear here after your first payment
+                      Buy credits to start booking training sessions
                     </p>
+                    <Button className="mt-4" onClick={() => setShowBuyModal(true)}>
+                      Buy Your First Credits
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {billingHistory.map((payment, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <CreditCard className="h-5 w-5 text-primary" />
+                    {history.purchases
+                      .sort((a, b) => new Date(b.purchased_at).getTime() - new Date(a.purchased_at).getTime())
+                      .map((purchase) => {
+                        const expiringSoon = isExpiringSoon(purchase.expires_at);
+                        const isExpired = purchase.status === 'expired';
+                        const isExhausted = purchase.status === 'exhausted';
+
+                        return (
+                          <div
+                            key={purchase.id}
+                            className={`flex items-center justify-between p-4 rounded-lg border bg-card ${
+                              isExpired || isExhausted ? 'opacity-60' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Coins className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-foreground">
+                                    {getPackageLabel(purchase.package_type)}
+                                  </p>
+                                  {isExpired && (
+                                    <Badge variant="secondary" className="text-xs">Expired</Badge>
+                                  )}
+                                  {isExhausted && (
+                                    <Badge variant="secondary" className="text-xs">Used Up</Badge>
+                                  )}
+                                  {expiringSoon && !isExpired && !isExhausted && (
+                                    <Badge variant="outline" className="text-xs text-orange-500 border-orange-500/30">
+                                      Expiring Soon
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                                  <span>Purchased {formatDate(purchase.purchased_at)}</span>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    Expires {formatDate(purchase.expires_at)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-foreground">
+                                {formatPrice(Number(purchase.price_paid) * 100)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {purchase.credits_remaining}/{purchase.credits_purchased} remaining
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">
-                              {payment.description}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {payment.date.toLocaleDateString('en-US', {
-                                month: 'long',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="font-bold text-foreground">{payment.amount}</p>
-                            <Badge
-                              variant="outline"
-                              className="bg-green-500/10 text-green-600 border-green-500/30"
-                            >
-                              Paid
-                            </Badge>
-                          </div>
-                          <Button variant="ghost" size="icon" disabled>
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      })}
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Payment Method */}
-            {registration.stripe_customer_id && (
+            {/* Usage History */}
+            {history?.usage && history.usage.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Payment Method</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    Credit Usage
+                  </CardTitle>
                   <CardDescription>
-                    Manage your payment information
+                    Sessions booked using credits
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">Credit Card</p>
-                        <p className="text-sm text-muted-foreground">•••• •••• •••• ••••</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" disabled>
-                      Update
-                    </Button>
+                  <div className="space-y-2">
+                    {history.usage
+                      .sort((a, b) => new Date(b.used_at).getTime() - new Date(a.used_at).getTime())
+                      .slice(0, 10)
+                      .map((usage) => (
+                        <div
+                          key={usage.id}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-card text-sm"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {usage.player_name} - {getSessionTypeLabel(usage.session_type)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDate(usage.session_date)} at {usage.time_slot}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="outline">-{usage.credits_used} credit</Badge>
+                        </div>
+                      ))}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-3">
-                    To update your payment method, please contact support at support@sniperzone.com
-                  </p>
                 </CardContent>
               </Card>
             )}
@@ -456,7 +378,7 @@ const BillingPage: React.FC = () => {
               <Info className="h-4 w-4" />
               <AlertTitle>Need Help?</AlertTitle>
               <AlertDescription>
-                For billing questions, subscription changes, or refund requests, please contact our
+                For billing questions or refund requests, please contact our
                 support team at{' '}
                 <a
                   href="mailto:support@sniperzone.com"
@@ -467,6 +389,13 @@ const BillingPage: React.FC = () => {
               </AlertDescription>
             </Alert>
           </div>
+
+          {/* Buy Credits Modal */}
+          <BuyCreditsModal
+            open={showBuyModal}
+            onClose={() => setShowBuyModal(false)}
+            currentBalance={creditBalance}
+          />
         </DashboardLayout>
       )}
     </ProtectedRoute>

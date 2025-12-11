@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { onAuthStateChange } from '@/lib/authService';
+import type { CreditBalanceResponse } from '@/types/credits';
 
 export interface ChildProfile {
   registrationId: string;
@@ -25,6 +26,10 @@ interface ProfileContextType {
   selectProfile: (profileId: string) => void;
   refreshProfiles: () => Promise<void>;
   clearSelection: () => void;
+  // Credit system additions
+  creditBalance: number;
+  creditLoading: boolean;
+  refreshCredits: () => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -47,6 +52,9 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Credit system state
+  const [creditBalance, setCreditBalance] = useState<number>(0);
+  const [creditLoading, setCreditLoading] = useState(false);
 
   // Fetch all children profiles for the authenticated user
   const fetchProfiles = async (currentUser: User): Promise<ChildProfile[]> => {
@@ -102,7 +110,38 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     }
   };
 
-  // Initialize profiles when user authenticates
+  // Fetch credit balance for the authenticated user
+  const fetchCredits = async (currentUser: User): Promise<number> => {
+    try {
+      const response = await fetch(`/api/credit-balance?firebase_uid=${currentUser.uid}`);
+      if (!response.ok) {
+        // User might not have credits yet - that's OK
+        return 0;
+      }
+      const data: CreditBalanceResponse = await response.json();
+      return data.total_credits || 0;
+    } catch (err) {
+      console.error('Error fetching credits:', err);
+      return 0;
+    }
+  };
+
+  // Refresh credit balance
+  const refreshCredits = async () => {
+    if (!user) return;
+
+    try {
+      setCreditLoading(true);
+      const balance = await fetchCredits(user);
+      setCreditBalance(balance);
+    } catch (err) {
+      console.error('Error refreshing credits:', err);
+    } finally {
+      setCreditLoading(false);
+    }
+  };
+
+  // Initialize profiles and credits when user authenticates
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (currentUser) => {
       setUser(currentUser);
@@ -110,10 +149,17 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
       if (currentUser) {
         try {
           setLoading(true);
+          setCreditLoading(true);
           setError(null);
 
-          const profiles = await fetchProfiles(currentUser);
+          // Fetch profiles and credits in parallel
+          const [profiles, credits] = await Promise.all([
+            fetchProfiles(currentUser),
+            fetchCredits(currentUser),
+          ]);
+
           setChildrenProfiles(profiles);
+          setCreditBalance(credits);
 
           if (profiles.length === 0) {
             // No children registered yet
@@ -129,19 +175,22 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
             if (savedProfileId && savedProfileExists) {
               setSelectedProfileId(savedProfileId);
             }
-            // If no saved selection or saved profile doesn't exist, leave as null
-            // User will be shown profile selection screen
+            // With credit system, we no longer need profile selection screen
+            // All children are shown in the dashboard
           }
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to load profiles');
         } finally {
           setLoading(false);
+          setCreditLoading(false);
         }
       } else {
         // User logged out
         setChildrenProfiles([]);
         setSelectedProfileId(null);
+        setCreditBalance(0);
         setLoading(false);
+        setCreditLoading(false);
       }
     });
 
@@ -163,6 +212,10 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     selectProfile,
     refreshProfiles,
     clearSelection,
+    // Credit system additions
+    creditBalance,
+    creditLoading,
+    refreshCredits,
   };
 
   return (
