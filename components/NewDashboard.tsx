@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AlertCircle, PartyPopper } from 'lucide-react';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from './dashboard/DashboardLayout';
@@ -49,6 +49,9 @@ const NewDashboard: React.FC = () => {
 
   // Error state
   const [error, setError] = useState<string | null>(null);
+
+  // Ref to track credit balance for realtime handler (avoids dependency loop)
+  const creditBalanceRef = useRef<number>(0);
 
   // Check for payment success in URL params
   useEffect(() => {
@@ -158,6 +161,11 @@ const NewDashboard: React.FC = () => {
     }
   }, [user]);
 
+  // Keep ref in sync with state (for realtime handler)
+  useEffect(() => {
+    creditBalanceRef.current = creditBalance?.total_credits || 0;
+  }, [creditBalance?.total_credits]);
+
   // Set up Supabase Realtime subscriptions
   useEffect(() => {
     if (!user) return;
@@ -174,7 +182,7 @@ const NewDashboard: React.FC = () => {
           filter: `firebase_uid=eq.${user.uid}`,
         },
         (payload) => {
-          const oldCredits = creditBalance?.total_credits || 0;
+          const oldCredits = creditBalanceRef.current;
           const newCredits = payload.new.total_credits;
 
           setCreditBalance(prev => prev ? {
@@ -242,7 +250,7 @@ const NewDashboard: React.FC = () => {
       supabase.removeChannel(bookingsChannel);
       supabase.removeChannel(recurringChannel);
     };
-  }, [user, creditBalance?.total_credits]);
+  }, [user]);
 
   // Handle booking cancellation
   const handleCancelBooking = async (bookingId: string) => {
