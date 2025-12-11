@@ -75,6 +75,9 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
 
   const { amount, priceId } = getPrice();
 
+  // Show error if priceId is missing (helps diagnose configuration issues)
+  const isPriceConfigMissing = !priceId && (payment_status === 'pending' || payment_status === 'failed' || payment_status === 'canceled');
+
   // Handle Stripe Checkout
   const handlePayment = async () => {
     try {
@@ -331,10 +334,20 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
       {(payment_status === 'pending' ||
         payment_status === 'canceled' ||
         payment_status === 'failed') && (
-        <CardFooter>
+        <CardFooter className="flex flex-col space-y-2">
+          {/* Warning if Stripe price not configured */}
+          {isPriceConfigMissing && (
+            <Alert variant="destructive" className="mb-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Configuration Error</AlertTitle>
+              <AlertDescription className="text-xs">
+                Payment system not configured. Please contact support.
+              </AlertDescription>
+            </Alert>
+          )}
           <Button
             size="lg"
-            className="w-full"
+            className="w-full min-h-[44px] touch-manipulation"
             onClick={handlePayment}
             disabled={loading || !priceId}
           >
@@ -342,6 +355,11 @@ const PaymentStatus: React.FC<PaymentStatusProps> = ({ registration }) => {
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Processing...
+              </>
+            ) : isPriceConfigMissing ? (
+              <>
+                <AlertCircle className="mr-2 h-4 w-4" />
+                Payment Unavailable
               </>
             ) : (
               <>
