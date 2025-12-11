@@ -245,9 +245,12 @@ const BillingPage: React.FC = () => {
                 <Separator className="my-4" />
 
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <p><strong>Other Sessions (Separate Purchase):</strong></p>
-                  <p>• Sunday Ice Practice: $50/session (not included in bundles)</p>
-                  <p>• Team Session: $15/player (minimum 10 players)</p>
+                  <p><strong>Other Sessions (Pay Per Session):</strong></p>
+                  <p>• Semi-Private Training: <span className="font-medium text-foreground">$69/session</span> (up to 3 players)</p>
+                  <p>• Private Training: <span className="font-medium text-foreground">$89.99/session</span> (1-on-1 coaching)</p>
+                  <p>• Sunday Ice Practice: <span className="font-medium text-foreground">$50/session</span></p>
+                  <p>• Team Session: <span className="font-medium text-foreground">$15/player</span> (minimum 10 players)</p>
+                  <p className="text-xs mt-2 italic">Book these through "Book a Session" on your dashboard</p>
                 </div>
               </CardContent>
             </Card>
