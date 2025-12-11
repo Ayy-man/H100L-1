@@ -15,13 +15,12 @@ import Pricing from './components/Pricing';
 import Footer from './components/Footer';
 import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
-import Dashboard from './components/Dashboard';
+import NewDashboard from './components/NewDashboard';
 import Login from './components/Login';
 import Terms from './components/Terms';
 import SchedulePage from './components/SchedulePage';
 import BillingPage from './components/BillingPage';
 import ProfilePage from './components/ProfilePage';
-import ProfileSelectionScreen from './components/ProfileSelectionScreen';
 
 function App() {
   const [language, setLanguage] = useState<Language>(Language.FR);
@@ -63,10 +62,12 @@ function App() {
       return <AdminDashboard />;
     }
     if (path === '/dashboard') {
-      return <Dashboard />;
+      return <NewDashboard />;
     }
+    // /select-profile is deprecated - redirect to dashboard (credit system shows all children)
     if (path === '/select-profile') {
-      return <ProfileSelectionScreen />;
+      window.location.href = '/dashboard';
+      return null;
     }
     if (path === '/schedule') {
       return <SchedulePage />;
