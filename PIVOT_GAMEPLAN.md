@@ -3,6 +3,7 @@
 > **Status:** Planning Phase
 > **Created:** December 11, 2025
 > **Last Updated:** December 11, 2025
+> **Includes:** Supabase Realtime Configuration
 
 ---
 
@@ -24,6 +25,24 @@ This document outlines the complete roadmap for pivoting SniperZone from a **sub
 - Sunday ($50), Semi-Private ($69), Private ($89.99) are separate purchases
 - Credits expire after 12 months, no refunds
 - Single dashboard view showing all children
+
+---
+
+## Current Database Schema (Reference)
+
+The existing database includes these tables that will remain and integrate with the new credit system:
+
+| Table | Purpose | Integration Notes |
+|-------|---------|-------------------|
+| `registrations` | Player/parent info, medical data | Keep as-is, remove `payment_status` dependency |
+| `notifications` | User notifications | Add new notification types for credits |
+| `sunday_practice_slots` | Sunday ice slot definitions | Keep as-is, update booking logic |
+| `sunday_bookings` | Sunday ice reservations | May migrate to unified `session_bookings` |
+| `schedule_changes` | Schedule modification requests | Review if still needed with credit model |
+| `schedule_exceptions` | One-time schedule swaps | Review if still needed |
+| `semi_private_pairings` | Semi-private player matching | Keep for semi-private sessions |
+| `unpaired_semi_private` | Waiting list for matching | Keep for semi-private sessions |
+| `time_slots` | Slot capacity tracking | May be replaced by `session_bookings` counts |
 
 ---
 
@@ -158,6 +177,293 @@ CREATE INDEX idx_bookings_registration ON session_bookings(registration_id);
 CREATE INDEX idx_bookings_status ON session_bookings(status);
 CREATE INDEX idx_recurring_active ON recurring_schedules(is_active, next_booking_date);
 ```
+
+---
+
+## Supabase Realtime Configuration
+
+### Why Realtime?
+
+The credit system requires real-time updates for a seamless user experience:
+
+1. **Credit Balance** - When credits are purchased or used, balance updates instantly
+2. **Slot Capacity** - When someone books a slot, others see capacity change live
+3. **Booking Status** - Cancellations reflect immediately
+4. **Notifications** - Real-time alerts for low credits, booking confirmations
+5. **Recurring Status** - When recurring is paused (insufficient credits), notify immediately
+
+### Tables Requiring Realtime
+
+| Table | Events | Use Case | Priority |
+|-------|--------|----------|----------|
+| `parent_credits` | UPDATE | Credit balance changes | **HIGH** |
+| `session_bookings` | INSERT, UPDATE, DELETE | Booking changes, capacity updates | **HIGH** |
+| `credit_purchases` | INSERT | New purchase confirmation | **MEDIUM** |
+| `recurring_schedules` | UPDATE | Pause/resume notifications | **MEDIUM** |
+| `notifications` | INSERT | Real-time notification delivery | **HIGH** |
+| `sunday_practice_slots` | UPDATE | Capacity changes (already exists) | **MEDIUM** |
+
+### SQL to Enable Realtime
+
+```sql
+-- ============================================
+-- ENABLE REALTIME ON NEW TABLES
+-- ============================================
+
+-- Enable realtime for parent_credits
+ALTER PUBLICATION supabase_realtime ADD TABLE parent_credits;
+
+-- Enable realtime for session_bookings
+ALTER PUBLICATION supabase_realtime ADD TABLE session_bookings;
+
+-- Enable realtime for credit_purchases
+ALTER PUBLICATION supabase_realtime ADD TABLE credit_purchases;
+
+-- Enable realtime for recurring_schedules
+ALTER PUBLICATION supabase_realtime ADD TABLE recurring_schedules;
+
+-- Verify notifications already has realtime (if not, add it)
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
+-- Verify sunday_practice_slots already has realtime (if not, add it)
+ALTER PUBLICATION supabase_realtime ADD TABLE sunday_practice_slots;
+
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) FOR REALTIME
+-- ============================================
+-- Realtime respects RLS policies, so we need proper policies
+
+-- parent_credits: Parents can only see their own credits
+CREATE POLICY "Users can view own credits" ON parent_credits
+    FOR SELECT USING (firebase_uid = auth.uid()::text);
+
+-- session_bookings: Parents see own bookings, all users see capacity impact
+CREATE POLICY "Users can view own bookings" ON session_bookings
+    FOR SELECT USING (firebase_uid = auth.uid()::text);
+
+-- For capacity display, we need a separate view or function
+-- that aggregates without exposing individual bookings
+
+-- credit_purchases: Parents see own purchases
+CREATE POLICY "Users can view own purchases" ON credit_purchases
+    FOR SELECT USING (firebase_uid = auth.uid()::text);
+
+-- recurring_schedules: Parents see own schedules
+CREATE POLICY "Users can view own recurring" ON recurring_schedules
+    FOR SELECT USING (firebase_uid = auth.uid()::text);
+
+-- notifications: Users see own notifications
+CREATE POLICY "Users can view own notifications" ON notifications
+    FOR SELECT USING (user_id = auth.uid()::text);
+```
+
+### Frontend Realtime Subscriptions
+
+```typescript
+// ============================================
+// CREDIT BALANCE SUBSCRIPTION
+// ============================================
+// In CreditBalanceCard.tsx or Dashboard context
+
+useEffect(() => {
+  if (!user) return;
+
+  const channel = supabase
+    .channel(`credits-${user.uid}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'parent_credits',
+        filter: `firebase_uid=eq.${user.uid}`,
+      },
+      (payload) => {
+        // Update credit balance in state
+        setCreditBalance(payload.new.total_credits);
+
+        // Show toast for credit changes
+        const oldCredits = payload.old?.total_credits || 0;
+        const newCredits = payload.new.total_credits;
+        const diff = newCredits - oldCredits;
+
+        if (diff > 0) {
+          toast.success(`+${diff} credits added!`);
+        } else if (diff < 0) {
+          toast.info(`${Math.abs(diff)} credit${Math.abs(diff) > 1 ? 's' : ''} used`);
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [user]);
+
+// ============================================
+// BOOKING UPDATES SUBSCRIPTION (for capacity)
+// ============================================
+// In SchedulePage.tsx or BookSessionModal.tsx
+
+useEffect(() => {
+  const channel = supabase
+    .channel('booking-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*', // INSERT, UPDATE, DELETE
+        schema: 'public',
+        table: 'session_bookings',
+      },
+      (payload) => {
+        // Refresh capacity data when any booking changes
+        // This ensures all users see accurate slot availability
+        refetchCapacity();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
+
+// ============================================
+// NOTIFICATIONS SUBSCRIPTION
+// ============================================
+// In NotificationBell.tsx (already exists, may need updates)
+
+useEffect(() => {
+  if (!userId) return;
+
+  const channel = supabase
+    .channel(`notifications-${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        // Add new notification to list
+        addNotification(payload.new);
+
+        // Show toast for high priority
+        if (payload.new.priority === 'high' || payload.new.priority === 'urgent') {
+          toast.info(payload.new.title);
+        }
+
+        // Play sound or vibrate for urgent
+        if (payload.new.priority === 'urgent') {
+          playNotificationSound();
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [userId]);
+
+// ============================================
+// RECURRING SCHEDULE STATUS
+// ============================================
+// In RecurringScheduleCard.tsx
+
+useEffect(() => {
+  if (!user) return;
+
+  const channel = supabase
+    .channel(`recurring-${user.uid}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'recurring_schedules',
+        filter: `firebase_uid=eq.${user.uid}`,
+      },
+      (payload) => {
+        // Update recurring status
+        updateRecurringSchedule(payload.new);
+
+        // Alert if paused due to insufficient credits
+        if (payload.new.paused_reason === 'insufficient_credits') {
+          toast.warning(
+            'Recurring booking paused - insufficient credits. Buy more to resume.',
+            { duration: 8000 }
+          );
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [user]);
+```
+
+### Realtime Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         SUPABASE REALTIME                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   ┌─────────────────┐                                                   │
+│   │ parent_credits  │────┐                                              │
+│   │ (UPDATE)        │    │                                              │
+│   └─────────────────┘    │                                              │
+│                          │    ┌─────────────────────────────────────┐   │
+│   ┌─────────────────┐    │    │           DASHBOARD                  │   │
+│   │ session_bookings│────┼───▶│   • Credit balance (live)           │   │
+│   │ (INSERT/UPDATE/ │    │    │   • Upcoming bookings (live)        │   │
+│   │  DELETE)        │    │    │   • Slot capacity (live)            │   │
+│   └─────────────────┘    │    │   • Notifications (live)            │   │
+│                          │    └─────────────────────────────────────┘   │
+│   ┌─────────────────┐    │                                              │
+│   │ credit_purchases│────┤                                              │
+│   │ (INSERT)        │    │    ┌─────────────────────────────────────┐   │
+│   └─────────────────┘    │    │         SCHEDULE PAGE                │   │
+│                          ├───▶│   • Slot availability (live)        │   │
+│   ┌─────────────────┐    │    │   • Booking confirmations (live)    │   │
+│   │recurring_sched. │────┤    │   • Capacity counters (live)        │   │
+│   │ (UPDATE)        │    │    └─────────────────────────────────────┘   │
+│   └─────────────────┘    │                                              │
+│                          │    ┌─────────────────────────────────────┐   │
+│   ┌─────────────────┐    │    │        ADMIN DASHBOARD               │   │
+│   │ notifications   │────┘    │   • All bookings (live)             │   │
+│   │ (INSERT)        │────────▶│   • Credit purchases (live)         │   │
+│   └─────────────────┘         │   • Capacity overview (live)        │   │
+│                               └─────────────────────────────────────┘   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Realtime Event Types
+
+| Event | Table | Trigger | Frontend Action |
+|-------|-------|---------|-----------------|
+| Credit purchased | `parent_credits` UPDATE | After Stripe webhook | Update balance display, show toast |
+| Credit used | `parent_credits` UPDATE | After booking created | Update balance display |
+| Booking created | `session_bookings` INSERT | User books session | Update capacity, add to calendar |
+| Booking cancelled | `session_bookings` UPDATE | User cancels | Update capacity, remove from calendar, refund credit |
+| Recurring paused | `recurring_schedules` UPDATE | CRON finds no credits | Show warning toast, update UI |
+| Notification sent | `notifications` INSERT | Various triggers | Show in bell, toast for urgent |
+| Slot capacity changed | `sunday_practice_slots` UPDATE | Booking created/cancelled | Update availability display |
+
+### Performance Considerations
+
+1. **Channel Limits**: Supabase has limits on concurrent channels. Use combined channels where possible.
+2. **Filter Specificity**: Always use filters (`filter: firebase_uid=eq.xxx`) to reduce unnecessary events.
+3. **Debouncing**: For capacity updates, debounce rapid changes to avoid UI flicker.
+4. **Cleanup**: Always remove channels on component unmount to prevent memory leaks.
+5. **Reconnection**: Handle reconnection gracefully (Supabase client handles this, but UI should show status).
 
 ### Data Flow Diagram
 
@@ -303,6 +609,8 @@ CREATE INDEX idx_recurring_active ON recurring_schedules(is_active, next_booking
 
 ### Phase 1: Database & Core APIs (Week 1)
 - [ ] Create new database tables (SQL migration)
+- [ ] **Enable Supabase Realtime on new tables**
+- [ ] **Configure RLS policies for Realtime**
 - [ ] Create `POST /api/purchase-credits` endpoint
 - [ ] Create `GET /api/credit-balance` endpoint
 - [ ] Create `POST /api/book-session` endpoint
@@ -316,13 +624,16 @@ CREATE INDEX idx_recurring_active ON recurring_schedules(is_active, next_booking
 - [ ] Create `BookSessionModal` component
 - [ ] Create `BuyCreditsModal` component
 - [ ] Build new unified Dashboard
+- [ ] **Add Realtime subscriptions for credit balance updates**
+- [ ] **Add Realtime subscriptions for booking changes**
 
 ### Phase 3: Booking Flow (Week 3)
 - [ ] Update capacity logic to count bookings
+- [ ] **Add Realtime subscriptions for live capacity updates**
 - [ ] Update Sunday booking to require payment
 - [ ] Create Private session purchase flow
 - [ ] Create Semi-Private session purchase flow
-- [ ] Update SchedulePage calendar
+- [ ] Update SchedulePage calendar with live availability
 
 ### Phase 4: Recurring & Polish (Week 4)
 - [ ] Create recurring schedule tables and APIs
@@ -459,6 +770,7 @@ VITE_STRIPE_PRICE_SEMI_PRIVATE  # Replace with per-session
 /components/dashboard/CancelBookingModal.tsx
 
 /database/credit_system_schema.sql
+/database/credit_system_realtime.sql    # Enable Realtime + RLS policies
 /database/migration_to_credits.sql
 ```
 
