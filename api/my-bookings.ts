@@ -52,15 +52,11 @@ export default async function handler(
 
     const supabase = getSupabase();
 
-    // Build query
+    // First check if session_bookings table exists and has any data for this user
+    // Use a simpler query without joins to be more resilient
     let query = supabase
       .from('session_bookings')
-      .select(`
-        *,
-        registrations!inner (
-          form_data
-        )
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('firebase_uid', firebase_uid);
 
     // Filter by status if not 'all'
@@ -86,31 +82,61 @@ export default async function handler(
 
     if (error) {
       console.error('Error fetching bookings:', error);
-      return res.status(500).json({ error: 'Database error' });
+      return res.status(500).json({ error: 'Database error', details: error.message });
     }
 
+    // If no bookings, return empty array immediately
+    if (!bookings || bookings.length === 0) {
+      const response: MyBookingsResponse = {
+        bookings: [],
+        total_count: 0,
+      };
+      return res.status(200).json(response);
+    }
+
+    // Get registration IDs to fetch player names
+    const registrationIds = [...new Set(bookings.map((b: any) => b.registration_id))];
+
+    // Fetch player names from registrations
+    const { data: registrations } = await supabase
+      .from('registrations')
+      .select('id, form_data')
+      .in('id', registrationIds);
+
+    // Create lookup map for player names
+    const playerMap = new Map<string, { name: string; category: string }>();
+    (registrations || []).forEach((r: any) => {
+      playerMap.set(r.id, {
+        name: r.form_data?.playerFullName || 'Unknown',
+        category: r.form_data?.playerCategory || 'Unknown',
+      });
+    });
+
     // Transform bookings to include player details
-    const bookingsWithDetails: SessionBookingWithDetails[] = (bookings || []).map((b: any) => ({
-      id: b.id,
-      firebase_uid: b.firebase_uid,
-      registration_id: b.registration_id,
-      session_type: b.session_type,
-      session_date: b.session_date,
-      time_slot: b.time_slot,
-      credits_used: b.credits_used,
-      credit_purchase_id: b.credit_purchase_id,
-      price_paid: b.price_paid,
-      stripe_payment_intent_id: b.stripe_payment_intent_id,
-      is_recurring: b.is_recurring,
-      recurring_schedule_id: b.recurring_schedule_id,
-      status: b.status,
-      cancelled_at: b.cancelled_at,
-      cancellation_reason: b.cancellation_reason,
-      created_at: b.created_at,
-      updated_at: b.updated_at,
-      player_name: b.registrations?.form_data?.playerFullName || 'Unknown',
-      player_category: b.registrations?.form_data?.playerCategory || 'Unknown',
-    }));
+    const bookingsWithDetails: SessionBookingWithDetails[] = bookings.map((b: any) => {
+      const player = playerMap.get(b.registration_id) || { name: 'Unknown', category: 'Unknown' };
+      return {
+        id: b.id,
+        firebase_uid: b.firebase_uid,
+        registration_id: b.registration_id,
+        session_type: b.session_type,
+        session_date: b.session_date,
+        time_slot: b.time_slot,
+        credits_used: b.credits_used,
+        credit_purchase_id: b.credit_purchase_id,
+        price_paid: b.price_paid,
+        stripe_payment_intent_id: b.stripe_payment_intent_id,
+        is_recurring: b.is_recurring,
+        recurring_schedule_id: b.recurring_schedule_id,
+        status: b.status,
+        cancelled_at: b.cancelled_at,
+        cancellation_reason: b.cancellation_reason,
+        created_at: b.created_at,
+        updated_at: b.updated_at,
+        player_name: player.name,
+        player_category: player.category,
+      };
+    });
 
     const response: MyBookingsResponse = {
       bookings: bookingsWithDetails,
