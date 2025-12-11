@@ -283,7 +283,7 @@ const NewDashboard: React.FC = () => {
   // Loading state
   if (profileLoading) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute requireProfile={false}>
         <DashboardLayout user={user || ({ email: 'loading...', uid: '' } as any)}>
           <div className="space-y-6">
             <Skeleton className="h-12 w-64" />
@@ -304,7 +304,7 @@ const NewDashboard: React.FC = () => {
   // Error state
   if (error) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute requireProfile={false}>
         <DashboardLayout user={user!}>
           <div className="max-w-2xl mx-auto">
             <Alert variant="destructive">
@@ -336,7 +336,7 @@ const NewDashboard: React.FC = () => {
   // No children registered yet
   if (children.length === 0) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute requireProfile={false}>
         <DashboardLayout user={user!}>
           <div className="max-w-2xl mx-auto">
             <Alert>
@@ -361,7 +361,7 @@ const NewDashboard: React.FC = () => {
   const parentName = children[0]?.playerName?.split(' ')[0] || 'Parent';
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requireProfile={false}>
       <DashboardLayout user={user!}>
         <div className="space-y-6">
           {/* Welcome Message */}
