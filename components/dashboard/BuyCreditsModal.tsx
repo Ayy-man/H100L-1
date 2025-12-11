@@ -99,7 +99,7 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
             Buy Credits
           </DialogTitle>
           <DialogDescription>
-            Credits are shared across all your children. 1 credit = 1 group training session.
+            Credits are shared across all your children. 1 credit = 1 training session.
           </DialogDescription>
         </DialogHeader>
 

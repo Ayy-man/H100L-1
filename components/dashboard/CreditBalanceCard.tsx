@@ -188,7 +188,8 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
                               {purchase.credits_remaining} credit{purchase.credits_remaining !== 1 ? 's' : ''}
                             </span>
                             <Badge variant="outline" className="text-xs">
-                              {purchase.package_type === '20_pack' ? '20-Pack' : 'Single'}
+                              {purchase.package_type === '20_pack' ? '20-Pack' :
+                               purchase.package_type === '10_pack' ? '10-Pack' : 'Single'}
                             </Badge>
                           </div>
                           <span className={`text-xs ${isExpiringSoon ? 'text-orange-500 font-medium' : 'text-muted-foreground'}`}>
@@ -218,7 +219,7 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
 
           {/* Pricing hint */}
           <p className="text-xs text-center text-muted-foreground">
-            1 credit = $40 | 20 credits = $500 (save $300)
+            1 session = $45 | 10 sessions = $350 | 20 sessions = $500
           </p>
         </CardContent>
       </Card>
