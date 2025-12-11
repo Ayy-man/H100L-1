@@ -31,11 +31,14 @@ export const STRIPE_PRICE_IDS = {
 export const CREDIT_PRICE_IDS = {
   // Credit packages
   CREDIT_SINGLE: import.meta.env.VITE_STRIPE_PRICE_CREDIT_SINGLE,
+  CREDIT_10_PACK: import.meta.env.VITE_STRIPE_PRICE_CREDIT_10PACK,
   CREDIT_20_PACK: import.meta.env.VITE_STRIPE_PRICE_CREDIT_20PACK,
-  // Direct session purchases
+  // Direct session purchases (Sunday NOT included in bundles)
   SUNDAY_ICE: import.meta.env.VITE_STRIPE_PRICE_SUNDAY,
   SEMI_PRIVATE_SESSION: import.meta.env.VITE_STRIPE_PRICE_SEMI_PRIVATE_SESSION,
   PRIVATE_SESSION: import.meta.env.VITE_STRIPE_PRICE_PRIVATE_SESSION,
+  // Team sessions
+  TEAM_SESSION: import.meta.env.VITE_STRIPE_PRICE_TEAM_SESSION,
 } as const;
 
 // =============================================================================
@@ -44,22 +47,41 @@ export const CREDIT_PRICE_IDS = {
 export const CREDIT_PRICING = {
   single: {
     credits: 1,
-    amount: 4000, // $40.00 CAD in cents
+    amount: 4500, // $45.00 CAD in cents
     currency: 'cad',
-    description: 'Single Credit - 1 Group Training Session',
+    description: 'Single Session - 1 Group Training',
     priceId: CREDIT_PRICE_IDS.CREDIT_SINGLE,
     validityMonths: 12,
+  },
+  '10_pack': {
+    credits: 10,
+    amount: 35000, // $350.00 CAD in cents
+    currency: 'cad',
+    description: '10-Session Package - Group Training',
+    priceId: CREDIT_PRICE_IDS.CREDIT_10_PACK,
+    perCreditAmount: 3500, // $35.00 per credit
+    validityMonths: 12,
+    savings: '$100 savings vs single sessions',
   },
   '20_pack': {
     credits: 20,
     amount: 50000, // $500.00 CAD in cents
     currency: 'cad',
-    description: '20-Credit Package - Group Training Sessions',
+    description: '20-Session Package - Group Training',
     priceId: CREDIT_PRICE_IDS.CREDIT_20_PACK,
     perCreditAmount: 2500, // $25.00 per credit
     validityMonths: 12,
-    savings: '$300 savings vs single credits',
+    savings: '$400 savings vs single sessions',
   },
+} as const;
+
+// Team session pricing
+export const TEAM_PRICING = {
+  perPlayer: 1500, // $15.00 CAD per player in cents
+  minPlayers: 10,
+  currency: 'cad',
+  description: 'Team Session',
+  priceId: CREDIT_PRICE_IDS.TEAM_SESSION,
 } as const;
 
 // =============================================================================
@@ -235,10 +257,10 @@ export const formatCreditPackage = (packageType: CreditPackageType): string => {
  * Calculate savings for bulk credit purchase
  */
 export const calculateCreditSavings = (packageType: CreditPackageType): number => {
-  if (packageType !== '20_pack') return 0;
+  if (packageType === 'single') return 0;
   const singlePrice = CREDIT_PRICING.single.amount;
-  const packPrice = CREDIT_PRICING['20_pack'].amount;
-  const packCredits = CREDIT_PRICING['20_pack'].credits;
+  const packPrice = CREDIT_PRICING[packageType].amount;
+  const packCredits = CREDIT_PRICING[packageType].credits;
   return (singlePrice * packCredits) - packPrice; // Returns savings in cents
 };
 
@@ -248,6 +270,7 @@ export const calculateCreditSavings = (packageType: CreditPackageType): number =
 export const areCreditPricesConfigured = (): boolean => {
   return Boolean(
     CREDIT_PRICE_IDS.CREDIT_SINGLE &&
+    CREDIT_PRICE_IDS.CREDIT_10_PACK &&
     CREDIT_PRICE_IDS.CREDIT_20_PACK &&
     CREDIT_PRICE_IDS.SUNDAY_ICE &&
     CREDIT_PRICE_IDS.SEMI_PRIVATE_SESSION &&
@@ -264,6 +287,14 @@ export const getCreditPackageOptions = () => [
     ...CREDIT_PRICING.single,
     formattedPrice: formatPrice(CREDIT_PRICING.single.amount),
     badge: null,
+  },
+  {
+    type: '10_pack' as CreditPackageType,
+    ...CREDIT_PRICING['10_pack'],
+    formattedPrice: formatPrice(CREDIT_PRICING['10_pack'].amount),
+    badge: 'Popular',
+    formattedPerCredit: formatPrice(CREDIT_PRICING['10_pack'].perCreditAmount),
+    formattedSavings: formatPrice(calculateCreditSavings('10_pack')),
   },
   {
     type: '20_pack' as CreditPackageType,

@@ -117,22 +117,22 @@ interface SetupRecurringModalProps {
 
 ## Stripe Products to Create
 
-### Credit Packages
-| Product | Price (CAD) | Price ID Env Var |
-|---------|-------------|------------------|
-| Single Credit | $40.00 | `STRIPE_PRICE_SINGLE_CREDIT` |
-| 20-Credit Pack | $500.00 | `STRIPE_PRICE_20_PACK` |
+### Session Packages (Group Training)
+| Product | Price (CAD) | Env Var |
+|---------|-------------|---------|
+| 1 Session | $45.00 | `VITE_STRIPE_PRICE_CREDIT_SINGLE` |
+| 10-Session Package | $350.00 | `VITE_STRIPE_PRICE_CREDIT_10PACK` |
+| 20-Session Package | $500.00 | `VITE_STRIPE_PRICE_CREDIT_20PACK` |
 
-### Direct Purchase Sessions
-| Product | Price (CAD) | Price ID Env Var |
-|---------|-------------|------------------|
-| Sunday Ice Practice | $50.00 | `STRIPE_PRICE_SUNDAY_ICE` |
-| Semi-Private Training | $69.00 | `STRIPE_PRICE_SEMI_PRIVATE` |
-| Private Training | $89.99 | `STRIPE_PRICE_PRIVATE` |
+### Other Sessions (Separate Purchase - NOT in bundles)
+| Product | Price (CAD) | Env Var |
+|---------|-------------|---------|
+| Sunday Ice Practice | $50.00 | `VITE_STRIPE_PRICE_SUNDAY` |
+| Team Session | $15.00/player (min 10) | `VITE_STRIPE_PRICE_TEAM_SESSION` |
 
 ### Stripe Dashboard Steps
 1. Go to Products → Add Product
-2. Name: "SniperZone Single Credit" (or appropriate name)
+2. Name: "SniperZone 1 Session" (or appropriate name)
 3. Price: Set amount in CAD
 4. Pricing model: One-time
 5. Copy the `price_xxx` ID after creation
@@ -143,12 +143,12 @@ interface SetupRecurringModalProps {
 ## Environment Variables Required
 
 ```env
-# Credit System Price IDs
-STRIPE_PRICE_SINGLE_CREDIT=price_xxx
-STRIPE_PRICE_20_PACK=price_xxx
-STRIPE_PRICE_SUNDAY_ICE=price_xxx
-STRIPE_PRICE_SEMI_PRIVATE=price_xxx
-STRIPE_PRICE_PRIVATE=price_xxx
+# Session Package Price IDs (Vite frontend)
+VITE_STRIPE_PRICE_CREDIT_SINGLE=price_xxx
+VITE_STRIPE_PRICE_CREDIT_10PACK=price_xxx
+VITE_STRIPE_PRICE_CREDIT_20PACK=price_xxx
+VITE_STRIPE_PRICE_SUNDAY=price_xxx
+VITE_STRIPE_PRICE_TEAM_SESSION=price_xxx
 ```
 
 ---

@@ -87,7 +87,12 @@ const BillingPage: React.FC = () => {
 
   // Get package label
   const getPackageLabel = (packageType: string) => {
-    return packageType === '20_pack' ? '20-Credit Package' : 'Single Credit';
+    const labels: Record<string, string> = {
+      single: '1 Session',
+      '10_pack': '10-Session Package',
+      '20_pack': '20-Session Package',
+    };
+    return labels[packageType] || packageType;
   };
 
   // Get session type label
@@ -199,34 +204,40 @@ const BillingPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Info className="h-5 w-5 text-primary" />
-                  Credit Pricing
+                  Session Pricing
                 </CardTitle>
                 <CardDescription>
-                  Buy credits for group training sessions
+                  Buy session packages for group training (Sunday ice not included)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Single Credit */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Single Session */}
                   <div className="p-4 rounded-lg border bg-card">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Single Credit</p>
-                        <p className="text-sm text-muted-foreground">1 group training session</p>
-                      </div>
-                      <p className="text-xl font-bold text-primary">$40</p>
+                    <div className="flex flex-col">
+                      <p className="font-medium">1 Session</p>
+                      <p className="text-sm text-muted-foreground">Single group training</p>
+                      <p className="text-xl font-bold text-primary mt-2">$45</p>
+                    </div>
+                  </div>
+
+                  {/* 10-Pack */}
+                  <div className="p-4 rounded-lg border bg-blue-500/5 border-blue-500/30 relative">
+                    <Badge className="absolute -top-2 right-3 bg-blue-500">Popular</Badge>
+                    <div className="flex flex-col">
+                      <p className="font-medium">10 Sessions</p>
+                      <p className="text-sm text-muted-foreground">$35/session • Save $100</p>
+                      <p className="text-xl font-bold text-primary mt-2">$350</p>
                     </div>
                   </div>
 
                   {/* 20-Pack */}
                   <div className="p-4 rounded-lg border bg-primary/5 border-primary/30 relative">
                     <Badge className="absolute -top-2 right-3 bg-primary">Best Value</Badge>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">20-Credit Package</p>
-                        <p className="text-sm text-muted-foreground">$25/credit • Save $300</p>
-                      </div>
-                      <p className="text-xl font-bold text-primary">$500</p>
+                    <div className="flex flex-col">
+                      <p className="font-medium">20 Sessions</p>
+                      <p className="text-sm text-muted-foreground">$25/session • Save $400</p>
+                      <p className="text-xl font-bold text-primary mt-2">$500</p>
                     </div>
                   </div>
                 </div>
@@ -234,10 +245,9 @@ const BillingPage: React.FC = () => {
                 <Separator className="my-4" />
 
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <p><strong>Other Sessions (Direct Purchase):</strong></p>
-                  <p>• Sunday Ice Practice: $50/session</p>
-                  <p>• Semi-Private Training: $69/session</p>
-                  <p>• Private Training: $89.99/session</p>
+                  <p><strong>Other Sessions (Separate Purchase):</strong></p>
+                  <p>• Sunday Ice Practice: $50/session (not included in bundles)</p>
+                  <p>• Team Session: $15/player (minimum 10 players)</p>
                 </div>
               </CardContent>
             </Card>
