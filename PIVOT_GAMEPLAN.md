@@ -7,6 +7,195 @@
 
 ---
 
+## Parallel Workstream Execution
+
+This pivot will be executed by **2 agents working in parallel** to avoid git conflicts.
+
+### Why 2 Agents (Not 3)?
+- `types.ts` is a shared dependency - splitting further creates merge conflicts
+- Clear separation: Backend creates types/APIs, Frontend consumes them
+- Simpler merge process with 2 branches
+
+### Agent Coordination Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        EXECUTION TIMELINE                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  AGENT 1 (Backend)                                                       │
+│  ═══════════════════════════════════════════════════════════════════    │
+│  │                                                                       │
+│  ├─► Task 1.1: Create /types/credits.ts (NEW FILE)                      │
+│  ├─► Task 1.2: Create database schema SQL files                         │
+│  ├─► Task 1.3: Update /lib/stripe.ts                                    │
+│  │                                                                       │
+│  ╔═══════════════════════════════════════════════════════════════════╗  │
+│  ║  🔔 HANDOFF POINT: After types.ts is committed, NOTIFY USER       ║  │
+│  ║     "Agent 1 has completed types. You can now start Agent 2."     ║  │
+│  ╚═══════════════════════════════════════════════════════════════════╝  │
+│  │                                                                       │
+│  ├─► Task 1.4-1.15: Continue with API endpoints (parallel safe)         │
+│  │                                                                       │
+│  └─► DONE: Push branch, create PR                                       │
+│                                                                          │
+│  AGENT 2 (Frontend) - STARTS AFTER HANDOFF NOTIFICATION                 │
+│  ═══════════════════════════════════════════════════════════════════    │
+│  │                                                                       │
+│  ├─► Task 2.1-2.8: Create new dashboard components                      │
+│  ├─► Task 2.9-2.14: Modify existing components                          │
+│  ├─► Task 2.15-2.16: Delete deprecated components                       │
+│  │                                                                       │
+│  └─► DONE: Push branch, create PR                                       │
+│                                                                          │
+│  MERGE ORDER: Agent 1 first → Agent 2 second                            │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## AGENT 1: Backend (Database + APIs + Types)
+
+**Branch:** `feature/credit-system-backend`
+**Focus:** All server-side code, database schemas, API endpoints, Stripe integration
+
+### Agent 1 Task List
+
+| Task # | Action | File | Priority |
+|--------|--------|------|----------|
+| **1.1** | CREATE | `/types/credits.ts` | **CRITICAL - DO FIRST** |
+| **1.2** | CREATE | `/database/credit_system_schema.sql` | HIGH |
+| **1.3** | CREATE | `/database/credit_system_realtime.sql` | HIGH |
+| **1.4** | MODIFY | `/lib/stripe.ts` | HIGH |
+| **1.5** | CREATE | `/api/purchase-credits.ts` | HIGH |
+| **1.6** | CREATE | `/api/credit-balance.ts` | HIGH |
+| **1.7** | CREATE | `/api/credit-history.ts` | MEDIUM |
+| **1.8** | CREATE | `/api/book-session.ts` | HIGH |
+| **1.9** | CREATE | `/api/cancel-booking.ts` | HIGH |
+| **1.10** | CREATE | `/api/my-bookings.ts` | MEDIUM |
+| **1.11** | CREATE | `/api/purchase-session.ts` | HIGH |
+| **1.12** | CREATE | `/api/recurring-schedule.ts` | MEDIUM |
+| **1.13** | CREATE | `/api/cron-process-recurring.ts` | LOW |
+| **1.14** | CREATE | `/api/admin-adjust-credits.ts` | LOW |
+| **1.15** | MODIFY | `/api/stripe-webhook.ts` | **CRITICAL** |
+| **1.16** | MODIFY | `/api/verify-payment.ts` | HIGH |
+| **1.17** | MODIFY | `/api/check-availability.ts` | HIGH |
+| **1.18** | MODIFY | `/api/sunday-book.ts` | HIGH |
+| **1.19** | MODIFY | `/api/sunday-next-slot.ts` | MEDIUM |
+| **1.20** | MODIFY | `/api/group-capacity.ts` | HIGH |
+| **1.21** | MODIFY | `/api/get-children.ts` | MEDIUM |
+| **1.22** | MODIFY | `/api/_lib/unifiedCapacityManager.ts` | HIGH |
+| **1.23** | MODIFY | `/api/admin-confirm-payment.ts` | LOW |
+| **1.24** | MODIFY | `/api/notifications.ts` | LOW |
+| **1.25** | REVIEW | `/api/reschedule-group.ts` | LOW (may delete) |
+| **1.26** | REVIEW | `/api/reschedule-private.ts` | LOW (may delete) |
+| **1.27** | REVIEW | `/api/reschedule-semi-private.ts` | LOW (may delete) |
+| **1.28** | DELETE | `/api/create-subscription.ts` | MEDIUM |
+| **1.29** | DELETE | `/api/cancel-subscription.ts` | MEDIUM |
+
+### Agent 1 Handoff Checkpoint
+
+```
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  🔔 AGENT 1 HANDOFF NOTIFICATION                                          ║
+║                                                                           ║
+║  After completing Tasks 1.1, 1.2, 1.3, and 1.4, Agent 1 MUST:            ║
+║                                                                           ║
+║  1. Commit these files:                                                   ║
+║     - /types/credits.ts                                                   ║
+║     - /database/credit_system_schema.sql                                  ║
+║     - /database/credit_system_realtime.sql                                ║
+║     - /lib/stripe.ts                                                      ║
+║                                                                           ║
+║  2. Push to branch                                                        ║
+║                                                                           ║
+║  3. Output this message to the user:                                      ║
+║     "✅ HANDOFF READY: Core types and schemas committed.                  ║
+║      You can now start Agent 2 (Frontend) in a separate session.          ║
+║      Agent 2 should pull from this branch before starting."               ║
+║                                                                           ║
+║  4. Continue with remaining tasks (1.5 onwards)                           ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## AGENT 2: Frontend (Components + UI)
+
+**Branch:** `feature/credit-system-frontend`
+**Focus:** All React components, contexts, UI updates
+**IMPORTANT:** Wait for Agent 1 handoff notification before starting!
+
+### Agent 2 Pre-Start Checklist
+
+```
+⚠️  BEFORE STARTING AGENT 2:
+    □ Receive handoff notification from Agent 1
+    □ Pull latest from Agent 1's branch to get /types/credits.ts
+    □ Verify /types/credits.ts exists locally
+    □ Create new branch from Agent 1's branch
+```
+
+### Agent 2 Task List
+
+| Task # | Action | File | Priority |
+|--------|--------|------|----------|
+| **2.1** | CREATE | `/components/NewDashboard.tsx` | HIGH |
+| **2.2** | CREATE | `/components/dashboard/CreditBalanceCard.tsx` | HIGH |
+| **2.3** | CREATE | `/components/dashboard/ChildrenSection.tsx` | HIGH |
+| **2.4** | CREATE | `/components/dashboard/UpcomingBookingsCard.tsx` | HIGH |
+| **2.5** | CREATE | `/components/dashboard/BookSessionModal.tsx` | HIGH |
+| **2.6** | CREATE | `/components/dashboard/BuyCreditsModal.tsx` | HIGH |
+| **2.7** | CREATE | `/components/dashboard/RecurringScheduleCard.tsx` | MEDIUM |
+| **2.8** | CREATE | `/components/dashboard/CancelBookingModal.tsx` | MEDIUM |
+| **2.9** | MODIFY | `/components/Dashboard.tsx` | HIGH |
+| **2.10** | MODIFY | `/components/BillingPage.tsx` | HIGH |
+| **2.11** | MODIFY | `/components/SchedulePage.tsx` | HIGH |
+| **2.12** | MODIFY | `/components/RegistrationForm.tsx` | MEDIUM |
+| **2.13** | MODIFY | `/components/dashboard/PaymentStatus.tsx` | HIGH |
+| **2.14** | MODIFY | `/components/dashboard/TrainingSchedule.tsx` | HIGH |
+| **2.15** | MODIFY | `/contexts/ProfileContext.tsx` | HIGH |
+| **2.16** | MODIFY | `/components/AdminDashboard.tsx` | MEDIUM |
+| **2.17** | MODIFY | `/lib/exportUtils.ts` | LOW |
+| **2.18** | DELETE | `/components/dashboard/ProfileSwitcher.tsx` | MEDIUM |
+| **2.19** | DELETE | `/components/ProfileSelectionScreen.tsx` | MEDIUM |
+
+### Agent 2 Realtime Integration Tasks
+
+| Task # | Action | Component | Realtime Feature |
+|--------|--------|-----------|------------------|
+| **2.20** | ADD | `CreditBalanceCard.tsx` | Subscribe to `parent_credits` UPDATE |
+| **2.21** | ADD | `UpcomingBookingsCard.tsx` | Subscribe to `session_bookings` changes |
+| **2.22** | ADD | `SchedulePage.tsx` | Subscribe to capacity updates |
+| **2.23** | ADD | `RecurringScheduleCard.tsx` | Subscribe to `recurring_schedules` UPDATE |
+| **2.24** | UPDATE | `NotificationBell.tsx` (existing) | Verify `notifications` subscription |
+
+---
+
+## File Ownership Summary (No Conflicts)
+
+| Directory/Pattern | Owner | Notes |
+|-------------------|-------|-------|
+| `/api/**/*.ts` | **AGENT 1** | All API endpoints |
+| `/database/**/*.sql` | **AGENT 1** | All SQL schemas |
+| `/lib/stripe.ts` | **AGENT 1** | Stripe configuration |
+| `/types/credits.ts` | **AGENT 1** | New credit types (separate file) |
+| `/components/**/*.tsx` | **AGENT 2** | All React components |
+| `/contexts/**/*.tsx` | **AGENT 2** | All React contexts |
+| `/lib/exportUtils.ts` | **AGENT 2** | Export utilities |
+
+### Shared Files (DANGER - Requires Coordination)
+
+| File | Primary Owner | Notes |
+|------|---------------|-------|
+| `/types.ts` | **AGENT 1** | Agent 1 may add imports from `/types/credits.ts` |
+
+**Resolution:** Agent 1 creates NEW file `/types/credits.ts` instead of modifying `/types.ts`. Agent 2 imports from the new file. No conflicts.
+
+---
+
 ## Executive Summary
 
 This document outlines the complete roadmap for pivoting SniperZone from a **subscription-based model** to a **credit/token-based model** with pay-per-session options.
@@ -605,49 +794,99 @@ useEffect(() => {
 
 ---
 
-## Implementation Phases
+## Implementation Phases (Agent-Based)
 
-### Phase 1: Database & Core APIs (Week 1)
-- [ ] Create new database tables (SQL migration)
-- [ ] **Enable Supabase Realtime on new tables**
-- [ ] **Configure RLS policies for Realtime**
-- [ ] Create `POST /api/purchase-credits` endpoint
-- [ ] Create `GET /api/credit-balance` endpoint
-- [ ] Create `POST /api/book-session` endpoint
-- [ ] Create `POST /api/cancel-booking` endpoint
-- [ ] Update Stripe webhook for one-time payments
+### Phase 1: Agent 1 Foundation (Tasks 1.1-1.4)
+**CRITICAL: Must complete before Agent 2 starts**
 
-### Phase 2: Dashboard Redesign (Week 2)
-- [ ] Create new `CreditBalanceCard` component
-- [ ] Create new `ChildrenSection` component
-- [ ] Create new `UpcomingBookingsCard` component
-- [ ] Create `BookSessionModal` component
-- [ ] Create `BuyCreditsModal` component
-- [ ] Build new unified Dashboard
-- [ ] **Add Realtime subscriptions for credit balance updates**
-- [ ] **Add Realtime subscriptions for booking changes**
+| Task | Agent | File | Status |
+|------|-------|------|--------|
+| Create credit types | AGENT 1 | `/types/credits.ts` | [ ] |
+| Create database schema | AGENT 1 | `/database/credit_system_schema.sql` | [ ] |
+| Create realtime config | AGENT 1 | `/database/credit_system_realtime.sql` | [ ] |
+| Update Stripe config | AGENT 1 | `/lib/stripe.ts` | [ ] |
 
-### Phase 3: Booking Flow (Week 3)
-- [ ] Update capacity logic to count bookings
-- [ ] **Add Realtime subscriptions for live capacity updates**
-- [ ] Update Sunday booking to require payment
-- [ ] Create Private session purchase flow
-- [ ] Create Semi-Private session purchase flow
-- [ ] Update SchedulePage calendar with live availability
+```
+🔔 HANDOFF: After Phase 1 completes, notify user to start Agent 2
+```
 
-### Phase 4: Recurring & Polish (Week 4)
-- [ ] Create recurring schedule tables and APIs
-- [ ] Create CRON job for weekly recurring processing
-- [ ] Add expiry warnings and notifications
-- [ ] Update admin dashboard for credits
-- [ ] Testing and bug fixes
+### Phase 2: Parallel Execution (Agent 1 + Agent 2)
 
-### Phase 5: Cleanup (Week 5)
-- [ ] Remove old subscription code
-- [ ] Remove ProfileSwitcher and profile selection
-- [ ] Update all documentation
-- [ ] Final testing
-- [ ] Deploy
+**AGENT 1 continues (Tasks 1.5-1.29):**
+| Task | File | Status |
+|------|------|--------|
+| Create purchase-credits API | `/api/purchase-credits.ts` | [ ] |
+| Create credit-balance API | `/api/credit-balance.ts` | [ ] |
+| Create credit-history API | `/api/credit-history.ts` | [ ] |
+| Create book-session API | `/api/book-session.ts` | [ ] |
+| Create cancel-booking API | `/api/cancel-booking.ts` | [ ] |
+| Create my-bookings API | `/api/my-bookings.ts` | [ ] |
+| Create purchase-session API | `/api/purchase-session.ts` | [ ] |
+| Create recurring-schedule API | `/api/recurring-schedule.ts` | [ ] |
+| Create cron-process-recurring | `/api/cron-process-recurring.ts` | [ ] |
+| Create admin-adjust-credits | `/api/admin-adjust-credits.ts` | [ ] |
+| Update stripe-webhook | `/api/stripe-webhook.ts` | [ ] |
+| Update verify-payment | `/api/verify-payment.ts` | [ ] |
+| Update check-availability | `/api/check-availability.ts` | [ ] |
+| Update sunday-book | `/api/sunday-book.ts` | [ ] |
+| Update sunday-next-slot | `/api/sunday-next-slot.ts` | [ ] |
+| Update group-capacity | `/api/group-capacity.ts` | [ ] |
+| Update get-children | `/api/get-children.ts` | [ ] |
+| Update unifiedCapacityManager | `/api/_lib/unifiedCapacityManager.ts` | [ ] |
+| Update admin-confirm-payment | `/api/admin-confirm-payment.ts` | [ ] |
+| Update notifications | `/api/notifications.ts` | [ ] |
+| Review reschedule-group | `/api/reschedule-group.ts` | [ ] |
+| Review reschedule-private | `/api/reschedule-private.ts` | [ ] |
+| Review reschedule-semi-private | `/api/reschedule-semi-private.ts` | [ ] |
+| Delete create-subscription | `/api/create-subscription.ts` | [ ] |
+| Delete cancel-subscription | `/api/cancel-subscription.ts` | [ ] |
+
+**AGENT 2 starts (Tasks 2.1-2.24):**
+| Task | File | Status |
+|------|------|--------|
+| Create NewDashboard | `/components/NewDashboard.tsx` | [ ] |
+| Create CreditBalanceCard | `/components/dashboard/CreditBalanceCard.tsx` | [ ] |
+| Create ChildrenSection | `/components/dashboard/ChildrenSection.tsx` | [ ] |
+| Create UpcomingBookingsCard | `/components/dashboard/UpcomingBookingsCard.tsx` | [ ] |
+| Create BookSessionModal | `/components/dashboard/BookSessionModal.tsx` | [ ] |
+| Create BuyCreditsModal | `/components/dashboard/BuyCreditsModal.tsx` | [ ] |
+| Create RecurringScheduleCard | `/components/dashboard/RecurringScheduleCard.tsx` | [ ] |
+| Create CancelBookingModal | `/components/dashboard/CancelBookingModal.tsx` | [ ] |
+| Update Dashboard.tsx | `/components/Dashboard.tsx` | [ ] |
+| Update BillingPage | `/components/BillingPage.tsx` | [ ] |
+| Update SchedulePage | `/components/SchedulePage.tsx` | [ ] |
+| Update RegistrationForm | `/components/RegistrationForm.tsx` | [ ] |
+| Update PaymentStatus | `/components/dashboard/PaymentStatus.tsx` | [ ] |
+| Update TrainingSchedule | `/components/dashboard/TrainingSchedule.tsx` | [ ] |
+| Update ProfileContext | `/contexts/ProfileContext.tsx` | [ ] |
+| Update AdminDashboard | `/components/AdminDashboard.tsx` | [ ] |
+| Update exportUtils | `/lib/exportUtils.ts` | [ ] |
+| Delete ProfileSwitcher | `/components/dashboard/ProfileSwitcher.tsx` | [ ] |
+| Delete ProfileSelectionScreen | `/components/ProfileSelectionScreen.tsx` | [ ] |
+| Add Realtime to CreditBalanceCard | Subscribe to `parent_credits` | [ ] |
+| Add Realtime to UpcomingBookingsCard | Subscribe to `session_bookings` | [ ] |
+| Add Realtime to SchedulePage | Subscribe to capacity | [ ] |
+| Add Realtime to RecurringScheduleCard | Subscribe to `recurring_schedules` | [ ] |
+| Verify NotificationBell Realtime | Check `notifications` sub | [ ] |
+
+### Phase 3: Merge & Integration
+| Step | Action | Status |
+|------|--------|--------|
+| 1 | Agent 1 creates PR for backend branch | [ ] |
+| 2 | Agent 2 creates PR for frontend branch | [ ] |
+| 3 | Merge Agent 1 PR first | [ ] |
+| 4 | Rebase Agent 2 branch on main | [ ] |
+| 5 | Merge Agent 2 PR | [ ] |
+| 6 | Integration testing | [ ] |
+| 7 | Deploy to staging | [ ] |
+
+### Phase 4: Final Testing & Cleanup
+- [ ] End-to-end testing of credit purchase flow
+- [ ] End-to-end testing of session booking flow
+- [ ] End-to-end testing of cancellation + refund
+- [ ] Verify Realtime updates work correctly
+- [ ] Update documentation
+- [ ] Deploy to production
 
 ---
 
@@ -802,10 +1041,64 @@ VITE_STRIPE_PRICE_SEMI_PRIVATE  # Replace with per-session
 
 ## Next Steps
 
+### Pre-Work (Manual)
 1. **Review this document** - Confirm all assumptions are correct
-2. **Create Stripe products** - Set up new price IDs for credits and sessions
-3. **Start Phase 1** - Database schema and core APIs
-4. **Iterate** - Build, test, refine
+2. **Create Stripe products** - Set up new price IDs in Stripe Dashboard:
+   - `VITE_STRIPE_PRICE_CREDIT_SINGLE` - $40 single credit
+   - `VITE_STRIPE_PRICE_CREDIT_20PACK` - $500 20-pack
+   - `VITE_STRIPE_PRICE_SUNDAY` - $50 Sunday ice
+   - `VITE_STRIPE_PRICE_SEMI_PRIVATE` - $69 Semi-private
+   - `VITE_STRIPE_PRICE_PRIVATE` - $89.99 Private
+
+### Agent Execution Order
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     HOW TO START THE AGENTS                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  STEP 1: Start Agent 1 (Backend)                                        │
+│  ─────────────────────────────────────────────────────────────────────  │
+│  Prompt: "You are Agent 1 (Backend). Read PIVOT_GAMEPLAN.md and         │
+│           complete all tasks in the 'AGENT 1: Backend' section.         │
+│           Start with Task 1.1 (create /types/credits.ts).               │
+│           After Tasks 1.1-1.4, commit and notify me for handoff."       │
+│                                                                          │
+│  STEP 2: Wait for Handoff Notification                                  │
+│  ─────────────────────────────────────────────────────────────────────  │
+│  Agent 1 will output:                                                   │
+│  "✅ HANDOFF READY: Core types and schemas committed.                   │
+│   You can now start Agent 2 (Frontend) in a separate session."          │
+│                                                                          │
+│  STEP 3: Start Agent 2 (Frontend) in NEW session                        │
+│  ─────────────────────────────────────────────────────────────────────  │
+│  Prompt: "You are Agent 2 (Frontend). Read PIVOT_GAMEPLAN.md and        │
+│           complete all tasks in the 'AGENT 2: Frontend' section.        │
+│           First, pull Agent 1's branch to get /types/credits.ts.        │
+│           Then create your own branch and start Task 2.1."              │
+│                                                                          │
+│  STEP 4: Both agents work in parallel                                   │
+│  ─────────────────────────────────────────────────────────────────────  │
+│  - Agent 1 continues with Tasks 1.5-1.29 (APIs)                         │
+│  - Agent 2 works on Tasks 2.1-2.24 (Components)                         │
+│  - No conflicts since they touch different files                        │
+│                                                                          │
+│  STEP 5: Merge                                                          │
+│  ─────────────────────────────────────────────────────────────────────  │
+│  1. Merge Agent 1's PR first                                            │
+│  2. Rebase Agent 2's branch on main                                     │
+│  3. Merge Agent 2's PR                                                  │
+│  4. Integration testing                                                  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Quick Reference: Agent Summary
+
+| Agent | Branch | Files | Task Count |
+|-------|--------|-------|------------|
+| **Agent 1** | `feature/credit-system-backend` | `/api/*`, `/database/*`, `/lib/stripe.ts`, `/types/credits.ts` | 29 tasks |
+| **Agent 2** | `feature/credit-system-frontend` | `/components/*`, `/contexts/*`, `/lib/exportUtils.ts` | 24 tasks |
 
 ---
 
