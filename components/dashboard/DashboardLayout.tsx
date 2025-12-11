@@ -13,7 +13,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { logoutUser } from '@/lib/authService';
 import { toast } from 'sonner';
-import ProfileSwitcher from './ProfileSwitcher';
 import { NotificationBell } from '@/components/notifications';
 
 interface DashboardLayoutProps {
@@ -95,16 +94,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
               </nav>
             </div>
 
-            {/* Notifications, Profile Switcher & User Menu */}
+            {/* Notifications & User Menu */}
             <div className="flex items-center space-x-4">
               {/* Notification Bell */}
               <NotificationBell
                 userId={user.uid}
                 userType="parent"
               />
-
-              {/* Profile Switcher (multiple children) */}
-              <ProfileSwitcher />
 
               <div className="hidden sm:flex flex-col items-end">
                 <p className="text-sm font-medium text-foreground">
