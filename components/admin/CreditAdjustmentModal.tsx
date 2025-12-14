@@ -58,17 +58,17 @@ const CreditAdjustmentModal: React.FC<CreditAdjustmentModalProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/admin/admin-adjust-credits', {
+      const response = await fetch('/api/admin-adjust-credits', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           firebase_uid: user.firebase_uid,
-          adjustment_amount: adjustmentType === 'add' ? creditAmount : -creditAmount,
+          adjustment: adjustmentType === 'add' ? creditAmount : -creditAmount,
           reason: reason,
-          admin_notes: notes,
-          admin_email: 'admin@sniperzone.ca' // TODO: Get from auth context
+          admin_id: 'admin', // TODO: Get from auth context
+          admin_notes: notes
         })
       });
 

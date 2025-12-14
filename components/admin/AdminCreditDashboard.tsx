@@ -248,7 +248,7 @@ const AdminCreditDashboard: React.FC = () => {
                   <div className="w-24 bg-gray-200 rounded-full h-2">
                     <div
                       className="bg-blue-500 h-2 rounded-full"
-                      style={{ width: `${(count / summary.overview.activePurchases) * 100}%` }}
+                      style={{ width: `${summary.overview.activePurchases > 0 ? (count / summary.overview.activePurchases) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -301,8 +301,6 @@ const AdminCreditDashboard: React.FC = () => {
             ))}
           </div>
         </motion.div>
-      )}
-        </>
       )}
 
       {/* Management Tab Content */}

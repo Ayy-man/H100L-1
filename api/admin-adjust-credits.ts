@@ -1,21 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '../../lib/supabase';
 import type {
   AdminAdjustCreditsRequest,
   AdminAdjustCreditsResponse,
 } from '../types/credits';
-
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-  }
-  return _supabase;
-};
 
 /**
  * Admin endpoint to manually adjust credits
@@ -59,14 +47,12 @@ export default async function handler(
       });
     }
 
-    const supabase = getSupabase();
-
     // TODO: In production, verify admin_id is actually an admin
     // This could be done by checking a custom claim in Firebase or
     // looking up in an admins table
 
     // Get current credit balance
-    const { data: parentCredits, error: fetchError } = await supabase
+    const { data: parentCredits, error: fetchError } = await supabaseAdmin
       .from('parent_credits')
       .select('total_credits')
       .eq('firebase_uid', firebase_uid)
@@ -91,7 +77,7 @@ export default async function handler(
     // Create or update parent_credits record
     if (!parentCredits) {
       // Create new record
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseAdmin
         .from('parent_credits')
         .insert({
           firebase_uid,
@@ -104,7 +90,7 @@ export default async function handler(
       }
     } else {
       // Update existing record
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('parent_credits')
         .update({
           total_credits: newBalance,
@@ -118,7 +104,7 @@ export default async function handler(
     }
 
     // Log the adjustment for audit trail
-    const { error: auditError } = await supabase
+    const { error: auditError } = await supabaseAdmin
       .from('credit_adjustments')
       .insert({
         firebase_uid,
@@ -135,7 +121,7 @@ export default async function handler(
     }
 
     // Create notification for the user
-    const { error: notifError } = await supabase
+    const { error: notifError } = await supabaseAdmin
       .from('notifications')
       .insert({
         user_id: firebase_uid,
