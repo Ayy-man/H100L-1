@@ -150,7 +150,7 @@ const AdminCreditDashboard: React.FC = () => {
       </div>
 
       {/* Overview Tab Content */}
-      {activeTab === 'overview' && (
+      {(activeTab === 'overview' && (
         <>
           {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -301,7 +301,7 @@ const AdminCreditDashboard: React.FC = () => {
             ))}
           </div>
         </motion.div>
-      )}
+      ))}
       </>
 
       {/* Management Tab Content */}
