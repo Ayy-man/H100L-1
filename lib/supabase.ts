@@ -74,29 +74,51 @@ export const supabase = new Proxy({} as SupabaseClient, {
 });
 
 // Admin client with service role key for bypassing RLS
-let _supabaseAdmin: SupabaseClient | null = null;
-
+// Server-side only - never use on client side
 export const supabaseAdmin = (() => {
-  if (!_supabaseAdmin) {
-    // Get credentials - prioritize service role key for admin operations
-    const url = process.env.SUPABASE_URL ||
-                process.env.VITE_SUPABASE_URL ||
-                import.meta.env?.VITE_SUPABASE_URL;
-
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!url || !serviceRoleKey) {
-      console.error('⚠️ SUPABASE ADMIN ERROR: Missing service role key');
-      console.error('Required: SUPABASE_SERVICE_ROLE_KEY in environment variables');
-      throw new Error('Supabase URL and Service Role Key are required for admin operations.');
-    }
-
-    _supabaseAdmin = createClient(url, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
+  // Only initialize on server side
+  if (typeof window !== 'undefined') {
+    // Return a mock object that throws when used
+    return new Proxy({} as any, {
+      get() {
+        throw new Error('supabaseAdmin can only be used on server side');
       }
     });
   }
-  return _supabaseAdmin;
+
+  let _supabaseAdmin: SupabaseClient | null = null;
+
+  return new Proxy({} as SupabaseClient, {
+    get(target, prop) {
+      if (!_supabaseAdmin) {
+        // Get credentials - prioritize service role key for admin operations
+        const url = process.env.SUPABASE_URL ||
+                    process.env.VITE_SUPABASE_URL ||
+                    import.meta.env?.VITE_SUPABASE_URL;
+
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+        if (!url || !serviceRoleKey) {
+          console.error('⚠️ SUPABASE ADMIN ERROR: Missing service role key');
+          console.error('Required: SUPABASE_SERVICE_ROLE_KEY in environment variables');
+          throw new Error('Supabase URL and Service Role Key are required for admin operations.');
+        }
+
+        _supabaseAdmin = createClient(url, serviceRoleKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        });
+      }
+      return _supabaseAdmin[prop as keyof SupabaseClient];
+    },
+    has(target, prop) {
+      if (!_supabaseAdmin) {
+        // Trigger initialization
+        void this.get(target, prop);
+      }
+      return _supabaseAdmin ? prop in _supabaseAdmin : false;
+    }
+  });
 })();
