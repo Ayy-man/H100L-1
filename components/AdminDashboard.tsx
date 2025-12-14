@@ -10,9 +10,6 @@ import DocumentsViewer from './DocumentsViewer';
 import PlayerDocumentsSection from './PlayerDocumentsSection';
 import DocumentStatusBadge from './DocumentStatusBadge';
 import ScheduleEditModal from './ScheduleEditModal';
-import SundayRosterAdmin from './admin/SundayRosterAdmin';
-import UnpairedPlayersPanel from './admin/UnpairedPlayersPanel';
-import ScheduleChangesPanel from './admin/ScheduleChangesPanel';
 import ConfirmPaymentButton from './ConfirmPaymentButton';
 import { NotificationBell } from './notifications';
 import AdminCreditDashboard from './admin/AdminCreditDashboard';
@@ -177,7 +174,7 @@ const AdminDashboard: React.FC = () => {
   ];
 
   // Dashboard tab state
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports' | 'sunday' | 'schedule' | 'credits'>('overview');
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'credits' | 'bookings' | 'settings'>('overview');
 
   // Mobile responsiveness
   const [isMobile, setIsMobile] = useState(false);
@@ -207,10 +204,9 @@ const AdminDashboard: React.FC = () => {
     // Tabs
     overview: isFrench ? 'Aperçu' : 'Overview',
     analytics: isFrench ? 'Analytique' : 'Analytics',
-    matching: isFrench ? 'Jumelage' : 'Matching',
-    reports: isFrench ? 'Rapports' : 'Reports',
-    sunday: isFrench ? 'Dimanche' : 'Sunday Practice',
     credits: isFrench ? 'Crédits' : 'Credits',
+    bookings: isFrench ? 'Réservations' : 'Bookings',
+    settings: isFrench ? 'Paramètres' : 'Settings',
 
     // Stats
     totalRegistrations: isFrench ? 'Total des inscriptions' : 'Total Registrations',
@@ -1105,47 +1101,7 @@ const AdminDashboard: React.FC = () => {
           >
             📈 {t.analytics}
           </button>
-          <button
-            onClick={() => setDashboardTab('matching')}
-            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
-              dashboardTab === 'matching'
-                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            🤝 {t.matching}
-          </button>
-          <button
-            onClick={() => setDashboardTab('reports')}
-            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
-              dashboardTab === 'reports'
-                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            📄 {t.reports}
-          </button>
-          <button
-            onClick={() => setDashboardTab('sunday')}
-            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
-              dashboardTab === 'sunday'
-                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            🏒 {t.sunday}
-          </button>
-          <button
-            onClick={() => setDashboardTab('schedule')}
-            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
-              dashboardTab === 'schedule'
-                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            📅 Schedule
-          </button>
-          <button
+            <button
             onClick={() => setDashboardTab('credits')}
             className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
               dashboardTab === 'credits'
@@ -1154,6 +1110,26 @@ const AdminDashboard: React.FC = () => {
             }`}
           >
             💳 {t.credits}
+          </button>
+          <button
+            onClick={() => setDashboardTab('bookings')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'bookings'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            📅 {t.bookings}
+          </button>
+          <button
+            onClick={() => setDashboardTab('settings')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'settings'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            ⚙️ {t.settings}
           </button>
         </div>
 
@@ -1713,19 +1689,25 @@ const AdminDashboard: React.FC = () => {
           />
         )}
 
-        {/* SUNDAY PRACTICE TAB */}
-        {dashboardTab === 'sunday' && (
-          <SundayRosterAdmin adminUser={currentAdmin} />
-        )}
-
-        {/* SCHEDULE CHANGES TAB */}
-        {dashboardTab === 'schedule' && (
-          <ScheduleChangesPanel />
-        )}
-
         {/* CREDITS TAB */}
         {dashboardTab === 'credits' && (
           <AdminCreditDashboard />
+        )}
+
+        {/* BOOKINGS TAB */}
+        {dashboardTab === 'bookings' && (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-bold mb-4">Bookings Management</h2>
+            <p className="text-gray-600">Coming soon - View and manage all session bookings</p>
+          </div>
+        )}
+
+        {/* SETTINGS TAB */}
+        {dashboardTab === 'settings' && (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-bold mb-4">System Settings</h2>
+            <p className="text-gray-600">Coming soon - Configure credit packages and system settings</p>
+          </div>
         )}
       </div>
 
@@ -2314,50 +2296,6 @@ const AdminDashboard: React.FC = () => {
             <span className="text-[9px] font-bold uppercase tracking-wider">Analytics</span>
           </button>
           <button
-            onClick={() => setDashboardTab('matching')}
-            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
-              dashboardTab === 'matching'
-                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
-                : 'text-gray-400'
-            }`}
-          >
-            <span className="text-lg mb-1">🤝</span>
-            <span className="text-[9px] font-bold uppercase tracking-wider">Match</span>
-          </button>
-          <button
-            onClick={() => setDashboardTab('reports')}
-            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
-              dashboardTab === 'reports'
-                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
-                : 'text-gray-400'
-            }`}
-          >
-            <span className="text-lg mb-1">📄</span>
-            <span className="text-[9px] font-bold uppercase tracking-wider">Reports</span>
-          </button>
-          <button
-            onClick={() => setDashboardTab('sunday')}
-            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
-              dashboardTab === 'sunday'
-                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
-                : 'text-gray-400'
-            }`}
-          >
-            <span className="text-lg mb-1">🏒</span>
-            <span className="text-[9px] font-bold uppercase tracking-wider">Sunday</span>
-          </button>
-          <button
-            onClick={() => setDashboardTab('schedule')}
-            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
-              dashboardTab === 'schedule'
-                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
-                : 'text-gray-400'
-            }`}
-          >
-            <span className="text-lg mb-1">📅</span>
-            <span className="text-[9px] font-bold uppercase tracking-wider">Schedule</span>
-          </button>
-          <button
             onClick={() => setDashboardTab('credits')}
             className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
               dashboardTab === 'credits'
@@ -2367,6 +2305,28 @@ const AdminDashboard: React.FC = () => {
           >
             <span className="text-lg mb-1">💳</span>
             <span className="text-[9px] font-bold uppercase tracking-wider">{t.credits}</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('bookings')}
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
+              dashboardTab === 'bookings'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-lg mb-1">📅</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">{t.bookings}</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('settings')}
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
+              dashboardTab === 'settings'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-lg mb-1">⚙️</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">{t.settings}</span>
           </button>
         </div>
       )}

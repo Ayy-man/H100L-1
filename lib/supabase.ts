@@ -72,3 +72,31 @@ export const supabase = new Proxy({} as SupabaseClient, {
     return value;
   }
 });
+
+// Admin client with service role key for bypassing RLS
+let _supabaseAdmin: SupabaseClient | null = null;
+
+export const supabaseAdmin = (() => {
+  if (!_supabaseAdmin) {
+    // Get credentials - prioritize service role key for admin operations
+    const url = process.env.SUPABASE_URL ||
+                process.env.VITE_SUPABASE_URL ||
+                import.meta.env?.VITE_SUPABASE_URL;
+
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !serviceRoleKey) {
+      console.error('⚠️ SUPABASE ADMIN ERROR: Missing service role key');
+      console.error('Required: SUPABASE_SERVICE_ROLE_KEY in environment variables');
+      throw new Error('Supabase URL and Service Role Key are required for admin operations.');
+    }
+
+    _supabaseAdmin = createClient(url, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  }
+  return _supabaseAdmin;
+})();
