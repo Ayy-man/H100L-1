@@ -301,8 +301,8 @@ const AdminCreditDashboard: React.FC = () => {
             ))}
           </div>
         </motion.div>
-      ))}
-      </>
+      )}
+      </>))}
 
       {/* Management Tab Content */}
       {activeTab === 'management' && (
