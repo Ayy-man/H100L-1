@@ -15,6 +15,7 @@ import UnpairedPlayersPanel from './admin/UnpairedPlayersPanel';
 import ScheduleChangesPanel from './admin/ScheduleChangesPanel';
 import ConfirmPaymentButton from './ConfirmPaymentButton';
 import { NotificationBell } from './notifications';
+import AdminCreditDashboard from './admin/AdminCreditDashboard';
 import { MedicalFiles, WeekDay, Language } from '../types';
 
 interface Registration {
@@ -176,7 +177,7 @@ const AdminDashboard: React.FC = () => {
   ];
 
   // Dashboard tab state
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports' | 'sunday' | 'schedule'>('overview');
+  const [dashboardTab, setDashboardTab] = useState<'overview' | 'analytics' | 'matching' | 'reports' | 'sunday' | 'schedule' | 'credits'>('overview');
 
   // Mobile responsiveness
   const [isMobile, setIsMobile] = useState(false);
@@ -209,6 +210,7 @@ const AdminDashboard: React.FC = () => {
     matching: isFrench ? 'Jumelage' : 'Matching',
     reports: isFrench ? 'Rapports' : 'Reports',
     sunday: isFrench ? 'Dimanche' : 'Sunday Practice',
+    credits: isFrench ? 'Crédits' : 'Credits',
 
     // Stats
     totalRegistrations: isFrench ? 'Total des inscriptions' : 'Total Registrations',
@@ -1143,6 +1145,16 @@ const AdminDashboard: React.FC = () => {
           >
             📅 Schedule
           </button>
+          <button
+            onClick={() => setDashboardTab('credits')}
+            className={`px-6 py-3 font-bold uppercase tracking-wider transition-all ${
+              dashboardTab === 'credits'
+                ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            💳 {t.credits}
+          </button>
         </div>
 
         {/* OVERVIEW TAB */}
@@ -1709,6 +1721,11 @@ const AdminDashboard: React.FC = () => {
         {/* SCHEDULE CHANGES TAB */}
         {dashboardTab === 'schedule' && (
           <ScheduleChangesPanel />
+        )}
+
+        {/* CREDITS TAB */}
+        {dashboardTab === 'credits' && (
+          <AdminCreditDashboard />
         )}
       </div>
 
@@ -2339,6 +2356,17 @@ const AdminDashboard: React.FC = () => {
           >
             <span className="text-lg mb-1">📅</span>
             <span className="text-[9px] font-bold uppercase tracking-wider">Schedule</span>
+          </button>
+          <button
+            onClick={() => setDashboardTab('credits')}
+            className={`flex flex-col items-center justify-center min-w-[60px] min-h-[48px] py-2 px-1 rounded-lg transition-all ${
+              dashboardTab === 'credits'
+                ? 'text-[#9BD4FF] bg-[#9BD4FF]/10'
+                : 'text-gray-400'
+            }`}
+          >
+            <span className="text-lg mb-1">💳</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider">{t.credits}</span>
           </button>
         </div>
       )}
