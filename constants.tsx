@@ -10,7 +10,7 @@ export const content = {
     },
     hero: {
       title: 'Elevate Your Game. Dominate The Ice.',
-      subtitle: 'Elite hockey training for dedicated players. Join SniperZone and unlock your potential with our paid monthly subscription.',
+      subtitle: 'Elite hockey training for dedicated players. Join SniperZone and unlock your potential with flexible session packages.',
       cta: 'Register Now',
     },
     features: {
@@ -29,18 +29,18 @@ export const content = {
       },
     },
     pricing: {
-      title: 'Join The Elite',
-      planName: 'Monthly Subscription',
-      price: '$299',
-      period: '/month',
+      title: 'Session Packages',
+      planName: 'Credit-Based Training',
+      price: 'From $25',
+      period: '/session',
       features: [
-        'Unlimited Weekday Synthetic Ice Sessions',
-        'Guaranteed Sunday Real Ice Slot',
-        'Personalized Coaching Feedback',
-        'Access to Pro-Level Equipment',
-        'Monthly Progress Reports',
+        'Single session: $45 (1 credit)',
+        '10-session pack: $350 ($35/session)',
+        '20-session pack: $500 ($25/session)',
+        'Credits valid for 12 months',
+        'Book any available time slot',
       ],
-      cta: 'Start My Subscription',
+      cta: 'Buy Credits',
     },
     footer: {
       copy: `© ${new Date().getFullYear()} SniperZone Hockey. All rights reserved.`
@@ -228,7 +228,7 @@ export const content = {
     },
     hero: {
       title: 'Élevez Votre Jeu. Dominez La Glace.',
-      subtitle: 'Entraînement de hockey élite pour joueurs dédiés. Rejoignez SniperZone et libérez votre potentiel avec notre abonnement mensuel payant.',
+      subtitle: 'Entraînement de hockey élite pour joueurs dédiés. Rejoignez SniperZone et libérez votre potentiel avec nos forfaits de sessions flexibles.',
       cta: 'Inscrivez-vous maintenant',
     },
     features: {
@@ -247,18 +247,18 @@ export const content = {
       },
     },
     pricing: {
-      title: 'Rejoignez L\'Élite',
-      planName: 'Abonnement Mensuel',
-      price: '299$',
-      period: '/mois',
+      title: 'Forfaits de Sessions',
+      planName: 'Entraînement par Crédits',
+      price: 'À partir de 25$',
+      period: '/session',
       features: [
-        'Sessions illimitées sur glace synthétique en semaine',
-        'Place garantie sur vraie glace le dimanche',
-        'Retours personnalisés des coachs',
-        'Accès à de l\'équipement de niveau pro',
-        'Rapports de progrès mensuels',
+        'Session unique: 45$ (1 crédit)',
+        'Forfait 10 sessions: 350$ (35$/session)',
+        'Forfait 20 sessions: 500$ (25$/session)',
+        'Crédits valides 12 mois',
+        'Réservez n\'importe quel créneau disponible',
       ],
-      cta: 'Démarrer Mon Abonnement',
+      cta: 'Acheter des Crédits',
     },
     footer: {
       copy: `© ${new Date().getFullYear()} Hockey SniperZone. Tous droits réservés.`
