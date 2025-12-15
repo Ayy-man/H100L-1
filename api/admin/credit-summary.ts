@@ -23,11 +23,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 2. Total credits in system
     const { data: totalCreditsData, error: totalCreditsError } = await supabaseAdmin
       .from('parent_credits')
-      .select('credits_remaining');
+      .select('total_credits');
 
     if (totalCreditsError) throw totalCreditsError;
 
-    const totalCredits = totalCreditsData?.reduce((sum, pc) => sum + pc.credits_remaining, 0) || 0;
+    const totalCredits = totalCreditsData?.reduce((sum, pc) => sum + pc.total_credits, 0) || 0;
 
     // 3. Expiring credits
     const { data: expiringCredits, error: expiringError } = await supabaseAdmin

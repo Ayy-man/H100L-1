@@ -410,43 +410,15 @@ const AdminDashboard: React.FC = () => {
   };
 
   const fetchCapacityData = async () => {
-    const { data: capacityData, error: capacityError } = await supabase
-      .from('capacity_overview')
-      .select('*');
-
-    if (!capacityError && capacityData) {
-      setCapacitySlots(capacityData);
-    }
+    // TODO: Implement capacity tracking for credit system
+    // Old capacity tables no longer exist
+    console.log('Capacity data fetch not yet implemented for credit system');
   };
 
   const fetchAnalyticsData = async () => {
-    try {
-      // Fetch all analytics views in parallel
-      const [
-        dailyRegsRes,
-        programDistRes,
-        revenueRes,
-        ageDistRes,
-        capacityUtilRes,
-        summaryRes
-      ] = await Promise.all([
-        supabase.from('daily_registration_counts').select('*'),
-        supabase.from('program_distribution').select('*'),
-        supabase.from('revenue_by_program').select('*'),
-        supabase.from('age_category_distribution').select('*'),
-        supabase.from('capacity_utilization').select('*'),
-        supabase.from('analytics_summary').select('*').single()
-      ]);
-
-      if (dailyRegsRes.data) setDailyRegistrations(dailyRegsRes.data);
-      if (programDistRes.data) setProgramDistribution(programDistRes.data);
-      if (revenueRes.data) setRevenueByProgram(revenueRes.data);
-      if (ageDistRes.data) setAgeDistribution(ageDistRes.data);
-      if (capacityUtilRes.data) setCapacityUtilization(capacityUtilRes.data);
-      if (summaryRes.data) setAnalyticsSummary(summaryRes.data);
-    } catch (err: any) {
-      console.error('Error fetching analytics:', err);
-    }
+    // TODO: Implement analytics for credit system
+    // Old analytics views no longer exist
+    console.log('Analytics fetch not yet implemented for credit system');
   };
 
   const fetchMatchingData = async () => {
