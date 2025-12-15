@@ -187,8 +187,12 @@ WHERE firebase_uid = 'YOUR_TEST_UID';
 |------|---------|
 | `components/ui/toast.tsx` | New - Enhanced toast with variants (success/error/warning) |
 | `components/admin/AdminActivityFeed.tsx` | New - Live activity feed subscribing to `admin:all` |
-| `components/AdminDashboard.tsx` | Added AdminActivityFeed to overview tab |
+| `components/AdminDashboard.tsx` | Added AdminActivityFeed to overview tab (passes `isAuthenticated` prop) |
 | `components/dashboard/BookSessionModal.tsx` | Added capacity channel subscription |
+
+### Bug Fixes
+
+- **AdminDashboard.tsx**: Fixed `ReferenceError: authenticated is not defined` - was passing wrong variable name to AdminActivityFeed
 
 ---
 
