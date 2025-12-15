@@ -1,23 +1,34 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import type {
-  BookSessionRequest,
-  BookSessionResponse,
-  SessionType,
-} from '../types/credits';
-import { isSessionType, CREDITS_PER_SESSION, MAX_GROUP_CAPACITY } from '../types/credits';
 
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-  }
-  return _supabase;
+// Session types and credits
+const SESSION_TYPES = ['group', 'sunday', 'private', 'semi_private'] as const;
+type SessionType = typeof SESSION_TYPES[number];
+
+const CREDITS_PER_SESSION: Record<SessionType, number> = {
+  group: 1,
+  sunday: 0,
+  private: 0,
+  semi_private: 0,
 };
+
+const MAX_GROUP_CAPACITY = 6;
+
+function isSessionType(value: string): value is SessionType {
+  return SESSION_TYPES.includes(value as SessionType);
+}
+
+// Inline Supabase client for Vercel bundling
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  return createClient(url, key);
+}
 
 export default async function handler(
   req: VercelRequest,
@@ -36,7 +47,7 @@ export default async function handler(
       session_date,
       time_slot,
       is_recurring = false,
-    } = req.body as BookSessionRequest;
+    } = req.body || {};
 
     // Validate required fields
     if (!firebase_uid || !registration_id || !session_type || !session_date || !time_slot) {
@@ -62,6 +73,7 @@ export default async function handler(
         redirect: '/api/purchase-session',
       });
     }
+
     const supabase = getSupabase();
 
     // Verify registration belongs to this user
@@ -78,21 +90,22 @@ export default async function handler(
       });
     }
 
-    // Check slot availability
-    const { data: slotCapacity, error: capacityError } = await supabase
-      .rpc('get_slot_capacity', {
-        p_session_date: session_date,
-        p_time_slot: time_slot,
-        p_session_type: session_type,
-        p_max_capacity: MAX_GROUP_CAPACITY,
-      });
+    // Check slot availability (direct query instead of RPC)
+    const { data: currentBookings, error: capacityError } = await supabase
+      .from('session_bookings')
+      .select('id')
+      .eq('session_date', session_date)
+      .eq('time_slot', time_slot)
+      .eq('session_type', session_type)
+      .in('status', ['booked', 'attended']);
 
     if (capacityError) {
       console.error('Error checking capacity:', capacityError);
       return res.status(500).json({ error: 'Failed to check availability' });
     }
 
-    if (!slotCapacity || slotCapacity.length === 0 || !slotCapacity[0].is_available) {
+    const bookingCount = currentBookings?.length || 0;
+    if (bookingCount >= MAX_GROUP_CAPACITY) {
       return res.status(409).json({
         error: 'This time slot is fully booked. Please select another time.',
       });
@@ -107,7 +120,7 @@ export default async function handler(
       .eq('time_slot', time_slot)
       .eq('session_type', session_type)
       .neq('status', 'cancelled')
-      .single();
+      .maybeSingle();
 
     if (existingBooking) {
       return res.status(409).json({
@@ -120,11 +133,11 @@ export default async function handler(
       .from('parent_credits')
       .select('total_credits')
       .eq('firebase_uid', firebase_uid)
-      .single();
+      .maybeSingle();
 
-    if (creditError && creditError.code !== 'PGRST116') {
+    if (creditError) {
       console.error('Error checking credits:', creditError);
-      return res.status(500).json({ error: 'Database error' });
+      return res.status(500).json({ error: 'Database error checking credits' });
     }
 
     const currentCredits = parentCredits?.total_credits || 0;
@@ -137,18 +150,57 @@ export default async function handler(
       });
     }
 
-    // Deduct credit using the database function (FIFO)
-    const { data: purchaseId, error: deductError } = await supabase
-      .rpc('deduct_credit', {
-        p_firebase_uid: firebase_uid,
-        p_credits_to_deduct: creditsRequired,
-      });
+    // Find oldest active purchase with remaining credits (FIFO)
+    const { data: activePurchase, error: purchaseError } = await supabase
+      .from('credit_purchases')
+      .select('id, credits_remaining')
+      .eq('firebase_uid', firebase_uid)
+      .eq('status', 'active')
+      .gte('credits_remaining', creditsRequired)
+      .gt('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
-    if (deductError) {
-      console.error('Error deducting credit:', deductError);
-      return res.status(500).json({
-        error: 'Failed to deduct credit. Please try again.',
+    if (purchaseError || !activePurchase) {
+      console.error('Error finding active purchase:', purchaseError);
+      return res.status(402).json({
+        error: 'No active credits available. Please purchase more credits.',
       });
+    }
+
+    // Deduct credit from purchase
+    const newRemaining = activePurchase.credits_remaining - creditsRequired;
+    const { error: deductPurchaseError } = await supabase
+      .from('credit_purchases')
+      .update({
+        credits_remaining: newRemaining,
+        status: newRemaining === 0 ? 'exhausted' : 'active',
+      })
+      .eq('id', activePurchase.id);
+
+    if (deductPurchaseError) {
+      console.error('Error deducting from purchase:', deductPurchaseError);
+      return res.status(500).json({ error: 'Failed to deduct credit' });
+    }
+
+    // Update parent total credits
+    const { error: updateTotalError } = await supabase
+      .from('parent_credits')
+      .update({ total_credits: currentCredits - creditsRequired })
+      .eq('firebase_uid', firebase_uid);
+
+    if (updateTotalError) {
+      console.error('Error updating total credits:', updateTotalError);
+      // Rollback the purchase deduction
+      await supabase
+        .from('credit_purchases')
+        .update({
+          credits_remaining: activePurchase.credits_remaining,
+          status: 'active',
+        })
+        .eq('id', activePurchase.id);
+      return res.status(500).json({ error: 'Failed to update credit balance' });
     }
 
     // Create the booking
@@ -161,7 +213,7 @@ export default async function handler(
         session_date,
         time_slot,
         credits_used: creditsRequired,
-        credit_purchase_id: purchaseId,
+        credit_purchase_id: activePurchase.id,
         is_recurring,
         status: 'booked',
       })
@@ -170,35 +222,32 @@ export default async function handler(
 
     if (bookingError) {
       console.error('Error creating booking:', bookingError);
-      // Try to refund the credit since booking failed
-      await supabase.rpc('refund_credit', {
-        p_firebase_uid: firebase_uid,
-        p_purchase_id: purchaseId,
-        p_credits_to_refund: creditsRequired,
-      });
+      // Rollback credit deductions
+      await supabase
+        .from('credit_purchases')
+        .update({
+          credits_remaining: activePurchase.credits_remaining,
+          status: 'active',
+        })
+        .eq('id', activePurchase.id);
+      await supabase
+        .from('parent_credits')
+        .update({ total_credits: currentCredits })
+        .eq('firebase_uid', firebase_uid);
       return res.status(500).json({
         error: 'Failed to create booking. Credit has been refunded.',
       });
     }
 
-    // Get updated credit balance
-    const { data: updatedCredits } = await supabase
-      .from('parent_credits')
-      .select('total_credits')
-      .eq('firebase_uid', firebase_uid)
-      .single();
-
-    const response: BookSessionResponse = {
+    return res.status(201).json({
       booking,
-      credits_remaining: updatedCredits?.total_credits || 0,
+      credits_remaining: currentCredits - creditsRequired,
       message: `Session booked successfully! ${creditsRequired} credit used.`,
-    };
-
-    return res.status(201).json(response);
+    });
   } catch (error: any) {
     console.error('Book session error:', error);
     return res.status(500).json({
-      error: 'Failed to book session',
+      error: error.message || 'Failed to book session',
     });
   }
 }
