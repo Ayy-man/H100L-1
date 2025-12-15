@@ -1,7 +1,7 @@
 # Codebase Issues & Improvements TODO
 
 **Last Updated:** 2025-12-15
-**Status:** Credit system LIVE - Subscription model deprecated
+**Status:** Credit system LIVE - Admin bookings panel COMPLETE
 
 ---
 
@@ -32,7 +32,21 @@ The system has been pivoted from **subscriptions to credits**:
 - [x] Added M7 to PlayerCategory type
 - [x] Fixed SetupRecurringModal to auto-assign time slots
 - [x] Rewrote SchedulePage for credit model
-- [x] Updated documentation
+- [x] Fixed "No available slots" bug - aligned categories across AddChildModal, add-child API, and check-availability
+- [x] Added category normalization with Adult→Junior fallback
+- [x] Fixed book-session API - removed RPC dependencies, handles admin-added credits
+- [x] Fixed recurring-schedule API - inlined types for Vercel bundling
+
+### Admin Bookings Panel (December 15, 2025)
+- [x] **Daily Operations** - Calendar view, attendance marking, session stats
+- [x] **Booking Management** - Search, filter, cancel/update bookings
+- [x] **Capacity Planning** - Visual slot utilization with progress bars
+- [x] **Revenue & Reports** - Stats by session type, credit usage, direct revenue
+
+### Enhanced AddChildModal (December 15, 2025)
+- [x] Multi-step form (2 steps)
+- [x] Step 1: Basic info + Emergency contact (name, phone, relationship)
+- [x] Step 2: Hockey info (position, hand, level, jersey, objective) + Medical (allergies, conditions, medication) + Consents
 
 ---
 
@@ -57,6 +71,21 @@ The system has been pivoted from **subscriptions to credits**:
   - Sometimes shows "No registration" briefly on first load
   - Add retry logic or increase auth propagation delay
 
+### API Import Issues (Medium Priority)
+
+These APIs still import from `../types/credits` which may fail on Vercel:
+- [ ] `api/admin-adjust-credits.ts`
+- [ ] `api/stripe-webhook.ts`
+- [ ] `api/purchase-session.ts`
+- [ ] `api/purchase-credits.ts`
+- [ ] `api/group-capacity.ts`
+- [ ] `api/cron-process-recurring.ts`
+- [ ] `api/credit-history.ts`
+- [ ] `api/credit-balance.ts`
+- [ ] `api/cancel-booking.ts`
+
+Fix: Inline types directly in each API file (like book-session.ts and recurring-schedule.ts)
+
 ### Deferred Updates (Low Priority)
 
 These legacy files still exist but are not actively used:
@@ -73,7 +102,7 @@ These legacy files still exist but are not actively used:
 |------|--------|-------|
 | `CREDIT_SYSTEM_TODO.md` | Current | Primary reference for credit system |
 | `PIVOT_GAMEPLAN.md` | Current | Complete implementation history |
-| `README.md` | Updated | Now includes credit system info |
+| `README.md` | Updated | Now includes admin panel info |
 | `TODO.md` | Current | This file |
 
 ---
@@ -88,6 +117,18 @@ These legacy files still exist but are not actively used:
 | M18, Junior | 8:15 PM | Not eligible |
 
 Private/Semi-Private: All ages, 8 AM - 4 PM, 7 days/week
+
+---
+
+## Admin Panel Features
+
+| Tab | Features |
+|-----|----------|
+| Overview | Registrations list, stats cards, filters |
+| Analytics | Charts, program distribution, capacity utilization |
+| Credits | Credit management, adjust balances, view purchases |
+| **Bookings** | Daily ops, booking management, capacity planning, revenue reports |
+| Settings | System configuration |
 
 ---
 

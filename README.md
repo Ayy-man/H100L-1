@@ -22,12 +22,19 @@ A comprehensive hockey training registration system with credit-based booking, S
   - M15/M15 Elite: 7:00 PM (weekday), 8:30 AM (Sunday)
   - M18/Junior: 8:15 PM (weekday only)
 
-- **Additional Features**
-  - Multi-step registration form with validation
-  - Recurring weekly bookings
-  - Real-time slot availability
-  - Admin dashboard with analytics
-  - Mobile-responsive design
+- **Parent Dashboard**
+  - Multi-step Add Child form with full profile (emergency contact, medical info, consents)
+  - Credit balance display with purchase history
+  - Book sessions with calendar view
+  - Set up recurring weekly bookings
+  - View upcoming and past sessions
+
+- **Admin Dashboard**
+  - **Overview**: Registration list, stats, filters
+  - **Analytics**: Charts, program distribution, capacity utilization
+  - **Credits**: Manage balances, view purchases, adjust credits
+  - **Bookings**: Daily operations, booking management, capacity planning, revenue reports
+  - **Settings**: System configuration
 
 ## Tech Stack
 
@@ -121,18 +128,27 @@ npm run build
 
 ```
 ├── api/                      # Vercel serverless API functions
+│   ├── add-child.ts          # Add child with full profile
 │   ├── purchase-credits.ts   # Buy credit packages
 │   ├── book-session.ts       # Book with credits
 │   ├── credit-balance.ts     # Get credit balance
 │   ├── purchase-session.ts   # Buy paid sessions
 │   ├── recurring-schedule.ts # Manage recurring bookings
+│   ├── check-availability.ts # Check slot availability
+│   ├── admin-adjust-credits.ts # Admin credit management
 │   └── stripe-webhook.ts     # Handle Stripe webhooks
 ├── components/               # React components
-│   ├── dashboard/            # Dashboard components
+│   ├── admin/                # Admin panel components
+│   │   ├── AdminBookingsPanel.tsx  # Bookings management
+│   │   ├── AdminCreditDashboard.tsx
+│   │   └── CreditManagementPanel.tsx
+│   ├── dashboard/            # Parent dashboard components
+│   │   ├── AddChildModal.tsx      # Multi-step child registration
 │   │   ├── BookSessionModal.tsx
 │   │   ├── BuyCreditsModal.tsx
+│   │   ├── SetupRecurringModal.tsx
 │   │   └── ...
-│   ├── form/                 # Registration form steps
+│   ├── form/                 # Legacy registration form steps
 │   └── ui/                   # shadcn/ui components
 ├── lib/                      # Utilities
 │   ├── stripe.ts             # Stripe configuration
@@ -148,9 +164,15 @@ npm run build
 
 ### New Parent Registration
 1. Sign up with email/password
-2. Add child(ren) from dashboard
+2. Add child(ren) from dashboard (2-step form with emergency contact, medical info)
 3. Buy credits
 4. Book sessions
+
+### Adding a Child
+1. Click "Add Child" on dashboard
+2. **Step 1**: Enter name, DOB (auto-calculates category), emergency contact
+3. **Step 2**: Hockey info (position, hand, level, jersey), medical info, consents
+4. Child appears in dashboard ready for booking
 
 ### Booking a Session
 1. Click "Book" on child
@@ -163,6 +185,17 @@ npm run build
 2. Select child and day
 3. Time slot auto-assigned by age category
 4. 1 credit deducted weekly
+
+## Admin Panel
+
+### Bookings Tab Features
+
+| Feature | Description |
+|---------|-------------|
+| **Daily Operations** | Calendar view, today's sessions, attendance marking (attended/no-show) |
+| **Booking Management** | Search, filter by type/status/date, cancel/update bookings |
+| **Capacity Planning** | Visual slot utilization bars, week-by-week navigation |
+| **Revenue & Reports** | Total bookings, credits used, direct revenue, breakdown by type |
 
 ## Documentation
 
