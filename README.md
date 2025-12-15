@@ -30,17 +30,24 @@ A comprehensive hockey training registration system with credit-based booking, S
   - View upcoming and past sessions
 
 - **Admin Dashboard**
-  - **Overview**: Registration list, stats, filters
+  - **Overview**: Registration list, stats, filters, live activity feed
   - **Analytics**: Charts, program distribution, capacity utilization
   - **Credits**: Manage balances, view purchases, adjust credits
   - **Bookings**: Daily operations, booking management, capacity planning, revenue reports
   - **Settings**: System configuration
+
+- **Realtime Updates**
+  - Live activity feed for admins (bookings, purchases, credit changes)
+  - Real-time capacity updates when booking sessions
+  - Toast notifications for important events
+  - Connection status indicators
 
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite
 - **Styling**: Tailwind CSS, shadcn/ui
 - **Backend**: Vercel Serverless Functions, Supabase
+- **Realtime**: Supabase Realtime (broadcast channels)
 - **Payments**: Stripe
 - **Auth**: Firebase Authentication
 - **Animations**: Framer Motion
@@ -143,6 +150,7 @@ npm run build
 │   └── stripe-webhook.ts     # Handle Stripe webhooks
 ├── components/               # React components
 │   ├── admin/                # Admin panel components
+│   │   ├── AdminActivityFeed.tsx   # Live activity feed (realtime)
 │   │   ├── AdminBookingsPanel.tsx  # Bookings management
 │   │   ├── AdminCreditDashboard.tsx
 │   │   └── CreditManagementPanel.tsx
@@ -203,6 +211,7 @@ npm run build
 
 ## Documentation
 
+- `docs/plans/2025-12-15-supabase-realtime-design.md` - Realtime architecture and implementation
 - `CREDIT_SYSTEM_TODO.md` - Credit system details
 - `PIVOT_GAMEPLAN.md` - Implementation history
 - `TODO.md` - Current issues and improvements

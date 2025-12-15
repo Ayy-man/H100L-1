@@ -1,7 +1,7 @@
 # Supabase Realtime Implementation Design
 
 > **Created:** December 15, 2025
-> **Status:** Database Complete, Frontend Enhancement Optional
+> **Status:** Complete (Database + Frontend)
 
 ---
 
@@ -78,11 +78,11 @@ WHERE routine_schema = 'realtime' AND routine_name LIKE '%broadcast%';
 
 ---
 
-## Frontend Implementation
+## Frontend Implementation (COMPLETE)
 
-### Current State
+### Existing Realtime (postgres_changes)
 
-The app already has working realtime using `postgres_changes`:
+The app has working realtime using `postgres_changes`:
 
 | Component | Subscriptions |
 |-----------|--------------|
@@ -90,22 +90,39 @@ The app already has working realtime using `postgres_changes`:
 | `AdminDashboard.tsx` | `registrations` |
 | `Dashboard.tsx` | Various tables |
 
-### Enhancement Option: Broadcast Subscriptions
+### New Broadcast Subscriptions (Implemented)
 
-To use the new broadcast channels instead of/in addition to `postgres_changes`:
+#### Admin Activity Feed
+
+`AdminActivityFeed.tsx` subscribes to `admin:all` channel for live updates:
 
 ```typescript
-// Subscribe to user channel
-const channel = supabase.channel(`user:${user.uid}`, { config: { private: true } });
+const channel = supabase.channel('admin:all', { config: { private: true } });
 
-channel
-  .on('broadcast', { event: 'parent_credits_changed' }, (payload) => {
-    setCreditBalance(payload.payload.new?.total_credits ?? 0);
-  })
-  .on('broadcast', { event: 'session_booking_changed' }, (payload) => {
-    refetchBookings();
-  })
-  .subscribe();
+eventTypes.forEach((eventType) => {
+  channel.on('broadcast', { event: eventType }, (payload) => {
+    // Add to events list, show toast notifications
+  });
+});
+```
+
+**Features:**
+- Live activity log with color-coded event types
+- Toast notifications for purchases, bookings, adjustments
+- Connection status indicator
+- Collapsible panel with event count badge
+
+#### Capacity Subscriptions
+
+`BookSessionModal.tsx` subscribes to capacity channels for real-time slot updates:
+
+```typescript
+const capacityTopic = `capacity:${sessionType}:${selectedDate}`;
+const channel = supabase.channel(capacityTopic, { config: { private: true } });
+
+channel.on('broadcast', { event: 'session_booking_changed' }, () => {
+  fetchSlots(); // Refresh availability when others book
+});
 ```
 
 ### When to Use Broadcast vs postgres_changes
@@ -113,8 +130,8 @@ channel
 | Use Case | Recommended Approach |
 |----------|---------------------|
 | User sees their own data change | Either works |
-| Admin sees ALL users' changes | **Broadcast** (`admin:all` channel) |
-| Capacity updates across users | **Broadcast** (`capacity:*` channels) |
+| Admin sees ALL users' changes | **Broadcast** (`admin:all` channel) ✅ |
+| Capacity updates across users | **Broadcast** (`capacity:*` channels) ✅ |
 | Simple single-user updates | `postgres_changes` is simpler |
 
 ---
@@ -164,17 +181,22 @@ WHERE firebase_uid = 'YOUR_TEST_UID';
 - Created 7 triggers on public tables
 - RLS policies on `realtime.messages` (if configured)
 
-### Frontend (no changes required)
-- Existing `postgres_changes` subscriptions continue to work
-- Optional: Migrate to broadcast approach for admin/capacity features
+### Frontend Components
+
+| File | Changes |
+|------|---------|
+| `components/ui/toast.tsx` | New - Enhanced toast with variants (success/error/warning) |
+| `components/admin/AdminActivityFeed.tsx` | New - Live activity feed subscribing to `admin:all` |
+| `components/AdminDashboard.tsx` | Added AdminActivityFeed to overview tab |
+| `components/dashboard/BookSessionModal.tsx` | Added capacity channel subscription |
 
 ---
 
 ## Future Enhancements
 
-1. **Admin Dashboard Live Feed** - Subscribe to `admin:all` to show real-time activity feed
-2. **Capacity Indicators** - Subscribe to `capacity:{type}:{date}` in booking modals
-3. **Connection Status** - Show online/offline indicator based on channel connection
+1. **User Channel Subscriptions** - Migrate parent dashboard from `postgres_changes` to `user:{uid}` broadcast channel for unified architecture
+2. **Notification Bell** - Real-time notification indicator using `notifications_changed` events
+3. **Admin Presence** - Show which admins are currently online
 
 ---
 
