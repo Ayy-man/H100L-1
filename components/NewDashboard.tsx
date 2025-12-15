@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { AlertCircle, PartyPopper } from 'lucide-react';
+import { AlertCircle, PartyPopper, UserPlus } from 'lucide-react';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from './dashboard/DashboardLayout';
 import CreditBalanceCard from './dashboard/CreditBalanceCard';
 import ChildrenSection from './dashboard/ChildrenSection';
 import UpcomingBookingsCard from './dashboard/UpcomingBookingsCard';
 import RecurringScheduleCard from './dashboard/RecurringScheduleCard';
+import AddChildModal from './dashboard/AddChildModal';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
@@ -49,6 +50,9 @@ const NewDashboard: React.FC = () => {
 
   // Error state
   const [error, setError] = useState<string | null>(null);
+
+  // Add child modal state
+  const [showAddChildModal, setShowAddChildModal] = useState(false);
 
   // Ref to track credit balance for realtime handler (avoids dependency loop)
   const creditBalanceRef = useRef<number>(0);
@@ -333,25 +337,55 @@ const NewDashboard: React.FC = () => {
     );
   }
 
-  // No children registered yet
+  // No children registered yet - show welcome and add child prompt
   if (children.length === 0) {
     return (
       <ProtectedRoute requireProfile={false}>
         <DashboardLayout user={user!}>
-          <div className="max-w-2xl mx-auto">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>No Children Registered</AlertTitle>
-              <AlertDescription className="mt-2">
-                Register your first child to start booking training sessions.
-                <div className="mt-4">
-                  <Button asChild>
-                    <a href="/register">Register a Child</a>
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
+          <div className="max-w-2xl mx-auto space-y-6">
+            {/* Welcome Message */}
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-foreground">
+                Welcome to SniperZone!
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Let's get started by adding your first child.
+              </p>
+            </div>
+
+            {/* Add Child Prompt */}
+            <div className="bg-card border rounded-xl p-8 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                <UserPlus className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Add Your First Child</h2>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Add your child's information to start booking training sessions.
+                You can buy credits and book sessions for all your children from one account.
+              </p>
+              <Button size="lg" onClick={() => setShowAddChildModal(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Child
+              </Button>
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-2">What you can do after adding a child:</p>
+              <ul className="space-y-1 text-xs">
+                <li>Buy session credits ($45 single, $350 for 10, $500 for 20)</li>
+                <li>Book group training sessions using credits</li>
+                <li>Book Sunday ice practice ($50/session)</li>
+                <li>Book private ($89.99) or semi-private ($69) training</li>
+              </ul>
+            </div>
           </div>
+
+          {/* Add Child Modal */}
+          <AddChildModal
+            open={showAddChildModal}
+            onClose={() => setShowAddChildModal(false)}
+          />
         </DashboardLayout>
       </ProtectedRoute>
     );

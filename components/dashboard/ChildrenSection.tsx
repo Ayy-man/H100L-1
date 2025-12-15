@@ -4,6 +4,7 @@ import {
   Plus,
   Calendar,
   RefreshCw,
+  UserPlus,
 } from 'lucide-react';
 import {
   Card,
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import BookSessionModal from './BookSessionModal';
+import AddChildModal from './AddChildModal';
 import type { ChildProfile } from '@/contexts/ProfileContext';
 
 interface ChildrenSectionProps {
@@ -36,6 +38,7 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
   onRefresh,
 }) => {
   const [bookingChild, setBookingChild] = useState<ChildProfile | null>(null);
+  const [showAddChildModal, setShowAddChildModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -107,11 +110,13 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
               >
                 <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
-              <Button variant="outline" size="sm" asChild>
-                <a href="/register">
-                  <Plus className="mr-1 h-4 w-4" />
-                  Add Player
-                </a>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddChildModal(true)}
+              >
+                <UserPlus className="mr-1 h-4 w-4" />
+                Add Player
               </Button>
             </div>
           </div>
@@ -162,8 +167,9 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
               <p className="text-muted-foreground">
                 No players registered yet
               </p>
-              <Button asChild className="mt-4">
-                <a href="/register">Register Your First Player</a>
+              <Button className="mt-4" onClick={() => setShowAddChildModal(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Your First Player
               </Button>
             </div>
           )}
@@ -179,6 +185,13 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
           allChildren={children}
         />
       )}
+
+      {/* Add Child Modal */}
+      <AddChildModal
+        open={showAddChildModal}
+        onClose={() => setShowAddChildModal(false)}
+        onSuccess={onRefresh}
+      />
     </>
   );
 };

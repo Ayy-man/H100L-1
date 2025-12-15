@@ -17,6 +17,7 @@ import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
 import NewDashboard from './components/NewDashboard';
 import Login from './components/Login';
+import SignupPage from './components/SignupPage';
 import Terms from './components/Terms';
 import SchedulePage from './components/SchedulePage';
 import BillingPage from './components/BillingPage';
@@ -80,6 +81,9 @@ function App() {
     }
     if (path === '/login') {
       return <Login />;
+    }
+    if (path === '/signup') {
+      return <SignupPage />;
     }
     if (path === '/terms') {
       return <Terms language={language} onClose={() => window.history.back()} />;

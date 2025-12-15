@@ -208,8 +208,8 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
       <FormSelect label="Select Program Type" name="programType" value={data.programType} handleChange={handleChange} error={errors.programType} required>
         <option value="">-- Choose a Program --</option>
         <option value="group">Group Training</option>
-        <option value="private" disabled>Private Training (Coming Soon)</option>
-        <option value="semi-private" disabled>Semi-Private Training (Coming Soon)</option>
+        <option value="private">Private Training</option>
+        <option value="semi-private">Semi-Private Training</option>
       </FormSelect>
 
       <AnimatePresence>
@@ -378,33 +378,57 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
           </motion.div>
         )}
 
-        {/* Private Training - COMING SOON */}
+        {/* Private Training Details */}
         {data.programType === 'private' && (
-            <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-yellow-500/10 border-2 border-yellow-500/30 p-6 rounded-lg overflow-hidden">
-                <div className="text-center py-8">
-                  <span className="text-6xl mb-4 block">🚧</span>
-                  <h4 className="font-bold text-yellow-400 text-2xl mb-2">Coming Soon</h4>
-                  <p className="text-gray-300">
-                    Private Training is not yet available for registration.
+            <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-purple-500/10 border-2 border-purple-500/30 p-6 rounded-lg overflow-hidden">
+                <h4 className="font-bold text-purple-400">Private Training Details</h4>
+                <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
+                  <p className="text-sm text-gray-300">
+                    🎯 <strong>1-on-1 personalized training</strong>
                   </p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    Please select <strong>Group Training</strong> to continue.
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm text-gray-400">
+                      <strong className="text-purple-400">$89.99</strong> per session (+ tax)
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      📅 Available 7 days a week
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      ⏰ Flexible scheduling based on availability
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
+                  <p className="text-xs text-gray-400">
+                    💡 After registration, you can book private sessions directly from your dashboard.
                   </p>
                 </div>
             </motion.div>
         )}
 
-        {/* Semi-Private Training - COMING SOON */}
+        {/* Semi-Private Training Details */}
         {data.programType === 'semi-private' && (
-            <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-yellow-500/10 border-2 border-yellow-500/30 p-6 rounded-lg overflow-hidden">
-                <div className="text-center py-8">
-                  <span className="text-6xl mb-4 block">🚧</span>
-                  <h4 className="font-bold text-yellow-400 text-2xl mb-2">Coming Soon</h4>
-                  <p className="text-gray-300">
-                    Semi-Private Training is not yet available for registration.
+            <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-teal-500/10 border-2 border-teal-500/30 p-6 rounded-lg overflow-hidden">
+                <h4 className="font-bold text-teal-400">Semi-Private Training Details</h4>
+                <div className="bg-teal-500/10 border border-teal-500/20 p-4 rounded-lg">
+                  <p className="text-sm text-gray-300">
+                    👥 <strong>Small group training (2-3 players)</strong>
                   </p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    Please select <strong>Group Training</strong> to continue.
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm text-gray-400">
+                      <strong className="text-teal-400">$69.00</strong> per session (+ tax)
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      📅 Available 7 days a week
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      👫 Train with players of similar skill level
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
+                  <p className="text-xs text-gray-400">
+                    💡 After registration, you can book semi-private sessions directly from your dashboard.
                   </p>
                 </div>
             </motion.div>

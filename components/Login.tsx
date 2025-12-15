@@ -223,15 +223,15 @@ const Login: React.FC = () => {
               )}
             </form>
 
-            {/* Register Link */}
+            {/* Signup Link */}
             {!forgotPasswordMode && (
               <div className="mt-6 text-center text-sm">
                 <span className="text-muted-foreground">Don't have an account? </span>
                 <a
-                  href="/register"
+                  href="/signup"
                   className="text-primary hover:underline font-medium"
                 >
-                  Register now
+                  Sign up
                 </a>
               </div>
             )}
