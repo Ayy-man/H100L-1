@@ -4,8 +4,10 @@ export enum Language {
 }
 
 export type PlayerCategory = 'M9' | 'M11' | 'M13' | 'M13 Elite' | 'M15' | 'M15 Elite' | 'M18' | 'Junior' | 'Unknown';
+/** @deprecated Credit system - no longer used. Parents book any number of sessions they want. */
 export type BookingFrequency = '1x' | '2x';
-export type BookingDay = 'tuesday' | 'friday'; // Legacy - keeping for backward compatibility
+/** @deprecated Credit system - no longer used. */
+export type BookingDay = 'tuesday' | 'friday';
 export type WeekDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type ProgramType = 'group' | 'private' | 'semi-private';
 
@@ -21,12 +23,14 @@ export interface MedicalFiles {
   medicalReport?: MedicalFile;
 }
 
+/** @deprecated Credit system - booking is done per-session from dashboard */
 export interface BookingRequest {
   category: PlayerCategory;
   frequency: BookingFrequency;
-  day?: BookingDay; // Optional for 2x, required for 1x
+  day?: BookingDay;
 }
 
+/** @deprecated Credit system - availability checked when booking from dashboard */
 export interface Availability {
   timeSlot: string;
   canBook2x: boolean;
@@ -56,12 +60,15 @@ export interface FormData {
   // Step 2
   programType: ProgramType | '';
 
-  // Group Details - New 7-day schedule with monthly booking
+  // Group Details - Credit system: no frequency/days needed at registration
+  /** @deprecated Credit system - parents book any time from dashboard */
   groupFrequency: '1x' | '2x' | '';
-  /** @deprecated Use groupSelectedDays instead. Kept for backward compatibility with existing data. */
+  /** @deprecated Credit system - no longer used */
   groupDay: 'tuesday' | 'friday' | '';
-  groupSelectedDays: WeekDay[]; // Preferred: Selected days of the week for recurring training
-  groupMonthlyDates: string[]; // Generated dates for the current month (ISO format: YYYY-MM-DD)
+  /** @deprecated Credit system - booking done from dashboard */
+  groupSelectedDays: WeekDay[];
+  /** @deprecated Credit system - booking done from dashboard */
+  groupMonthlyDates: string[];
 
   // Private Details (sold by unity - one session at a time)
   /** @deprecated Private sessions are now always 'one-time'. Kept for backward compatibility. */

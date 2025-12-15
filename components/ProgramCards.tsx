@@ -4,69 +4,44 @@ import { Language, ProgramType } from '../types';
 
 interface ProgramCardsProps {
   language: Language;
-  onProgramSelect: (programType: ProgramType, frequency: '1x' | '2x' | '') => void;
+  onProgramSelect: (programType: ProgramType) => void;
 }
 
 interface ProgramCard {
   id: string;
   programType: ProgramType;
-  frequency: '1x' | '2x' | '';
   title: { en: string; fr: string };
   price: string;
   period: { en: string; fr: string };
   features: { en: string[]; fr: string[] };
   popular?: boolean;
   icon: string;
-  comingSoon?: boolean; // Programs not yet available for registration
+  comingSoon?: boolean;
 }
 
+// Credit-based pricing - no more 1x/2x distinction
+// Parents buy credits and book any available time slots
 const programs: ProgramCard[] = [
   {
-    id: 'group-1x',
+    id: 'group',
     programType: 'group',
-    frequency: '1x',
-    title: { en: 'Group Training - 1x/week', fr: 'Entraînement de Groupe - 1x/semaine' },
-    price: 'From $25',
-    period: { en: '/session', fr: '/session' },
-    icon: '/images/hockey-puck-icon.png',
-    features: {
-      en: [
-        'Weekly group session',
-        'Age-specific time slots',
-        'Professional coaching',
-        'Buy 1 ($45), 10 ($350), or 20 ($500) sessions',
-        'Sessions valid for 12 months',
-      ],
-      fr: [
-        'Session de groupe hebdomadaire',
-        'Créneaux horaires par âge',
-        'Coaching professionnel',
-        'Achetez 1 (45$), 10 (350$) ou 20 (500$) sessions',
-        'Sessions valides 12 mois',
-      ],
-    },
-  },
-  {
-    id: 'group-2x',
-    programType: 'group',
-    frequency: '2x',
-    title: { en: 'Group Training - 2x/week', fr: 'Entraînement de Groupe - 2x/semaine' },
+    title: { en: 'Group Training', fr: 'Entraînement de Groupe' },
     price: 'From $25',
     period: { en: '/session', fr: '/session' },
     popular: true,
     icon: '/images/hockey-puck-icon.png',
     features: {
       en: [
-        'Twice weekly sessions',
-        'Age-specific time slots',
+        'Book any available time slot',
+        'Age-specific sessions (M9 to Junior)',
         'Professional coaching',
         'Buy 1 ($45), 10 ($350), or 20 ($500) sessions',
         'Sessions valid for 12 months',
         'Best value with 20-pack!',
       ],
       fr: [
-        'Sessions bi-hebdomadaires',
-        'Créneaux horaires par âge',
+        'Réservez n\'importe quel créneau disponible',
+        'Sessions par groupe d\'âge (M9 à Junior)',
         'Coaching professionnel',
         'Achetez 1 (45$), 10 (350$) ou 20 (500$) sessions',
         'Sessions valides 12 mois',
@@ -77,7 +52,6 @@ const programs: ProgramCard[] = [
   {
     id: 'sunday-ice',
     programType: 'group',
-    frequency: '',
     title: { en: 'Sunday Ice Practice', fr: 'Pratique sur Glace du Dimanche' },
     price: '$50',
     period: { en: '/session', fr: '/session' },
@@ -102,7 +76,6 @@ const programs: ProgramCard[] = [
   {
     id: 'semi-private',
     programType: 'semi-private',
-    frequency: '',
     title: { en: 'Semi-Private Training', fr: 'Entraînement Semi-Privé' },
     price: '$69',
     period: { en: '/session', fr: '/session' },
@@ -125,9 +98,8 @@ const programs: ProgramCard[] = [
     },
   },
   {
-    id: 'private-1x',
+    id: 'private',
     programType: 'private',
-    frequency: '1x',
     title: { en: 'Private Training', fr: 'Entraînement Privé' },
     price: '$89.99',
     period: { en: '/session', fr: '/session' },
@@ -180,12 +152,12 @@ const ProgramCards: React.FC<ProgramCardsProps> = ({ language, onProgramSelect }
           </h2>
           <p className="text-xl text-gray-400">
             {lang === 'en'
-              ? 'Select the training program that fits your goals'
-              : 'Sélectionnez le programme qui correspond à vos objectifs'}
+              ? 'Buy credits and book any available time slots'
+              : 'Achetez des crédits et réservez n\'importe quel créneau disponible'}
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
           {programs.map((program, index) => (
             <motion.div
               key={program.id}
@@ -244,7 +216,7 @@ const ProgramCards: React.FC<ProgramCardsProps> = ({ language, onProgramSelect }
               </div>
 
               <button
-                onClick={() => !program.comingSoon && onProgramSelect(program.programType, program.frequency)}
+                onClick={() => !program.comingSoon && onProgramSelect(program.programType)}
                 disabled={program.comingSoon}
                 className={`w-full font-bold py-3 px-6 rounded-lg text-sm uppercase tracking-wider transition-all duration-300 ${
                   program.comingSoon

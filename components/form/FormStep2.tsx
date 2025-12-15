@@ -217,6 +217,24 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
           <motion.div variants={slideDown} initial="initial" animate="animate" exit="exit" className="space-y-6 bg-white/5 p-6 rounded-lg overflow-hidden">
             <h4 className="font-bold text-[#9BD4FF]">Group Training Details</h4>
 
+            {/* Credit-based booking info */}
+            <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
+              <p className="text-sm text-gray-300">
+                🎟️ <strong>Credit-Based System:</strong> Buy credits, book any available slot
+              </p>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <span className="text-[#9BD4FF] font-semibold">$45</span> single session
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <span className="text-[#9BD4FF] font-semibold">$350</span> for 10 sessions ($35 each)
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <span className="text-[#9BD4FF] font-semibold">$500</span> for 20 sessions ($25 each) - Best Value!
+                </div>
+              </div>
+            </div>
+
             {/* Schedule Info - Show assigned time based on age category */}
             {(() => {
               const assignedSlot = data.playerCategory
@@ -224,21 +242,21 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
                 : null;
 
               return (
-                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
-                  <p className="text-sm text-gray-300">
-                    📅 <strong>Group Training Schedule:</strong> Available <span className="text-[#9BD4FF]">7 days a week</span>
+                <div className="bg-[#9BD4FF]/10 border border-[#9BD4FF]/30 p-4 rounded-lg">
+                  <p className="text-sm text-gray-300 mb-2">
+                    📅 <strong>Available 7 days a week</strong>
                   </p>
                   {assignedSlot ? (
-                    <div className="mt-2 p-3 bg-[#9BD4FF]/10 border border-[#9BD4FF]/30 rounded-lg">
+                    <>
                       <p className="text-sm font-semibold text-[#9BD4FF]">
-                        🕐 Your Assigned Time: {assignedSlot.time}
+                        🕐 Your Time Slot: {assignedSlot.time}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         Based on {data.playerCategory} age category • Max 6 players per slot
                       </p>
-                    </div>
+                    </>
                   ) : (
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-gray-400">
                       Time slots: 4:30 PM, 5:45 PM, 7:00 PM, 8:15 PM (based on age category)
                     </p>
                   )}
@@ -246,135 +264,17 @@ const FormStep2: React.FC<FormStep2Props> = ({ data, errors, handleChange, handl
               );
             })()}
 
-            {/* Frequency Selection */}
-            <FormSelect label="Frequency" name="groupFrequency" value={data.groupFrequency} handleChange={handleChange} error={errors.groupFrequency} required>
-                <option value="">-- Select Frequency --</option>
-                <option value="1x">1x / week</option>
-                <option value="2x">2x / week</option>
-            </FormSelect>
-
-            {/* Day Selection - Available 7 days a week */}
-            {data.groupFrequency && (
-                <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Select Your Training {data.groupFrequency === '1x' ? 'Day' : 'Days'} <span className="text-red-500">*</span>
-                    </label>
-                    <p className="text-xs text-gray-400 mb-3">
-                      {data.groupFrequency === '1x'
-                        ? 'Choose any 1 day per week for your training'
-                        : 'Choose any 2 days per week for your training'}
-                    </p>
-
-                    {/* Check Availability Button */}
-                    <button
-                      type="button"
-                      onClick={checkAvailability}
-                      disabled={isCheckingAvailability}
-                      className="mb-4 px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg hover:bg-green-500/30 transition text-sm font-medium disabled:opacity-50"
-                    >
-                      {isCheckingAvailability ? '🔄 Checking...' : '🔍 Check Availability'}
-                    </button>
-
-                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                        {daysOfWeek.map(day => {
-                          const isSelected = data.groupSelectedDays.includes(day.value);
-                          const isAllowedDay = isDayAvailable(day.value);
-                          const dayCapacity = getDayCapacity(day.label);
-                          // Check if slot is full (either API says so, or 0 available spots)
-                          const isFull = dayCapacity?.isFull || (dayCapacity && dayCapacity.availableSpots === 0);
-                          // Disable if: not selected AND (can't select more OR not allowed OR slot is full)
-                          const isDisabled = !isSelected && (!canSelectMore || !isAllowedDay || isFull);
-
-                          return (
-                            <button
-                              key={day.value}
-                              type="button"
-                              onClick={() => isAllowedDay && !isDisabled && !isFull && handleDayToggle(day.value)}
-                              disabled={isDisabled || !isAllowedDay}
-                              className={`p-2 sm:p-3 border-2 rounded-lg text-center font-semibold text-xs sm:text-sm transition-all min-h-[70px] flex flex-col items-center justify-center ${
-                                isSelected
-                                  ? 'border-[#9BD4FF] bg-[#9BD4FF]/20 text-[#9BD4FF]'
-                                  : !isAllowedDay
-                                  ? 'border-white/10 bg-gray-700/30 text-gray-600 cursor-not-allowed'
-                                  : isFull
-                                  ? 'border-red-500/50 bg-red-500/10 text-red-400 cursor-not-allowed'
-                                  : isDisabled
-                                  ? 'border-white/10 bg-white/5 text-gray-600 cursor-not-allowed'
-                                  : 'border-white/20 bg-white/5 text-white hover:border-[#9BD4FF]/50 cursor-pointer'
-                              }`}
-                            >
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                {isSelected && (
-                                  <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                                {/* Short name on mobile, full name on sm+ */}
-                                <span className="sm:hidden text-xs">{day.short}</span>
-                                <span className="hidden sm:inline">{day.label}</span>
-                              </div>
-
-                              {/* Capacity Badge */}
-                              {isAllowedDay && dayCapacity && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                  isFull
-                                    ? 'bg-red-500 text-white'
-                                    : dayCapacity.availableSpots <= 2
-                                    ? 'bg-yellow-500 text-black'
-                                    : 'bg-green-500 text-white'
-                                }`}>
-                                  {isFull ? 'FULL' : `${dayCapacity.availableSpots}/${dayCapacity.totalCapacity}`}
-                                </span>
-                              )}
-
-                              {!isAllowedDay && (
-                                <span className="text-[9px] text-gray-500 mt-1">N/A</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                    </div>
-                    <p className="mt-2 text-xs text-gray-400">
-                      Selected: {data.groupSelectedDays.length} / {maxDays}
-                    </p>
-                    {errors.groupDay && <p className="mt-2 text-sm text-red-500">{errors.groupDay}</p>}
-                    {availabilityError && (
-                      <p className="mt-2 text-sm text-yellow-500">⚠️ {availabilityError}</p>
-                    )}
-                </div>
-            )}
-
-            {/* Monthly Calendar Preview */}
-            {data.groupSelectedDays.length > 0 && monthlyDates.length > 0 && (
-              <div className="bg-white/10 p-4 rounded-lg">
-                <h5 className="font-semibold text-white mb-2 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-[#9BD4FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Your {getCurrentMonthYear()} Schedule
-                </h5>
-                <p className="text-sm text-gray-300 mb-3">
-                  {remainingDates.length} training sessions scheduled for the rest of this month:
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                  {monthlyDates.map((date, index) => (
-                    <div
-                      key={date}
-                      className={`p-2 rounded text-sm text-center ${
-                        isDateInPast(date)
-                          ? 'bg-gray-600/20 text-gray-500 line-through'
-                          : 'bg-[#9BD4FF]/10 text-[#9BD4FF]'
-                      }`}
-                    >
-                      {formatDateForDisplay(date)}
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-xs text-gray-400 italic">
-                  💡 These dates will be automatically synced to your schedule after registration
-                </p>
-              </div>
-            )}
+            <div className="bg-green-500/10 border border-green-500/30 p-4 rounded-lg">
+              <p className="text-sm text-gray-300">
+                ✨ <strong>How it works:</strong>
+              </p>
+              <ol className="mt-2 text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                <li>Complete registration to create your account</li>
+                <li>Buy credit packages from your dashboard</li>
+                <li>Book any available session using your credits</li>
+                <li>Train as often as you want - credits valid for 12 months!</li>
+              </ol>
+            </div>
           </motion.div>
         )}
 

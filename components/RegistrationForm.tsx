@@ -15,7 +15,6 @@ interface RegistrationFormProps {
   onClose: () => void;
   preSelectedProgram?: {
     programType: ProgramType | '';
-    frequency: '1x' | '2x' | '';
   };
   language?: Language;
   mode?: 'new-parent' | 'add-child'; // new-parent: create Firebase account, add-child: use existing account
@@ -76,7 +75,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
       setFormData(prev => ({
         ...prev,
         programType: preSelectedProgram.programType,
-        groupFrequency: preSelectedProgram.programType === 'group' ? preSelectedProgram.frequency : '',
       }));
     }
   }, [preSelectedProgram]);

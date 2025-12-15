@@ -28,8 +28,7 @@ function App() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<{
     programType: ProgramType | '';
-    frequency: '1x' | '2x' | '';
-  }>({ programType: '', frequency: '' });
+  }>({ programType: '' });
 
   const selectedContent = content[language];
 
@@ -37,11 +36,11 @@ function App() {
   const closeForm = () => {
     setIsFormOpen(false);
     // Reset selected program when form closes
-    setSelectedProgram({ programType: '', frequency: '' });
+    setSelectedProgram({ programType: '' });
   };
 
-  const handleProgramSelect = (programType: ProgramType, frequency: '1x' | '2x' | '') => {
-    setSelectedProgram({ programType, frequency });
+  const handleProgramSelect = (programType: ProgramType) => {
+    setSelectedProgram({ programType });
     setIsFormOpen(true);
   };
 
