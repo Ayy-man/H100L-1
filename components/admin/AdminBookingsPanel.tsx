@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../../lib/supabase';
 import {
   Calendar,
   Search,
@@ -31,13 +30,28 @@ interface Booking {
   session_date: string;
   time_slot: string;
   credits_used: number;
-  price_paid: number | null;
-  is_recurring: boolean;
-  status: 'booked' | 'attended' | 'cancelled' | 'no_show';
+  amount_paid: number | null;
+  status: 'confirmed' | 'attended' | 'cancelled' | 'no_show';
   created_at: string;
+  updated_at: string;
   player_name: string;
   player_category: string;
-  parent_email: string;
+  parent_email: string | null;
+  cancellation_reason: string | null;
+}
+
+interface BookingsApiResponse {
+  bookings: Booking[];
+  stats: {
+    total: number;
+    confirmed: number;
+    attended: number;
+    cancelled: number;
+    no_show: number;
+    credits_used: number;
+    direct_revenue: number;
+    by_type: Record<string, number>;
+  };
 }
 
 interface DayStats {
@@ -57,7 +71,7 @@ interface SlotCapacity {
 
 // Constants
 const SESSION_TYPES = ['group', 'sunday', 'private', 'semi_private'];
-const BOOKING_STATUSES = ['booked', 'attended', 'cancelled', 'no_show'];
+const BOOKING_STATUSES = ['confirmed', 'attended', 'cancelled', 'no_show'];
 const MAX_CAPACITIES: Record<string, number> = {
   group: 6,
   sunday: 15,
@@ -66,7 +80,7 @@ const MAX_CAPACITIES: Record<string, number> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  booked: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+  confirmed: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
   attended: 'bg-green-500/20 text-green-400 border-green-500/50',
   cancelled: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
   no_show: 'bg-red-500/20 text-red-400 border-red-500/50',
@@ -158,7 +172,7 @@ const BookingRow: React.FC<{
         {booking.status}
       </span>
     </td>
-    <td className="py-3 px-4 text-gray-400 text-sm">{booking.parent_email}</td>
+    <td className="py-3 px-4 text-gray-400 text-sm">{booking.parent_email || '-'}</td>
     <td className="py-3 px-4">
       <div className="flex gap-2">
         <button
@@ -168,7 +182,7 @@ const BookingRow: React.FC<{
         >
           <Eye className="w-4 h-4" />
         </button>
-        {booking.status === 'booked' && (
+        {booking.status === 'confirmed' && (
           <>
             <button
               onClick={() => onStatusChange(booking.id, 'attended')}
@@ -248,36 +262,35 @@ const AdminBookingsPanel: React.FC = () => {
   // Modal state
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
-  // Fetch bookings
+  // Fetch bookings from API
   const fetchBookings = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('session_bookings')
-        .select(`
-          *,
-          registrations!inner (
-            form_data,
-            parent_email
-          )
-        `)
-        .gte('session_date', dateRangeStart)
-        .lte('session_date', dateRangeEnd)
-        .order('session_date', { ascending: true })
-        .order('time_slot', { ascending: true });
+      const params = new URLSearchParams({
+        date_start: dateRangeStart,
+        date_end: dateRangeEnd,
+      });
 
-      if (fetchError) throw fetchError;
+      if (typeFilter !== 'all') {
+        params.append('session_type', typeFilter);
+      }
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
 
-      const transformedBookings: Booking[] = (data || []).map((b: any) => ({
-        ...b,
-        player_name: b.registrations?.form_data?.playerFullName || 'Unknown',
-        player_category: b.registrations?.form_data?.playerCategory || 'Unknown',
-        parent_email: b.registrations?.parent_email || b.registrations?.form_data?.parentEmail || '',
-      }));
+      const response = await fetch(`/api/admin-bookings?${params}`);
+      const data: BookingsApiResponse = await response.json();
 
-      setBookings(transformedBookings);
+      if (!response.ok) {
+        throw new Error((data as any).error || 'Failed to fetch bookings');
+      }
+
+      setBookings(data.bookings);
     } catch (err: any) {
       console.error('Error fetching bookings:', err);
       setError(err.message || 'Failed to fetch bookings');
@@ -290,21 +303,31 @@ const AdminBookingsPanel: React.FC = () => {
     fetchBookings();
   }, [dateRangeStart, dateRangeEnd]);
 
-  // Handle status change
+  // Handle status change via API
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
-      const updateData: any = { status: newStatus };
-      if (newStatus === 'cancelled') {
-        updateData.cancelled_at = new Date().toISOString();
-        updateData.cancellation_reason = 'Admin cancelled';
+      const response = await fetch('/api/admin-bookings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          booking_id: bookingId,
+          status: newStatus,
+          cancellation_reason: newStatus === 'cancelled' ? 'Admin cancelled' : undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update booking');
       }
 
-      const { error: updateError } = await supabase
-        .from('session_bookings')
-        .update(updateData)
-        .eq('id', bookingId);
-
-      if (updateError) throw updateError;
+      // Show success message if credits were refunded
+      if (data.credits_refunded > 0) {
+        alert(`Booking cancelled. ${data.credits_refunded} credit(s) refunded to parent.`);
+      }
 
       // Refresh bookings
       await fetchBookings();
@@ -395,10 +418,10 @@ const AdminBookingsPanel: React.FC = () => {
     const activeBookings = bookings.filter((b) => b.status !== 'cancelled');
 
     const creditBookings = activeBookings.filter((b) => b.credits_used > 0);
-    const paidBookings = activeBookings.filter((b) => b.price_paid && b.price_paid > 0);
+    const paidBookings = activeBookings.filter((b) => b.amount_paid && b.amount_paid > 0);
 
     const totalCreditsUsed = creditBookings.reduce((sum, b) => sum + b.credits_used, 0);
-    const totalRevenue = paidBookings.reduce((sum, b) => sum + (b.price_paid || 0), 0);
+    const totalRevenue = paidBookings.reduce((sum, b) => sum + (b.amount_paid || 0), 0);
 
     const byType: Record<string, { count: number; revenue: number; credits: number }> = {};
     activeBookings.forEach((b) => {
@@ -406,7 +429,7 @@ const AdminBookingsPanel: React.FC = () => {
         byType[b.session_type] = { count: 0, revenue: 0, credits: 0 };
       }
       byType[b.session_type].count++;
-      byType[b.session_type].revenue += b.price_paid || 0;
+      byType[b.session_type].revenue += b.amount_paid || 0;
       byType[b.session_type].credits += b.credits_used;
     });
 
@@ -582,7 +605,7 @@ const AdminBookingsPanel: React.FC = () => {
             />
             <StatCard
               title="Pending"
-              value={todayBookings.filter((b) => b.status === 'booked').length}
+              value={todayBookings.filter((b) => b.status === 'confirmed').length}
               icon={<Clock className="w-5 h-5" />}
               color="text-yellow-400"
             />
@@ -951,14 +974,14 @@ const AdminBookingsPanel: React.FC = () => {
                   <p className="text-white">
                     {selectedBooking.credits_used > 0
                       ? `${selectedBooking.credits_used} credit(s)`
-                      : selectedBooking.price_paid
-                      ? `$${(selectedBooking.price_paid / 100).toFixed(2)}`
+                      : selectedBooking.amount_paid
+                      ? `$${(selectedBooking.amount_paid / 100).toFixed(2)}`
                       : 'N/A'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Recurring</p>
-                  <p className="text-white">{selectedBooking.is_recurring ? 'Yes' : 'No'}</p>
+                  <p className="text-gray-400 text-sm">Cancellation</p>
+                  <p className="text-white">{selectedBooking.cancellation_reason || '-'}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Booked On</p>
@@ -971,7 +994,7 @@ const AdminBookingsPanel: React.FC = () => {
               <div className="border-t border-white/10 pt-4">
                 <p className="text-gray-400 text-sm mb-2">Quick Actions</p>
                 <div className="flex gap-2">
-                  {selectedBooking.status === 'booked' && (
+                  {selectedBooking.status === 'confirmed' && (
                     <>
                       <button
                         onClick={() => {

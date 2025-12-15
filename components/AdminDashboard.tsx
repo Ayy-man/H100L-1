@@ -417,9 +417,22 @@ const AdminDashboard: React.FC = () => {
   };
 
   const fetchAnalyticsData = async () => {
-    // TODO: Implement analytics for credit system
-    // Old analytics views no longer exist
-    console.log('Analytics fetch not yet implemented for credit system');
+    try {
+      const response = await fetch('/api/admin-analytics');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch analytics');
+      }
+
+      setDailyRegistrations(data.dailyRegistrations || []);
+      setProgramDistribution(data.programDistribution || []);
+      setRevenueByProgram(data.revenueByProgram || []);
+      setAgeDistribution(data.ageDistribution || []);
+      setAnalyticsSummary(data.summary || null);
+    } catch (err: any) {
+      console.error('Error fetching analytics:', err);
+    }
   };
 
   const fetchMatchingData = async () => {
