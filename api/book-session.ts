@@ -1,10 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import {
-  sendBookingConfirmed,
-  sendCreditsLow,
-  createMinimalContact,
-} from './_lib/n8nWebhook';
+// n8nWebhook imported dynamically to prevent function crash if module fails to load
 
 // Session types and credits
 const SESSION_TYPES = ['group', 'sunday', 'private', 'semi_private'] as const;
@@ -39,6 +35,15 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // Early env var validation
+  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[book-session] Missing env vars:', {
+      hasUrl: !!process.env.VITE_SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -248,9 +253,11 @@ export default async function handler(
       });
     }
 
-    // Send n8n webhooks (fire and forget)
+    // Send n8n webhooks (fire and forget) - dynamic import to prevent function crash
     const newBalance = currentCredits - creditsRequired;
     try {
+      const { sendBookingConfirmed, sendCreditsLow, createMinimalContact } = await import('./_lib/n8nWebhook');
+
       // Get parent and player info
       const { data: regData } = await supabase
         .from('registrations')

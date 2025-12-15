@@ -55,6 +55,15 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // Early env var validation
+  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[recurring-schedule] Missing env vars:', {
+      hasUrl: !!process.env.VITE_SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   try {
     const supabase = getSupabase();
 

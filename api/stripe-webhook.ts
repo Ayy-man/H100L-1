@@ -2,14 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { Readable } from 'stream';
-import {
-  sendCreditsPurchased,
-  sendContactUpdated,
-  sendBookingConfirmed,
-  createMinimalContact,
-  type ContactInfo,
-  type PaymentInfo,
-} from './_lib/n8nWebhook';
+// n8nWebhook imported dynamically to prevent function crash if module fails to load
 
 // Inline types (Vercel bundling doesn't resolve ../types/credits)
 type CreditPackageType = 'single' | '10_pack' | '20_pack';
@@ -295,8 +288,10 @@ async function handleCreditPurchase(
       },
     });
 
-  // Send n8n webhooks for GHL (fire and forget)
+  // Send n8n webhooks for GHL (fire and forget) - dynamic import to prevent function crash
   try {
+    const { sendCreditsPurchased, sendContactUpdated, createMinimalContact } = await import('./_lib/n8nWebhook');
+
     // Get parent contact info
     const { data: registration } = await supabase
       .from('registrations')
@@ -307,7 +302,7 @@ async function handleCreditPurchase(
 
     if (registration) {
       const formData = registration.form_data || {};
-      const contact: ContactInfo = createMinimalContact(
+      const contact = createMinimalContact(
         firebase_uid,
         registration.parent_email || formData.parentEmail || '',
         formData.parentPhone || '',
@@ -328,7 +323,7 @@ async function handleCreditPurchase(
       });
 
       // Send contact_updated with payment info
-      const paymentInfo: PaymentInfo = {
+      const paymentInfo = {
         total_spent: pricePaid,
         credits_purchased: creditsNum,
         last_purchase_date: new Date().toISOString().split('T')[0],
@@ -433,8 +428,10 @@ async function handleSessionPurchase(
       },
     });
 
-  // Send n8n webhook for GHL (fire and forget)
+  // Send n8n webhook for GHL (fire and forget) - dynamic import to prevent function crash
   try {
+    const { sendBookingConfirmed, createMinimalContact } = await import('./_lib/n8nWebhook');
+
     // Get parent contact info from any registration
     const { data: parentReg } = await supabase
       .from('registrations')
@@ -445,7 +442,7 @@ async function handleSessionPurchase(
 
     if (parentReg) {
       const formData = parentReg.form_data || {};
-      const contact: ContactInfo = createMinimalContact(
+      const contact = createMinimalContact(
         firebase_uid,
         parentReg.parent_email || formData.parentEmail || '',
         formData.parentPhone || '',

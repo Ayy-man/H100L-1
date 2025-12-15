@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { sendBookingCancelled, createMinimalContact } from './_lib/n8nWebhook';
+// n8nWebhook imported dynamically to prevent function crash if module fails to load
 
 // Inline types and constants (Vercel bundling doesn't resolve ../types/credits)
 const CANCELLATION_WINDOW_HOURS = 24;
@@ -34,6 +34,15 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // Early env var validation
+  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[cancel-booking] Missing env vars:', {
+      hasUrl: !!process.env.VITE_SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -134,8 +143,10 @@ export default async function handler(
       message = 'Booking cancelled successfully.';
     }
 
-    // Send n8n webhook (fire and forget)
+    // Send n8n webhook (fire and forget) - dynamic import to prevent function crash
     try {
+      const { sendBookingCancelled, createMinimalContact } = await import('./_lib/n8nWebhook');
+
       // Get parent and player info
       const { data: regData } = await supabase
         .from('registrations')
