@@ -106,7 +106,15 @@ const SetupRecurringModal: React.FC<SetupRecurringModalProps> = ({
         }),
       });
 
-      const data = await response.json();
+      // Handle non-JSON responses (e.g., Vercel errors)
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(text || `Server error (${response.status})`);
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create recurring schedule');

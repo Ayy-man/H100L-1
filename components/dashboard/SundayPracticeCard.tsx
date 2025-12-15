@@ -175,7 +175,15 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
         }),
       });
 
-      const data = await response.json();
+      // Handle non-JSON responses (e.g., Vercel errors)
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(text || `Server error (${response.status})`);
+      }
 
       if (!data.success) {
         toast.error(data.error || 'Failed to cancel booking');
@@ -188,7 +196,7 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
       await fetchNextSlot();
     } catch (error) {
       console.error('Cancellation error:', error);
-      toast.error('Failed to cancel booking');
+      toast.error(error instanceof Error ? error.message : 'Failed to cancel booking');
     } finally {
       setActionLoading(false);
     }

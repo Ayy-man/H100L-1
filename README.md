@@ -37,10 +37,9 @@ A comprehensive hockey training registration system with credit-based booking, S
   - **Settings**: System configuration
 
 - **Realtime Updates**
-  - Live activity feed for admins (bookings, purchases, credit changes)
   - Real-time capacity updates when booking sessions
+  - Live data sync for credits, bookings, and schedules
   - Toast notifications for important events
-  - Connection status indicators
 
 ## Tech Stack
 
@@ -150,7 +149,6 @@ npm run build
 │   └── stripe-webhook.ts     # Handle Stripe webhooks
 ├── components/               # React components
 │   ├── admin/                # Admin panel components
-│   │   ├── AdminActivityFeed.tsx   # Live activity feed (realtime)
 │   │   ├── AdminBookingsPanel.tsx  # Bookings management
 │   │   ├── AdminCreditDashboard.tsx
 │   │   └── CreditManagementPanel.tsx

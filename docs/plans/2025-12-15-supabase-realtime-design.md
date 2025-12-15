@@ -92,26 +92,6 @@ The app has working realtime using `postgres_changes`:
 
 ### New Broadcast Subscriptions (Implemented)
 
-#### Admin Activity Feed
-
-`AdminActivityFeed.tsx` subscribes to `admin:all` channel for live updates:
-
-```typescript
-const channel = supabase.channel('admin:all', { config: { private: true } });
-
-eventTypes.forEach((eventType) => {
-  channel.on('broadcast', { event: eventType }, (payload) => {
-    // Add to events list, show toast notifications
-  });
-});
-```
-
-**Features:**
-- Live activity log with color-coded event types
-- Toast notifications for purchases, bookings, adjustments
-- Connection status indicator
-- Collapsible panel with event count badge
-
 #### Capacity Subscriptions
 
 `BookSessionModal.tsx` subscribes to capacity channels for real-time slot updates:
@@ -130,7 +110,7 @@ channel.on('broadcast', { event: 'session_booking_changed' }, () => {
 | Use Case | Recommended Approach |
 |----------|---------------------|
 | User sees their own data change | Either works |
-| Admin sees ALL users' changes | **Broadcast** (`admin:all` channel) ✅ |
+| Admin sees ALL users' changes | **Broadcast** (`admin:all` channel) |
 | Capacity updates across users | **Broadcast** (`capacity:*` channels) ✅ |
 | Simple single-user updates | `postgres_changes` is simpler |
 
@@ -185,14 +165,8 @@ WHERE firebase_uid = 'YOUR_TEST_UID';
 
 | File | Changes |
 |------|---------|
-| `components/ui/toast.tsx` | New - Enhanced toast with variants (success/error/warning) |
-| `components/admin/AdminActivityFeed.tsx` | New - Live activity feed subscribing to `admin:all` |
-| `components/AdminDashboard.tsx` | Added AdminActivityFeed to overview tab (passes `isAuthenticated` prop) |
+| `components/ui/toast.tsx` | Enhanced toast with variants (success/error/warning) |
 | `components/dashboard/BookSessionModal.tsx` | Added capacity channel subscription |
-
-### Bug Fixes
-
-- **AdminDashboard.tsx**: Fixed `ReferenceError: authenticated is not defined` - was passing wrong variable name to AdminActivityFeed
 
 ---
 
