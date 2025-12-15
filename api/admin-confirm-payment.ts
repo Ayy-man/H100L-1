@@ -17,12 +17,19 @@ interface CreateNotificationParams {
   actionUrl?: string;
 }
 
+// Inline Supabase client for Vercel bundling (no caching to avoid stale connections)
+function getSupabaseClient() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  return createClient(url, key);
+}
+
 async function createNotification(params: CreateNotificationParams) {
   try {
-    const supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = getSupabaseClient();
 
     const { error } = await supabase
       .from('notifications')
@@ -91,17 +98,8 @@ async function notifyPaymentConfirmed(params: {
   });
 }
 
-// Lazy-initialized Supabase client to avoid cold start issues
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-  }
-  return _supabase;
-};
+// Use shared getSupabaseClient function defined above
+const getSupabase = getSupabaseClient;
 
 /**
  * Admin Confirm Payment API

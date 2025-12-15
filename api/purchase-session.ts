@@ -29,22 +29,25 @@ interface SessionPurchaseMetadata {
   time_slot: string;
 }
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
+// Inline Supabase client for Vercel bundling (no caching to avoid stale connections)
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
+
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error('Missing STRIPE_SECRET_KEY environment variable');
+  }
+  return new Stripe(key, { apiVersion: '2025-02-24.acacia' });
+}
 
 // Session price IDs from environment
 const SESSION_PRICE_IDS = {
@@ -71,6 +74,17 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // Early env var validation
+  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      !process.env.STRIPE_SECRET_KEY) {
+    console.error('[purchase-session] Missing env vars:', {
+      hasSupabaseUrl: !!process.env.VITE_SUPABASE_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+    });
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -174,6 +188,7 @@ export default async function handler(
     };
 
     // Create Stripe Checkout Session
+    const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],

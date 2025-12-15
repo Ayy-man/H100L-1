@@ -20,17 +20,15 @@ import { createClient } from '@supabase/supabase-js';
  *   - reason: string (if ineligible, explains why)
  */
 
-// Lazy-initialized Supabase client to avoid cold start issues
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline Supabase client for Vercel bundling (no caching to avoid stale connections)
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+  return createClient(url, key);
+}
 
 export default async function handler(
   req: VercelRequest,

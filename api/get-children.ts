@@ -18,22 +18,31 @@ import { createClient } from '@supabase/supabase-js';
  *   - count: Number of children
  */
 
-// Lazy-initialized Supabase client to avoid cold start issues
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline Supabase client for Vercel bundling (no caching to avoid stale connections)
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // Early env var validation
+  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[get-children] Missing env vars:', {
+      hasUrl: !!process.env.VITE_SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });

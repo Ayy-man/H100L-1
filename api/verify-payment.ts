@@ -2,21 +2,23 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
-});
-
-// Lazy-initialized Supabase client to avoid cold start issues
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline Supabase client for Vercel bundling (no caching to avoid stale connections)
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+  return createClient(url, key);
+}
+
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error('Missing STRIPE_SECRET_KEY environment variable');
+  }
+  return new Stripe(key, { apiVersion: '2025-02-24.acacia' });
+}
 
 // Group training capacity
 const MAX_GROUP_CAPACITY = 6;

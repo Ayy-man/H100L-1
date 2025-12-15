@@ -1,18 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
-// Lazy-initialized Supabase client
-let _supabase: SupabaseClient | null = null;
+// Inline Supabase client for Vercel bundling (no caching to avoid stale connections)
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const getSupabase = (): SupabaseClient => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
 
 /**
  * Availability Check API
@@ -439,6 +438,15 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // Early env var validation
+  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[check-availability] Missing env vars:', {
+      hasUrl: !!process.env.VITE_SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
