@@ -136,17 +136,6 @@ async function checkDateAvailability(
     playerCategory = await getPlayerCategory(registrationId);
   }
 
-  // Debug logging - remove after fix verified
-  console.log('[check-availability] Debug:', {
-    date,
-    sessionType,
-    registrationId,
-    playerCategory,
-    allowedSlots: registrationId
-      ? getAllowedSlotsForCategory(playerCategory, sessionType)
-      : 'N/A (no registration_id)',
-  });
-
   // Determine time slots and capacity based on session type
   let timeSlots: string[];
   let maxCapacity: number;
