@@ -135,7 +135,11 @@ npm run build
 │   ├── purchase-session.ts   # Buy paid sessions
 │   ├── recurring-schedule.ts # Manage recurring bookings
 │   ├── check-availability.ts # Check slot availability
+│   ├── admin-bookings.ts     # Admin bookings API (service role)
+│   ├── admin-analytics.ts    # Admin analytics API (service role)
 │   ├── admin-adjust-credits.ts # Admin credit management
+│   ├── admin/
+│   │   └── credit-summary.ts # Admin credit dashboard data
 │   └── stripe-webhook.ts     # Handle Stripe webhooks
 ├── components/               # React components
 │   ├── admin/                # Admin panel components

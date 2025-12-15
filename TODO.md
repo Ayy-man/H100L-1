@@ -36,6 +36,15 @@ The system has been pivoted from **subscriptions to credits**:
 - [x] Added category normalization with Adult→Junior fallback
 - [x] Fixed book-session API - removed RPC dependencies, handles admin-added credits
 - [x] Fixed recurring-schedule API - inlined types for Vercel bundling
+- [x] Fixed admin panel RLS bypass - created service role APIs for bookings and analytics
+- [x] Fixed credit-summary API syntax error - invalid JS in Supabase client init
+
+### Admin Panel Backend APIs (December 15, 2025)
+- [x] Created `api/admin-bookings.ts` - Service role API for bookings (bypasses RLS)
+- [x] Created `api/admin-analytics.ts` - Service role API for analytics data
+- [x] Updated `AdminBookingsPanel` to fetch via API instead of direct Supabase
+- [x] Updated `AdminDashboard` fetchAnalyticsData() to use new analytics API
+- [x] Fixed `api/admin/credit-summary.ts` syntax error causing 500 errors
 
 ### Admin Bookings Panel (December 15, 2025)
 - [x] **Daily Operations** - Calendar view, attendance marking, session stats
@@ -122,13 +131,13 @@ Private/Semi-Private: All ages, 8 AM - 4 PM, 7 days/week
 
 ## Admin Panel Features
 
-| Tab | Features |
-|-----|----------|
-| Overview | Registrations list, stats cards, filters |
-| Analytics | Charts, program distribution, capacity utilization |
-| Credits | Credit management, adjust balances, view purchases |
-| **Bookings** | Daily ops, booking management, capacity planning, revenue reports |
-| Settings | System configuration |
+| Tab | Features | Backend API |
+|-----|----------|-------------|
+| Overview | Registrations list, stats cards, filters | Direct Supabase |
+| Analytics | Charts, program distribution, registration trends | `/api/admin-analytics` |
+| Credits | Credit management, adjust balances, view purchases | `/api/admin/credit-summary` |
+| **Bookings** | Daily ops, booking management, capacity planning, revenue | `/api/admin-bookings` |
+| Settings | System configuration | - |
 
 ---
 
