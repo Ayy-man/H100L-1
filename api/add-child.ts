@@ -19,13 +19,34 @@ interface AddChildRequest {
   date_of_birth: string;
   player_category: string;
   parent_email?: string;
+  // Emergency contact
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_relationship?: string;
+  // Hockey info
+  position?: string;
+  dominant_hand?: string;
+  current_level?: string;
+  jersey_size?: string;
+  primary_objective?: string;
+  // Medical info
+  has_allergies?: boolean;
+  allergies_details?: string;
+  has_medical_conditions?: boolean;
+  medical_conditions_details?: string;
+  carries_medication?: boolean;
+  medication_details?: string;
+  // Consents
+  photo_video_consent?: boolean;
+  policy_acceptance?: boolean;
 }
 
 /**
  * Add Child API Endpoint
  *
  * Creates a new registration (child) for an existing parent account.
- * This is a simplified flow that only requires basic child information.
+ * Accepts full player profile including emergency contact, hockey info,
+ * medical information, and consents.
  *
  * The parent can later:
  * - Buy credits (shared across all children)
@@ -47,6 +68,26 @@ export default async function handler(
       date_of_birth,
       player_category,
       parent_email,
+      // Emergency contact
+      emergency_contact_name,
+      emergency_contact_phone,
+      emergency_relationship,
+      // Hockey info
+      position,
+      dominant_hand,
+      current_level,
+      jersey_size,
+      primary_objective,
+      // Medical info
+      has_allergies,
+      allergies_details,
+      has_medical_conditions,
+      medical_conditions_details,
+      carries_medication,
+      medication_details,
+      // Consents
+      photo_video_consent,
+      policy_acceptance,
     } = req.body as AddChildRequest;
 
     // Validate required fields
@@ -82,30 +123,64 @@ export default async function handler(
       });
     }
 
+    // Validate required fields for full registration
+    if (!emergency_contact_name?.trim()) {
+      return res.status(400).json({ error: 'emergency_contact_name is required' });
+    }
+    if (!emergency_contact_phone?.trim()) {
+      return res.status(400).json({ error: 'emergency_contact_phone is required' });
+    }
+    if (!emergency_relationship?.trim()) {
+      return res.status(400).json({ error: 'emergency_relationship is required' });
+    }
+    if (!jersey_size) {
+      return res.status(400).json({ error: 'jersey_size is required' });
+    }
+    if (!photo_video_consent) {
+      return res.status(400).json({ error: 'photo_video_consent is required' });
+    }
+    if (!policy_acceptance) {
+      return res.status(400).json({ error: 'policy_acceptance is required' });
+    }
+
     const supabase = getSupabase();
 
-    // Create minimal form_data for registration
+    // Create full form_data for registration
     const formData = {
+      // Basic info
       playerFullName: player_name.trim(),
       dateOfBirth: date_of_birth,
       playerCategory: player_category,
       parentEmail: parent_email || '',
-      // Set defaults for required fields
-      programType: 'group', // Default, can be changed when booking
+      // Emergency contact
+      emergencyContactName: emergency_contact_name.trim(),
+      emergencyContactPhone: emergency_contact_phone.trim(),
+      emergencyRelationship: emergency_relationship.trim(),
+      // Hockey info
+      position: position?.trim() || '',
+      dominantHand: dominant_hand || '',
+      currentLevel: current_level?.trim() || '',
+      jerseySize: jersey_size,
+      primaryObjective: primary_objective || '',
+      // Medical info
+      hasAllergies: has_allergies || false,
+      allergiesDetails: allergies_details?.trim() || '',
+      hasMedicalConditions: has_medical_conditions || false,
+      medicalConditionsDetails: medical_conditions_details?.trim() || '',
+      carriesMedication: carries_medication || false,
+      medicationDetails: medication_details?.trim() || '',
+      // Consents
+      photoVideoConsent: photo_video_consent,
+      policyAcceptance: policy_acceptance,
+      // Set defaults for program-related fields (not used in add-child flow)
+      programType: 'group',
       groupFrequency: '',
       groupSelectedDays: [],
-      // These will be filled in if/when needed
       parentFullName: '',
       parentPhone: '',
       parentCity: '',
       parentPostalCode: '',
       communicationLanguage: 'en',
-      emergencyContactName: '',
-      emergencyContactPhone: '',
-      emergencyRelationship: '',
-      jerseySize: '',
-      photoVideoConsent: true,
-      policyAcceptance: true,
     };
 
     // Insert registration
