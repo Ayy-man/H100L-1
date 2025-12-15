@@ -155,11 +155,13 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
   useEffect(() => {
     if (formData.dateOfBirth) {
       const calculated = calculateCategory(formData.dateOfBirth);
-      setAutoCategory(calculated);
-      // Only auto-set if category hasn't been manually selected
-      if (!formData.category) {
+      // Update category if:
+      // 1. No category selected yet, OR
+      // 2. Current category matches the previous auto-detected value (user hasn't manually changed it)
+      if (!formData.category || formData.category === autoCategory) {
         setFormData(prev => ({ ...prev, category: calculated }));
       }
+      setAutoCategory(calculated);
     }
   }, [formData.dateOfBirth]);
 
