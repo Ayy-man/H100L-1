@@ -1271,7 +1271,26 @@ VITE_STRIPE_PRICE_PRIVATE_SESSION=price_xxx
 
 ## Recent Changes (December 15, 2025)
 
-### Latest Updates (Session 2)
+### Latest Updates (Session 3 - Time Slot Filtering)
+1. **Time Slot Filtering by Age Category** - Major fix for check-availability API:
+   - M7/M9/M11 only see 4:30 PM slot for group training
+   - M13/M13 Elite only see 5:45 PM slot
+   - M15/M15 Elite only see 7:00 PM slot
+   - M18/Junior only see 8:15 PM slot
+   - Sunday Ice: M7-M11 → 7:30 AM, M13-M15 → 8:30 AM, M18/Junior not eligible
+   - Private/Semi-Private: No restrictions (all times available)
+
+2. **Added M7 to PlayerCategory** - Fixed missing category:
+   - Updated `types.ts` to include 'M7'
+   - Updated `lib/timeSlots.ts` to include M7 in weekday slots
+   - M7 now properly appears in 4:30 PM slot
+
+3. **Documentation Updates**:
+   - `CREDIT_SYSTEM_TODO.md` - Complete time slot tables for all session types
+   - `TODO.md` - Simplified to reflect current state
+   - `README.md` - Updated for credit system
+
+### Previous Updates (Session 2)
 1. **Admin Credit APIs - Module Not Found Fix** - Inlined Supabase client in 7 admin API files:
    - Root cause: `vercel.json` only bundles `api/_lib/**`, but admin APIs imported from `../../lib/supabase`
    - Fixed files: `credit-summary.ts`, `credit-history.ts`, `credit-search.ts`, `report-templates.ts`, `scheduled-reports.ts`, `reports/history.ts`, `admin-adjust-credits.ts`

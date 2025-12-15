@@ -1,17 +1,33 @@
 # SniperZone Hockey Training Registration System
 
-A comprehensive hockey training registration system with Stripe payments, Supabase backend, and shadcn/ui components.
+A comprehensive hockey training registration system with credit-based booking, Stripe payments, Supabase backend, and shadcn/ui components.
 
 ## Features
 
-- 🏒 Multi-step registration form with validation
-- 💳 Stripe payment integration with subscriptions
-- 📅 7-day group training scheduling
-- 👥 Capacity management for group and private sessions
-- 📊 Admin dashboard with analytics
-- 🌐 Bilingual support (English/French)
-- 📱 Mobile-responsive design
-- 🎨 Modern UI with shadcn/ui components
+- **Credit-Based Booking System**
+  - Buy credit packages ($45 single, $350 for 10, $500 for 20)
+  - 1 credit = 1 group training session
+  - Credits valid for 12 months
+  - Shared across all children in family
+
+- **Session Types**
+  - Group Training (credit-based, Mon-Sat)
+  - Sunday Ice Practice ($50 direct pay)
+  - Semi-Private Training ($69 direct pay, 2-3 players)
+  - Private Training ($89.99 direct pay, 1-on-1)
+
+- **Time Slots by Age Category**
+  - M7/M9/M11: 4:30 PM (weekday), 7:30 AM (Sunday)
+  - M13/M13 Elite: 5:45 PM (weekday), 8:30 AM (Sunday)
+  - M15/M15 Elite: 7:00 PM (weekday), 8:30 AM (Sunday)
+  - M18/Junior: 8:15 PM (weekday only)
+
+- **Additional Features**
+  - Multi-step registration form with validation
+  - Recurring weekly bookings
+  - Real-time slot availability
+  - Admin dashboard with analytics
+  - Mobile-responsive design
 
 ## Tech Stack
 
@@ -19,6 +35,7 @@ A comprehensive hockey training registration system with Stripe payments, Supaba
 - **Styling**: Tailwind CSS, shadcn/ui
 - **Backend**: Vercel Serverless Functions, Supabase
 - **Payments**: Stripe
+- **Auth**: Firebase Authentication
 - **Animations**: Framer Motion
 
 ## Development Setup
@@ -28,10 +45,11 @@ A comprehensive hockey training registration system with Stripe payments, Supaba
 - Node.js 18+ and npm
 - Supabase account and project
 - Stripe account (test mode for development)
+- Firebase project
 
 ### Installation
 
-1. **Clone the repository and install dependencies:**
+1. **Clone and install dependencies:**
 
 ```bash
 npm install
@@ -39,7 +57,7 @@ npm install
 
 2. **Set up environment variables:**
 
-Create a `.env` file in the root directory:
+Create a `.env` file:
 
 ```bash
 # Supabase
@@ -47,58 +65,51 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
+# Firebase
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_project_id
+
 # Stripe
 VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
-# Stripe Price IDs (create these in Stripe Dashboard)
-VITE_STRIPE_PRICE_GROUP_1X=price_xxx
-VITE_STRIPE_PRICE_GROUP_2X=price_xxx
-VITE_STRIPE_PRICE_PRIVATE_1X=price_xxx
-VITE_STRIPE_PRICE_PRIVATE_2X=price_xxx
-VITE_STRIPE_PRICE_SEMI_PRIVATE=price_xxx
-```
+# Credit Package Prices
+VITE_STRIPE_PRICE_CREDIT_SINGLE=price_xxx    # $45
+VITE_STRIPE_PRICE_CREDIT_10PACK=price_xxx    # $350
+VITE_STRIPE_PRICE_CREDIT_20PACK=price_xxx    # $500
 
-See `.env.example` for a complete template.
+# Session Prices
+VITE_STRIPE_PRICE_SUNDAY=price_xxx                    # $50
+VITE_STRIPE_PRICE_SEMI_PRIVATE_SESSION=price_xxx      # $69
+VITE_STRIPE_PRICE_PRIVATE_SESSION=price_xxx           # $89.99
+```
 
 3. **Set up Supabase database:**
 
-Run the SQL scripts in the `database/` directory:
+Run these SQL scripts in Supabase SQL Editor:
 
 ```bash
-# In Supabase SQL Editor, run these in order:
-database/capacity_setup.sql
-database/registrations_view.sql
-database/analytics_views.sql
-database/semi_private_groups.sql
-database/report_templates.sql
+database/credit_system_schema.sql      # Core tables
+database/credit_system_realtime.sql    # Realtime + RLS
 ```
-
-4. **Set up Supabase Storage:**
-
-Follow instructions in `SUPABASE_STORAGE_SETUP.md` to create the medical files bucket.
 
 ### Running the Development Server
 
-**Important**: This project uses Vercel serverless functions for API routes. To run the API routes locally, you must use:
+**Important**: Use Vercel CLI for API routes:
 
 ```bash
 npm run dev
 ```
 
-This runs `vercel dev`, which:
-- Automatically detects and runs your Vite dev server
-- Enables API routes at `/api/*`
-- Simulates the Vercel production environment
+This runs `vercel dev` which enables API routes at `/api/*`.
 
-**Alternative** (frontend only, no API routes):
+**Alternative** (frontend only):
 
 ```bash
 npm run dev:vite
 ```
-
-This runs the Vite dev server directly, but **API features like "Check Availability" won't work**.
 
 ### Building for Production
 
@@ -106,86 +117,58 @@ This runs the Vite dev server directly, but **API features like "Check Availabil
 npm run build
 ```
 
-### Preview Production Build
-
-```bash
-npm run preview
-```
-
 ## Project Structure
 
 ```
 ├── api/                      # Vercel serverless API functions
-│   ├── check-availability.ts # Capacity checking endpoint
-│   ├── create-subscription.ts# Stripe subscription creation
-│   └── stripe-webhook.ts     # Stripe webhook handler
+│   ├── purchase-credits.ts   # Buy credit packages
+│   ├── book-session.ts       # Book with credits
+│   ├── credit-balance.ts     # Get credit balance
+│   ├── purchase-session.ts   # Buy paid sessions
+│   ├── recurring-schedule.ts # Manage recurring bookings
+│   └── stripe-webhook.ts     # Handle Stripe webhooks
 ├── components/               # React components
-│   ├── form/                 # Form step components
-│   ├── ui/                   # shadcn/ui components
-│   └── ...                   # Other components
-├── lib/                      # Utilities and services
-│   ├── capacityManager.ts    # Capacity management logic
+│   ├── dashboard/            # Dashboard components
+│   │   ├── BookSessionModal.tsx
+│   │   ├── BuyCreditsModal.tsx
+│   │   └── ...
+│   ├── form/                 # Registration form steps
+│   └── ui/                   # shadcn/ui components
+├── lib/                      # Utilities
 │   ├── stripe.ts             # Stripe configuration
 │   ├── supabase.ts           # Supabase client
-│   └── ...                   # Other utilities
+│   └── timeSlots.ts          # Time slot definitions
 ├── database/                 # SQL setup scripts
-├── types.ts                  # TypeScript type definitions
-└── constants.tsx             # App constants and translations
+├── types/                    # TypeScript types
+│   └── credits.ts            # Credit system types
+└── types.ts                  # Core type definitions
 ```
 
-## Key Features
+## User Flows
 
-### Custom Dropdowns
+### New Parent Registration
+1. Sign up with email/password
+2. Add child(ren) from dashboard
+3. Buy credits
+4. Book sessions
 
-The app includes custom dropdown components to fix Windows white background issues with native select elements. See `components/form/CustomSelect.tsx`.
+### Booking a Session
+1. Click "Book" on child
+2. Select session type (Group/Sunday/Private/Semi-Private)
+3. Pick date - only eligible time slot shown
+4. Confirm (deducts credit or redirects to Stripe)
 
-### Capacity Management
-
-Real-time capacity checking for group and private training sessions with cross-program time slot blocking. See `lib/unifiedCapacityManager.ts`.
-
-### Payment Flow
-
-1. User completes registration form (Steps 1-4)
-2. Payment step (Step 5) with Stripe Elements
-3. Subscription created via `/api/create-subscription`
-4. Webhook updates payment status
-
-### Admin Dashboard
-
-Access at `/admin` with features:
-- Registration overview with filtering
-- Analytics and revenue charts
-- Semi-private player matching
-- Export capabilities (CSV, PDF, Excel)
-
-## Troubleshooting
-
-### "Could not connect to availability service"
-
-This error occurs when API routes aren't available. Make sure you're running:
-
-```bash
-npm run dev  # NOT npm run dev:vite
-```
-
-### Stripe not loading
-
-1. Check that `VITE_STRIPE_PUBLISHABLE_KEY` is set in `.env`
-2. Verify the key starts with `pk_test_` (test mode) or `pk_live_` (production)
-3. Restart the dev server after adding environment variables
-
-### Database errors
-
-1. Verify Supabase connection with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-2. Ensure all SQL scripts in `database/` have been run
-3. Check RLS policies in Supabase dashboard
+### Recurring Bookings
+1. Click "Set Up Recurring"
+2. Select child and day
+3. Time slot auto-assigned by age category
+4. 1 credit deducted weekly
 
 ## Documentation
 
-- `STRIPE_INTEGRATION_GAMEPLAN.md` - Complete Stripe setup guide
-- `SUPABASE_STORAGE_SETUP.md` - File storage configuration
-- `PLAYER_DOCUMENTS_FEATURES.md` - Document management features
-- `CODEBASE_REVIEW_COMPLETE.md` - Detailed codebase analysis
+- `CREDIT_SYSTEM_TODO.md` - Credit system details
+- `PIVOT_GAMEPLAN.md` - Implementation history
+- `TODO.md` - Current issues and improvements
 
 ## Contributing
 
