@@ -1,7 +1,19 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../lib/supabase';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+// Inline Supabase client - lib/supabase.ts is not bundled by Vercel
+let _getSupabaseAdmin(): ReturnType<typeof createClient> | null = null;
+const getSupabaseAdmin = () => {
+  if (!_getSupabaseAdmin()) {
+    _getSupabaseAdmin() = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _getSupabaseAdmin();
+};
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { method } = req;
 
   switch (method) {
@@ -15,11 +27,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+async function handleGet(req: VercelRequest, res: VercelResponse) {
   try {
     const { status } = req.query;
 
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from('scheduled_reports')
       .select(`
         *,
@@ -42,11 +54,11 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function handlePost(req: NextApiRequest, res: NextApiResponse) {
+async function handlePost(req: VercelRequest, res: VercelResponse) {
   try {
     const report = req.body;
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('scheduled_reports')
       .insert({
         ...report,

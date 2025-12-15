@@ -1,5 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from '../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Inline Supabase client - lib/supabase.ts is not bundled by Vercel
+let _getSupabaseAdmin(): ReturnType<typeof createClient> | null = null;
+const getSupabaseAdmin = () => {
+  if (!_getSupabaseAdmin()) {
+    _getSupabaseAdmin() = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _getSupabaseAdmin();
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -14,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Get credit purchases
-    const { data: purchases, error: purchaseError } = await supabaseAdmin
+    const { data: purchases, error: purchaseError } = await getSupabaseAdmin()
       .from('credit_purchases')
       .select('*')
       .eq('firebase_uid', firebase_uid)
@@ -25,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (purchaseError) throw purchaseError;
 
     // Get credit usage (session bookings with player info)
-    const { data: bookings, error: bookingError } = await supabaseAdmin
+    const { data: bookings, error: bookingError } = await getSupabaseAdmin()
       .from('session_bookings')
       .select(`
         id,
@@ -43,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (bookingError) throw bookingError;
 
     // Get credit adjustments
-    const { data: adjustments, error: adjustmentError } = await supabaseAdmin
+    const { data: adjustments, error: adjustmentError } = await getSupabaseAdmin()
       .from('credit_adjustments')
       .select('*')
       .eq('firebase_uid', firebase_uid)

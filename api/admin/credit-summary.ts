@@ -1,5 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from '../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Inline Supabase client - lib/supabase.ts is not bundled by Vercel
+let _getSupabaseAdmin(): ReturnType<typeof createClient> | null = null;
+const getSupabaseAdmin = () => {
+  if (!_getSupabaseAdmin()) {
+    _getSupabaseAdmin() = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _getSupabaseAdmin();
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -14,14 +26,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
     // 1. Total parents with credits
-    const { data: totalParents, error: totalParentsError } = await supabaseAdmin
+    const { data: totalParents, error: totalParentsError } = await getSupabaseAdmin()
       .from('parent_credits')
       .select('firebase_uid');
 
     if (totalParentsError) throw totalParentsError;
 
     // 2. Total credits in system
-    const { data: totalCreditsData, error: totalCreditsError } = await supabaseAdmin
+    const { data: totalCreditsData, error: totalCreditsError } = await getSupabaseAdmin()
       .from('parent_credits')
       .select('total_credits');
 
@@ -30,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const totalCredits = totalCreditsData?.reduce((sum, pc) => sum + pc.total_credits, 0) || 0;
 
     // 3. Expiring credits
-    const { data: expiringCredits, error: expiringError } = await supabaseAdmin
+    const { data: expiringCredits, error: expiringError } = await getSupabaseAdmin()
       .from('credit_purchases')
       .select('credits_remaining, expires_at, firebase_uid')
       .gt('credits_remaining', 0);
@@ -49,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // 4. Total revenue from credit purchases
-    const { data: revenueData, error: revenueError } = await supabaseAdmin
+    const { data: revenueData, error: revenueError } = await getSupabaseAdmin()
       .from('credit_purchases')
       .select('price_paid, created_at');
 
@@ -70,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const { data: usageData, error: usageError } = await supabaseAdmin
+    const { data: usageData, error: usageError } = await getSupabaseAdmin()
       .from('session_bookings')
       .select('credits_used, created_at')
       .eq('status', 'confirmed')
@@ -88,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     firstDayOfMonth.setDate(1);
     firstDayOfMonth.setHours(0, 0, 0, 0);
 
-    const { data: monthlyUsageData, error: monthlyUsageError } = await supabaseAdmin
+    const { data: monthlyUsageData, error: monthlyUsageError } = await getSupabaseAdmin()
       .from('session_bookings')
       .select('credits_used')
       .eq('status', 'confirmed')
@@ -99,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const creditsUsedThisMonth = monthlyUsageData?.reduce((sum, b) => sum + (b.credits_used || 0), 0) || 0;
 
     // 9. Package distribution
-    const { data: packageData, error: packageError } = await supabaseAdmin
+    const { data: packageData, error: packageError } = await getSupabaseAdmin()
       .from('credit_purchases')
       .select('package_type, credits_purchased')
       .eq('status', 'completed');
@@ -113,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }, {} as Record<string, number>);
 
     // 10. Recent activity (last 10 adjustments)
-    const { data: recentActivity, error: activityError } = await supabaseAdmin
+    const { data: recentActivity, error: activityError } = await getSupabaseAdmin()
       .from('credit_adjustments')
       .select('*')
       .order('created_at', { ascending: false })
@@ -126,7 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-    const { data: dailyRevenueData, error: dailyRevenueError } = await supabaseAdmin
+    const { data: dailyRevenueData, error: dailyRevenueError } = await getSupabaseAdmin()
       .from('credit_purchases')
       .select('price_paid, created_at')
       .gte('created_at', thirtyDaysAgo.toISOString())

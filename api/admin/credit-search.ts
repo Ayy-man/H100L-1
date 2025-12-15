@@ -1,5 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from '../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Inline Supabase client - lib/supabase.ts is not bundled by Vercel
+let _getSupabaseAdmin(): ReturnType<typeof createClient> | null = null;
+const getSupabaseAdmin = () => {
+  if (!_getSupabaseAdmin()) {
+    _getSupabaseAdmin() = createClient(
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _getSupabaseAdmin();
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -17,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Search registrations by parent email or player name
     // (parent_email is stored in registrations, not parent_credits)
-    const { data: registrationData, error: registrationError } = await supabaseAdmin
+    const { data: registrationData, error: registrationError } = await getSupabaseAdmin()
       .from('registrations')
       .select(`
         id,
@@ -48,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         userMap.get(uid).children.push(player);
       } else {
         // Get parent credits for this user
-        const { data: credits } = await supabaseAdmin
+        const { data: credits } = await getSupabaseAdmin()
           .from('parent_credits')
           .select('total_credits')
           .eq('firebase_uid', uid)
@@ -67,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const users = await Promise.all(
       Array.from(userMap.values()).map(async (user) => {
         // Get total credits purchased
-        const { data: purchases } = await supabaseAdmin
+        const { data: purchases } = await getSupabaseAdmin()
           .from('credit_purchases')
           .select('credits_purchased, created_at')
           .eq('firebase_uid', user.firebase_uid)
@@ -79,14 +91,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           : null;
 
         // Get last activity (booking or adjustment)
-        const { data: lastBooking } = await supabaseAdmin
+        const { data: lastBooking } = await getSupabaseAdmin()
           .from('session_bookings')
           .select('created_at')
           .eq('firebase_uid', user.firebase_uid)
           .order('created_at', { ascending: false })
           .limit(1);
 
-        const { data: lastAdjustment } = await supabaseAdmin
+        const { data: lastAdjustment } = await getSupabaseAdmin()
           .from('credit_adjustments')
           .select('created_at')
           .eq('firebase_uid', user.firebase_uid)
