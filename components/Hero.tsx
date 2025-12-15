@@ -8,7 +8,6 @@ interface HeroProps {
     subtitle: string;
     cta: string;
   };
-  onRegisterClick: () => void;
 }
 
 const containerVariants: Variants = {
@@ -33,7 +32,7 @@ const itemVariants: Variants = {
   },
 };
 
-const Hero: React.FC<HeroProps> = ({ content, onRegisterClick }) => {
+const Hero: React.FC<HeroProps> = ({ content }) => {
   return (
     <section className="relative h-screen flex items-center justify-center text-center px-6 pt-16">
       <div
@@ -61,12 +60,12 @@ const Hero: React.FC<HeroProps> = ({ content, onRegisterClick }) => {
           {content.subtitle}
         </motion.p>
         <motion.div variants={itemVariants}>
-          <button
-            onClick={onRegisterClick}
+          <a
+            href="/signup"
             className="mt-8 inline-block bg-[#9BD4FF] text-black font-bold py-4 px-10 rounded-lg text-lg uppercase tracking-wider transition-all duration-300 hover:shadow-[0_0_15px_rgba(155,212,255,0.8),0_0_25px_rgba(155,212,255,0.5)] hover:scale-105"
           >
             {content.cta}
-          </button>
+          </a>
         </motion.div>
       </motion.div>
     </section>

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { UserPlus, Loader2, Calendar, User, Phone, Heart, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { UserPlus, Loader2, Calendar, User, Phone, Heart, Shield, ChevronLeft, ChevronRight, FileUp, X, FileText } from 'lucide-react';
+import { uploadMedicalFiles, validateFile } from '@/lib/storageService';
 import {
   Dialog,
   DialogContent,
@@ -144,6 +145,12 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
   const [formData, setFormData] = useState<ChildFormData>(initialFormData);
   const [autoCategory, setAutoCategory] = useState('');
 
+  // Medical document file state
+  const [actionPlanFile, setActionPlanFile] = useState<File | null>(null);
+  const [medicalReportFile, setMedicalReportFile] = useState<File | null>(null);
+  const actionPlanInputRef = useRef<HTMLInputElement>(null);
+  const medicalReportInputRef = useRef<HTMLInputElement>(null);
+
   // Auto-calculate category when DOB changes
   useEffect(() => {
     if (formData.dateOfBirth) {
@@ -163,8 +170,37 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
       setAutoCategory('');
       setError('');
       setStep(1);
+      setActionPlanFile(null);
+      setMedicalReportFile(null);
     }
   }, [open]);
+
+  // File input handlers
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setFile: (file: File | null) => void
+  ) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      const validation = validateFile(file);
+      if (!validation.valid) {
+        setError(validation.error || 'Invalid file');
+        return;
+      }
+    }
+    setError('');
+    setFile(file);
+  };
+
+  const removeFile = (
+    setFile: (file: File | null) => void,
+    inputRef: React.RefObject<HTMLInputElement | null>
+  ) => {
+    setFile(null);
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  };
 
   const handleInputChange = (field: keyof ChildFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -239,6 +275,7 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
     setLoading(true);
 
     try {
+      // First, create the child to get the registration ID
       const response = await fetch('/api/add-child', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -275,6 +312,38 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to add child');
+      }
+
+      // Upload medical documents if any
+      if (actionPlanFile || medicalReportFile) {
+        const registrationId = data.registration?.id || data.id || `child_${user.uid}_${Date.now()}`;
+
+        try {
+          const uploadedFiles = await uploadMedicalFiles(
+            {
+              actionPlan: actionPlanFile,
+              medicalReport: medicalReportFile,
+            },
+            registrationId
+          );
+
+          // Update the registration with file URLs if needed
+          if (uploadedFiles.actionPlan || uploadedFiles.medicalReport) {
+            await fetch('/api/add-child', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                registration_id: registrationId,
+                action_plan_url: uploadedFiles.actionPlan?.url,
+                medical_report_url: uploadedFiles.medicalReport?.url,
+              }),
+            });
+          }
+        } catch (uploadError: any) {
+          console.warn('Medical document upload failed:', uploadError);
+          // Don't fail the whole submission if upload fails
+          toast.warning('Child added but medical documents failed to upload. You can add them later.');
+        }
       }
 
       toast.success(`${formData.playerName} has been added!`);
@@ -629,6 +698,77 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
                     rows={2}
                   />
                 )}
+
+                {/* Medical Document Uploads */}
+                <div className="space-y-4 pt-4 border-t border-border/50">
+                  <h5 className="text-sm font-medium flex items-center gap-2">
+                    <FileUp className="h-4 w-4" />
+                    Medical Documents (Optional)
+                  </h5>
+                  <p className="text-xs text-muted-foreground">
+                    Upload medical documents such as action plans or medical reports. PDF files only, max 5MB each.
+                  </p>
+
+                  {/* Action Plan Upload */}
+                  <div className="space-y-2">
+                    <Label htmlFor="actionPlan">Action Plan</Label>
+                    {actionPlanFile ? (
+                      <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="text-sm flex-1 truncate">{actionPlanFile.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(setActionPlanFile, actionPlanInputRef)}
+                          disabled={loading}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Input
+                        ref={actionPlanInputRef}
+                        id="actionPlan"
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={(e) => handleFileChange(e, setActionPlanFile)}
+                        disabled={loading}
+                        className="cursor-pointer"
+                      />
+                    )}
+                  </div>
+
+                  {/* Medical Report Upload */}
+                  <div className="space-y-2">
+                    <Label htmlFor="medicalReport">Medical Report</Label>
+                    {medicalReportFile ? (
+                      <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="text-sm flex-1 truncate">{medicalReportFile.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(setMedicalReportFile, medicalReportInputRef)}
+                          disabled={loading}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Input
+                        ref={medicalReportInputRef}
+                        id="medicalReport"
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={(e) => handleFileChange(e, setMedicalReportFile)}
+                        disabled={loading}
+                        className="cursor-pointer"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Consents Section */}

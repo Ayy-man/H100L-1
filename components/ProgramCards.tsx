@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Language, ProgramType } from '../types';
+import { Language } from '../types';
+import type { ProgramType } from '../types';
 
 interface ProgramCardsProps {
   language: Language;
-  onProgramSelect: (programType: ProgramType) => void;
 }
 
 interface ProgramCard {
@@ -134,7 +134,7 @@ const CheckIcon = () => (
   </svg>
 );
 
-const ProgramCards: React.FC<ProgramCardsProps> = ({ language, onProgramSelect }) => {
+const ProgramCards: React.FC<ProgramCardsProps> = ({ language }) => {
   const lang = language === Language.EN ? 'en' : 'fr';
 
   return (
@@ -215,21 +215,25 @@ const ProgramCards: React.FC<ProgramCardsProps> = ({ language, onProgramSelect }
                 </ul>
               </div>
 
-              <button
-                onClick={() => !program.comingSoon && onProgramSelect(program.programType)}
-                disabled={program.comingSoon}
-                className={`w-full font-bold py-3 px-6 rounded-lg text-sm uppercase tracking-wider transition-all duration-300 ${
-                  program.comingSoon
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                    : program.popular
-                    ? 'bg-[#9BD4FF] text-black hover:shadow-[0_0_15px_rgba(155,212,255,0.8)]'
-                    : 'bg-white/10 text-white hover:bg-[#9BD4FF] hover:text-black'
-                }`}
-              >
-                {program.comingSoon
-                  ? (lang === 'en' ? 'Coming Soon' : 'Bientôt')
-                  : (lang === 'en' ? 'Select Program' : 'Choisir Programme')}
-              </button>
+              {program.comingSoon ? (
+                <button
+                  disabled
+                  className="w-full font-bold py-3 px-6 rounded-lg text-sm uppercase tracking-wider bg-gray-600 text-gray-400 cursor-not-allowed"
+                >
+                  {lang === 'en' ? 'Coming Soon' : 'Bientôt'}
+                </button>
+              ) : (
+                <a
+                  href="/signup"
+                  className={`block w-full text-center font-bold py-3 px-6 rounded-lg text-sm uppercase tracking-wider transition-all duration-300 ${
+                    program.popular
+                      ? 'bg-[#9BD4FF] text-black hover:shadow-[0_0_15px_rgba(155,212,255,0.8)]'
+                      : 'bg-white/10 text-white hover:bg-[#9BD4FF] hover:text-black'
+                  }`}
+                >
+                  {lang === 'en' ? 'Get Started' : 'Commencer'}
+                </a>
+              )}
             </motion.div>
           ))}
         </div>
