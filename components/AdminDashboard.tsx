@@ -13,6 +13,7 @@ import ScheduleEditModal from './ScheduleEditModal';
 import ConfirmPaymentButton from './ConfirmPaymentButton';
 import { NotificationBell } from './notifications';
 import AdminCreditDashboard from './admin/AdminCreditDashboard';
+import AdminBookingsPanel from './admin/AdminBookingsPanel';
 import { MedicalFiles, WeekDay, Language } from '../types';
 
 interface Registration {
@@ -1668,10 +1669,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* BOOKINGS TAB */}
         {dashboardTab === 'bookings' && (
-          <div className="text-center py-20">
-            <h2 className="text-2xl font-bold mb-4">Bookings Management</h2>
-            <p className="text-gray-600">Coming soon - View and manage all session bookings</p>
-          </div>
+          <AdminBookingsPanel />
         )}
 
         {/* SETTINGS TAB */}
