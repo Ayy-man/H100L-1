@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Repeat,
   User,
   Calendar,
   Clock,
   Loader2,
+  Info,
 } from 'lucide-react';
 import {
   Dialog,
@@ -25,6 +26,8 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { toast } from 'sonner';
 import type { ChildProfile } from '@/contexts/ProfileContext';
 import type { DayOfWeek } from '@/types/credits';
+import { findSlotForCategory } from '@/lib/timeSlots';
+import type { PlayerCategory } from '@/types';
 
 interface SetupRecurringModalProps {
   open: boolean;
@@ -33,7 +36,7 @@ interface SetupRecurringModalProps {
   onSuccess: () => void;
 }
 
-// Days available for group training (no Sundays - that's separate)
+// Days available for group training (7 days a week)
 const AVAILABLE_DAYS: { value: DayOfWeek; label: string }[] = [
   { value: 'monday', label: 'Monday' },
   { value: 'tuesday', label: 'Tuesday' },
@@ -41,14 +44,7 @@ const AVAILABLE_DAYS: { value: DayOfWeek; label: string }[] = [
   { value: 'thursday', label: 'Thursday' },
   { value: 'friday', label: 'Friday' },
   { value: 'saturday', label: 'Saturday' },
-];
-
-// Time slots for group training
-const TIME_SLOTS = [
-  '5:00 PM',
-  '5:45 PM',
-  '6:30 PM',
-  '7:15 PM',
+  { value: 'sunday', label: 'Sunday' },
 ];
 
 /**
@@ -69,21 +65,29 @@ const SetupRecurringModal: React.FC<SetupRecurringModalProps> = ({
   const { user } = useProfile();
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [selectedDay, setSelectedDay] = useState<DayOfWeek | ''>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-determine time slot based on selected child's category
+  const selectedChildData = useMemo(() => {
+    return children.find(c => c.registrationId === selectedChild);
+  }, [children, selectedChild]);
+
+  const assignedTimeSlot = useMemo(() => {
+    if (!selectedChildData?.playerCategory) return null;
+    return findSlotForCategory(selectedChildData.playerCategory as PlayerCategory);
+  }, [selectedChildData]);
 
   // Reset form when modal closes
   const handleClose = () => {
     setSelectedChild('');
     setSelectedDay('');
-    setSelectedTime('');
     onClose();
   };
 
   // Create recurring schedule
   const handleSubmit = async () => {
-    if (!user || !selectedChild || !selectedDay || !selectedTime) {
-      toast.error('Please complete all selections');
+    if (!user || !selectedChild || !selectedDay || !assignedTimeSlot) {
+      toast.error('Please select a player and day');
       return;
     }
 
@@ -98,7 +102,7 @@ const SetupRecurringModal: React.FC<SetupRecurringModalProps> = ({
           registration_id: selectedChild,
           session_type: 'group',
           day_of_week: selectedDay,
-          time_slot: selectedTime,
+          time_slot: assignedTimeSlot.time,
         }),
       });
 
@@ -178,34 +182,40 @@ const SetupRecurringModal: React.FC<SetupRecurringModalProps> = ({
             </Select>
           </div>
 
-          {/* Time Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              Select Time
-            </label>
-            <Select value={selectedTime} onValueChange={setSelectedTime}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a time" />
-              </SelectTrigger>
-              <SelectContent>
-                {TIME_SLOTS.map((time) => (
-                  <SelectItem key={time} value={time}>
-                    {time}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Auto-assigned Time Slot */}
+          {selectedChild && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                Assigned Time Slot
+              </label>
+              {assignedTimeSlot ? (
+                <div className="p-3 rounded-lg bg-muted border flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{assignedTimeSlot.time}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    Based on {selectedChildData?.playerCategory} category
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-2">
+                  <Info className="h-4 w-4 text-yellow-500" />
+                  <span className="text-sm text-yellow-600">
+                    Unable to determine time slot for this player's category
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Summary */}
-          {selectedChild && selectedDay && selectedTime && (
+          {selectedChild && selectedDay && assignedTimeSlot && (
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
               <p className="text-sm font-medium text-primary">Summary</p>
               <p className="text-sm text-muted-foreground mt-1">
                 <strong>{getChildName(selectedChild)}</strong> will be automatically booked for
                 group training every <strong>{AVAILABLE_DAYS.find(d => d.value === selectedDay)?.label}</strong> at{' '}
-                <strong>{selectedTime}</strong>.
+                <strong>{assignedTimeSlot.time}</strong>.
               </p>
               <p className="text-xs text-muted-foreground mt-2">
                 1 credit will be deducted weekly. You can pause or cancel anytime.
@@ -228,7 +238,7 @@ const SetupRecurringModal: React.FC<SetupRecurringModalProps> = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!selectedChild || !selectedDay || !selectedTime || loading}
+            disabled={!selectedChild || !selectedDay || !assignedTimeSlot || loading}
             className="flex-1"
           >
             {loading ? (

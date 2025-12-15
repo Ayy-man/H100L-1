@@ -37,8 +37,11 @@ import { formatPrice, getSessionPrice } from '@/lib/stripe';
 interface BookSessionModalProps {
   open: boolean;
   onClose: () => void;
-  child: ChildProfile | null;
+  onSuccess?: () => void;
+  child?: ChildProfile | null;
+  children?: ChildProfile[];
   allChildren?: ChildProfile[];
+  preSelectedDate?: Date | null;
 }
 
 interface TimeSlotOption {
@@ -61,8 +64,11 @@ interface TimeSlotOption {
 const BookSessionModal: React.FC<BookSessionModalProps> = ({
   open,
   onClose,
+  onSuccess,
   child,
+  children = [],
   allChildren = [],
+  preSelectedDate,
 }) => {
   const { user } = useProfile();
 
@@ -83,8 +89,17 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Derive children list
-  const childrenList = allChildren.length > 0 ? allChildren : (child ? [child] : []);
+  // Derive children list (support both 'children' and 'allChildren' props)
+  const childrenList = children.length > 0 ? children : (allChildren.length > 0 ? allChildren : (child ? [child] : []));
+
+  // Pre-select date if provided
+  useEffect(() => {
+    if (preSelectedDate && open) {
+      const dateStr = `${preSelectedDate.getFullYear()}-${String(preSelectedDate.getMonth() + 1).padStart(2, '0')}-${String(preSelectedDate.getDate()).padStart(2, '0')}`;
+      setSelectedDate(dateStr);
+      setCurrentMonth(preSelectedDate);
+    }
+  }, [preSelectedDate, open]);
 
   // Initialize selected child
   useEffect(() => {
@@ -167,6 +182,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
         }
 
         toast.success('Session booked successfully!');
+        onSuccess?.();
         onClose();
       } else {
         // Paid session - redirect to Stripe
