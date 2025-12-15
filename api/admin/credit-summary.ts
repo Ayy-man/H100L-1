@@ -1,7 +1,7 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabaseAdmin } from '../../lib/supabase';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -51,11 +51,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 4. Total revenue from credit purchases
     const { data: revenueData, error: revenueError } = await supabaseAdmin
       .from('credit_purchases')
-      .select('amount, created_at');
+      .select('price_paid, created_at');
 
     if (revenueError) throw revenueError;
 
-    const totalRevenue = revenueData?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+    const totalRevenue = revenueData?.reduce((sum, p) => sum + (p.price_paid || 0), 0) || 0;
 
     // 5. Monthly revenue (current month)
     const currentMonth = new Date();
@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const monthlyRevenue = revenueData?.filter(p =>
       new Date(p.created_at) >= currentMonth
-    ).reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+    ).reduce((sum, p) => sum + (p.price_paid || 0), 0) || 0;
 
     // 6. Credits used today
     const today = new Date();
@@ -101,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 9. Package distribution
     const { data: packageData, error: packageError } = await supabaseAdmin
       .from('credit_purchases')
-      .select('package_type, credits')
+      .select('package_type, credits_purchased')
       .eq('status', 'completed');
 
     if (packageError) throw packageError;
@@ -128,7 +128,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: dailyRevenueData, error: dailyRevenueError } = await supabaseAdmin
       .from('credit_purchases')
-      .select('amount, created_at')
+      .select('price_paid, created_at')
       .gte('created_at', thirtyDaysAgo.toISOString())
       .eq('status', 'completed');
 
@@ -136,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const dailyRevenue = dailyRevenueData?.reduce((acc, p) => {
       const date = new Date(p.created_at).toISOString().split('T')[0];
-      acc[date] = (acc[date] || 0) + (p.amount || 0);
+      acc[date] = (acc[date] || 0) + (p.price_paid || 0);
       return acc;
     }, {} as Record<string, number>);
 

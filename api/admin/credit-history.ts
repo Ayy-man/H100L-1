@@ -1,7 +1,7 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabaseAdmin } from '../../lib/supabase';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (purchaseError) throw purchaseError;
 
-    // Get credit usage (session bookings)
+    // Get credit usage (session bookings with player info)
     const { data: bookings, error: bookingError } = await supabaseAdmin
       .from('session_bookings')
       .select(`
@@ -32,10 +32,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         session_type,
         credits_used,
         created_at,
-        player_name
+        registration_id,
+        registrations!inner(form_data)
       `)
       .eq('firebase_uid', firebase_uid)
-      .eq('status', 'confirmed')
+      .eq('status', 'booked')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -56,27 +57,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...purchases.map(p => ({
         id: `purchase-${p.id}`,
         type: 'purchase' as const,
-        amount: p.credits,
+        amount: p.credits_purchased,
         description: `Purchased ${p.package_type || 'credit'} package`,
         created_at: p.created_at,
         player_name: null,
         admin_email: null,
         reason: null
       })),
-      ...bookings.map(b => ({
+      ...bookings.map((b: any) => ({
         id: `booking-${b.id}`,
         type: 'usage' as const,
         amount: b.credits_used || 0,
         description: `Booked ${b.session_type} session`,
         created_at: b.created_at,
-        player_name: b.player_name,
+        player_name: b.registrations?.form_data?.playerFullName || null,
         admin_email: null,
         reason: null
       })),
       ...adjustments.map(a => ({
         id: `adjustment-${a.id}`,
         type: 'adjustment' as const,
-        amount: a.adjustment_amount,
+        amount: a.adjustment,
         description: 'Admin adjustment',
         created_at: a.created_at,
         player_name: null,

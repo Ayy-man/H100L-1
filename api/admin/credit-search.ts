@@ -1,7 +1,7 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabaseAdmin } from '../../lib/supabase';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -15,52 +15,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const searchTerm = q.trim().toLowerCase();
 
-    // Search parents by email
-    const { data: parentData, error: parentError } = await supabaseAdmin
-      .from('parent_credits')
-      .select(`
-        firebase_uid,
-        parent_email,
-        credits_remaining
-      `)
-      .ilike('parent_email', `%${searchTerm}%`)
-      .limit(10);
-
-    if (parentError) throw parentError;
-
-    // Search by player name
+    // Search registrations by parent email or player name
+    // (parent_email is stored in registrations, not parent_credits)
     const { data: registrationData, error: registrationError } = await supabaseAdmin
       .from('registrations')
       .select(`
+        id,
         form_data,
-        firebase_uid
+        firebase_uid,
+        parent_email
       `)
-      .ilike('form_data->>player_name', `%${searchTerm}%`)
-      .limit(20);
+      .or(`parent_email.ilike.%${searchTerm}%,form_data->>'playerFullName'.ilike.%${searchTerm}%`)
+      .not('firebase_uid', 'is', null)
+      .limit(30);
 
     if (registrationError) throw registrationError;
 
-    // Combine and deduplicate results
+    // Group by firebase_uid to get unique users
     const userMap = new Map<string, any>();
 
-    // Add parent email matches
-    parentData?.forEach(parent => {
-      userMap.set(parent.firebase_uid, {
-        firebase_uid: parent.firebase_uid,
-        parent_email: parent.parent_email,
-        credits_remaining: parent.credits_remaining,
-        children: []
-      });
-    });
-
-    // Add player name matches and get additional details
     for (const registration of registrationData || []) {
-      const formData = registration.form_data;
+      const formData = registration.form_data as any;
       const uid = registration.firebase_uid;
+      if (!uid) continue;
 
       const player = {
-        name: formData.player_name,
-        category: formData.player_category
+        name: formData?.playerFullName || 'Unknown',
+        category: formData?.playerCategory || 'Unknown'
       };
 
       if (userMap.has(uid)) {
@@ -69,14 +50,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Get parent credits for this user
         const { data: credits } = await supabaseAdmin
           .from('parent_credits')
-          .select('parent_email, credits_remaining')
+          .select('total_credits')
           .eq('firebase_uid', uid)
           .single();
 
         userMap.set(uid, {
           firebase_uid: uid,
-          parent_email: credits?.parent_email || 'Unknown',
-          credits_remaining: credits?.credits_remaining || 0,
+          parent_email: registration.parent_email || formData?.parentEmail || 'Unknown',
+          total_credits: credits?.total_credits || 0,
           children: [player]
         });
       }
@@ -88,12 +69,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Get total credits purchased
         const { data: purchases } = await supabaseAdmin
           .from('credit_purchases')
-          .select('credits, created_at')
+          .select('credits_purchased, created_at')
           .eq('firebase_uid', user.firebase_uid)
           .eq('status', 'completed');
 
-        const totalCredits = purchases?.reduce((sum, p) => sum + p.credits, 0) || 0;
-        const lastPurchase = purchases?.length > 0
+        const totalPurchased = purchases?.reduce((sum, p) => sum + (p.credits_purchased || 0), 0) || 0;
+        const lastPurchase = purchases?.length
           ? purchases.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at
           : null;
 
@@ -115,11 +96,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const lastActivity = [
           lastBooking?.[0]?.created_at,
           lastAdjustment?.[0]?.created_at
-        ].filter(Boolean).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+        ].filter(Boolean).sort((a, b) => new Date(b as string).getTime() - new Date(a as string).getTime())[0];
 
         return {
           ...user,
-          total_credits: totalCredits,
+          total_purchased: totalPurchased,
           total_purchases: purchases?.length || 0,
           last_purchase: lastPurchase,
           last_activity: lastActivity
@@ -129,8 +110,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Sort by relevance (exact email match first, then by last activity)
     users.sort((a, b) => {
-      const aExactMatch = a.parent_email.toLowerCase() === searchTerm;
-      const bExactMatch = b.parent_email.toLowerCase() === searchTerm;
+      const aExactMatch = a.parent_email?.toLowerCase() === searchTerm;
+      const bExactMatch = b.parent_email?.toLowerCase() === searchTerm;
 
       if (aExactMatch && !bExactMatch) return -1;
       if (!aExactMatch && bExactMatch) return 1;
