@@ -305,6 +305,34 @@ async function handleCreditPurchase(
       },
     });
 
+  // Get parent email for admin notification
+  const { data: parentReg } = await supabase
+    .from('registrations')
+    .select('parent_email')
+    .eq('firebase_uid', firebase_uid)
+    .limit(1)
+    .single();
+
+  // Notify admins about credit purchase
+  await supabase
+    .from('notifications')
+    .insert({
+      user_id: 'admin',
+      user_type: 'admin',
+      type: 'payment_received',
+      title: 'Credits Purchased',
+      message: `${parentReg?.parent_email || 'A parent'} purchased ${creditsNum} credits (${CREDIT_PRICING[package_type].priceFormatted})`,
+      priority: 'normal',
+      data: {
+        firebase_uid,
+        credits: creditsNum,
+        package_type,
+        price_paid: pricePaid,
+        parent_email: parentReg?.parent_email,
+      },
+      action_url: '/admin',
+    });
+
   // Send n8n webhooks for GHL (fire and forget) - dynamic import to prevent function crash
   try {
     const { sendCreditsPurchased, sendContactUpdated, createMinimalContact } = await import('./_lib/n8nWebhook');

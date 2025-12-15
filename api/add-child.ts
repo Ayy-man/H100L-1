@@ -230,6 +230,29 @@ export default async function handler(
         });
     }
 
+    // Notify admins about new child registration
+    try {
+      await supabase.from('notifications').insert({
+        user_id: 'admin',
+        user_type: 'admin',
+        type: 'system',
+        title: 'New Child Added',
+        message: `${player_name} (${player_category}) was added by ${parent_email || 'a parent'}`,
+        priority: 'normal',
+        data: {
+          registration_id: registration.id,
+          player_name: player_name,
+          player_category: player_category,
+          parent_email: parent_email,
+          firebase_uid: firebase_uid,
+        },
+        action_url: '/admin',
+      });
+    } catch (notifyErr) {
+      console.warn('Failed to create admin notification:', notifyErr);
+      // Don't fail the request if notification fails
+    }
+
     return res.status(200).json({
       success: true,
       registration_id: registration.id,

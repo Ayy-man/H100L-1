@@ -240,6 +240,41 @@ async function handlePost(
       });
     }
 
+    // Get player name for notification
+    const { data: regData } = await supabase
+      .from('registrations')
+      .select('form_data, parent_email')
+      .eq('id', registration_id)
+      .single();
+
+    const playerName = regData?.form_data?.playerFullName || 'A player';
+    const playerCategory = regData?.form_data?.playerCategory || '';
+
+    // Notify admins about new recurring schedule
+    try {
+      await supabase.from('notifications').insert({
+        user_id: 'admin',
+        user_type: 'admin',
+        type: 'system',
+        title: 'New Recurring Schedule',
+        message: `${playerName} (${playerCategory}) set up recurring ${session_type} on ${day_of_week}s at ${time_slot}`,
+        priority: 'low',
+        data: {
+          schedule_id: schedule.id,
+          registration_id,
+          player_name: playerName,
+          player_category: playerCategory,
+          session_type,
+          day_of_week,
+          time_slot,
+          parent_email: regData?.parent_email,
+        },
+        action_url: '/admin',
+      });
+    } catch (notifyErr) {
+      console.warn('Failed to create admin notification:', notifyErr);
+    }
+
     return res.status(201).json({
       schedule,
       message: `Recurring ${day_of_week} ${time_slot} schedule created. Auto-booking will start from ${nextBookingDate}.`,
