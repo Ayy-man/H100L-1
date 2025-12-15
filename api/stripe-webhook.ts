@@ -2,13 +2,52 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { Readable } from 'stream';
-import type {
-  CreditPurchaseMetadata,
-  SessionPurchaseMetadata,
-  CreditPackageType,
-  SessionType,
-} from '../types/credits';
-import { CREDIT_PRICING } from '../types/credits';
+
+// Inline types (Vercel bundling doesn't resolve ../types/credits)
+type CreditPackageType = 'single' | '10_pack' | '20_pack';
+type SessionType = 'group' | 'sunday' | 'private' | 'semi_private';
+
+interface CreditPurchaseMetadata {
+  type: 'credit_purchase';
+  firebase_uid: string;
+  package_type: CreditPackageType;
+  credits: string; // Stripe metadata must be strings
+}
+
+interface SessionPurchaseMetadata {
+  type: 'session_purchase';
+  firebase_uid: string;
+  registration_id: string;
+  session_type: SessionType;
+  session_date: string;
+  time_slot: string;
+}
+
+const CREDIT_PRICING = {
+  single: {
+    credits: 1,
+    price: 4500, // $45.00 CAD in cents
+    priceFormatted: '$45.00',
+    description: 'Single Session',
+    validityMonths: 12,
+  },
+  '10_pack': {
+    credits: 10,
+    price: 35000, // $350.00 CAD in cents
+    priceFormatted: '$350.00',
+    perCreditPrice: 3500, // $35.00 per credit
+    description: '10-Session Package',
+    validityMonths: 12,
+  },
+  '20_pack': {
+    credits: 20,
+    price: 50000, // $500.00 CAD in cents
+    priceFormatted: '$500.00',
+    perCreditPrice: 2500, // $25.00 per credit
+    description: '20-Session Package',
+    validityMonths: 12,
+  },
+} as const;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',

@@ -1,22 +1,40 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import type {
-  CreditBalanceResponse,
-  CreditPurchaseInfo,
-  CreditBalanceSummary,
-} from '../types/credits';
 
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline types (Vercel bundling doesn't resolve ../types/credits)
+type CreditPackageType = 'single' | '10_pack' | '20_pack';
+type CreditPurchaseStatus = 'active' | 'expired' | 'exhausted';
+
+interface CreditPurchaseInfo {
+  id: string;
+  package_type: CreditPackageType;
+  credits_remaining: number;
+  expires_at: string;
+  status: CreditPurchaseStatus;
+}
+
+interface CreditBalanceResponse {
+  total_credits: number;
+  purchases: CreditPurchaseInfo[];
+}
+
+interface CreditBalanceSummary {
+  total_credits: number;
+  expiring_soon: number;
+  next_expiry_date: string | null;
+}
+
+// Inline Supabase client for Vercel bundling
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
 
 export default async function handler(
   req: VercelRequest,

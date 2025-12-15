@@ -1,21 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
+// Inline types (Vercel bundling doesn't resolve ../types/credits)
+interface AdminAdjustCreditsRequest {
+  firebase_uid: string;
+  adjustment: number; // Positive to add, negative to subtract
+  reason: string;
+  admin_id: string;
+}
+
+interface AdminAdjustCreditsResponse {
+  success: boolean;
+  new_balance: number;
+  message: string;
+}
+
 // Inline Supabase client - lib/supabase.ts is not bundled by Vercel
-let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
-const getSupabaseAdmin = () => {
-  if (!_supabaseAdmin) {
-    _supabaseAdmin = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+function getSupabaseAdmin() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabaseAdmin;
-};
-import type {
-  AdminAdjustCreditsRequest,
-  AdminAdjustCreditsResponse,
-} from '../types/credits';
+
+  return createClient(url, key);
+}
 
 /**
  * Admin endpoint to manually adjust credits

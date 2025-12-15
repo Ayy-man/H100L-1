@@ -1,18 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { MAX_GROUP_CAPACITY } from '../types/credits';
 
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline constants (Vercel bundling doesn't resolve ../types/credits)
+const MAX_GROUP_CAPACITY = 6;
+
+// Inline Supabase client for Vercel bundling
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
 
 /**
  * CRON JOB: Process Recurring Schedules

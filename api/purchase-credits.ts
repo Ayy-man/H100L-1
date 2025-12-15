@@ -1,30 +1,75 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import type {
-  CreditPackageType,
-  PurchaseCreditsRequest,
-  PurchaseCreditsResponse,
-  CreditPurchaseMetadata,
-} from '../types/credits';
-import { isCreditPackageType, CREDIT_PRICING } from '../types/credits';
+
+// Inline types and constants (Vercel bundling doesn't resolve ../types/credits)
+type CreditPackageType = 'single' | '10_pack' | '20_pack';
+
+interface PurchaseCreditsRequest {
+  firebase_uid: string;
+  package_type: CreditPackageType;
+  success_url: string;
+  cancel_url: string;
+}
+
+interface PurchaseCreditsResponse {
+  checkout_url: string;
+  session_id: string;
+}
+
+interface CreditPurchaseMetadata {
+  type: 'credit_purchase';
+  firebase_uid: string;
+  package_type: CreditPackageType;
+  credits: string;
+}
+
+const CREDIT_PRICING = {
+  single: {
+    credits: 1,
+    price: 4500,
+    priceFormatted: '$45.00',
+    description: 'Single Session',
+    validityMonths: 12,
+  },
+  '10_pack': {
+    credits: 10,
+    price: 35000,
+    priceFormatted: '$350.00',
+    perCreditPrice: 3500,
+    description: '10-Session Package',
+    validityMonths: 12,
+  },
+  '20_pack': {
+    credits: 20,
+    price: 50000,
+    priceFormatted: '$500.00',
+    perCreditPrice: 2500,
+    description: '20-Session Package',
+    validityMonths: 12,
+  },
+} as const;
+
+function isCreditPackageType(value: string): value is CreditPackageType {
+  return ['single', '10_pack', '20_pack'].includes(value);
+}
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline Supabase client for Vercel bundling
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
 
 // Credit package price IDs (to be set in environment)
 const CREDIT_PRICE_IDS: Record<CreditPackageType, string> = {

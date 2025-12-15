@@ -1,11 +1,33 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import type {
-  PurchaseSessionRequest,
-  PurchaseSessionResponse,
-  SessionPurchaseMetadata,
-} from '../types/credits';
+
+// Inline types (Vercel bundling doesn't resolve ../types/credits)
+type SessionType = 'sunday' | 'private' | 'semi_private';
+
+interface PurchaseSessionRequest {
+  firebase_uid: string;
+  registration_id: string;
+  session_type: SessionType;
+  session_date: string;
+  time_slot: string;
+  success_url: string;
+  cancel_url: string;
+}
+
+interface PurchaseSessionResponse {
+  checkout_url: string;
+  session_id: string;
+}
+
+interface SessionPurchaseMetadata {
+  type: 'session_purchase';
+  firebase_uid: string;
+  registration_id: string;
+  session_type: SessionType;
+  session_date: string;
+  time_slot: string;
+}
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

@@ -1,22 +1,33 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import type {
-  CancelBookingRequest,
-  CancelBookingResponse,
-} from '../types/credits';
-import { CANCELLATION_WINDOW_HOURS } from '../types/credits';
 
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline types and constants (Vercel bundling doesn't resolve ../types/credits)
+const CANCELLATION_WINDOW_HOURS = 24;
+
+interface CancelBookingRequest {
+  booking_id: string;
+  firebase_uid: string;
+  reason?: string;
+}
+
+interface CancelBookingResponse {
+  success: boolean;
+  credits_refunded: number;
+  credits_remaining: number;
+  message: string;
+}
+
+// Inline Supabase client for Vercel bundling
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
 
 export default async function handler(
   req: VercelRequest,

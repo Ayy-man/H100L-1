@@ -1,22 +1,55 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import type {
-  CreditHistoryResponse,
-  CreditPurchase,
-  CreditUsageRecord,
-} from '../types/credits';
 
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline types (Vercel bundling doesn't resolve ../types/credits)
+type CreditPackageType = 'single' | '10_pack' | '20_pack';
+type CreditPurchaseStatus = 'active' | 'expired' | 'exhausted';
+type SessionType = 'group' | 'sunday' | 'private' | 'semi_private';
+
+interface CreditPurchase {
+  id: string;
+  firebase_uid: string;
+  package_type: CreditPackageType;
+  credits_purchased: number;
+  price_paid: number;
+  currency: string;
+  stripe_payment_intent_id: string | null;
+  stripe_checkout_session_id: string | null;
+  purchased_at: string;
+  expires_at: string;
+  credits_remaining: number;
+  status: CreditPurchaseStatus;
+}
+
+interface CreditUsageRecord {
+  id: string;
+  booking_id: string;
+  registration_id: string;
+  player_name: string;
+  session_type: SessionType;
+  session_date: string;
+  time_slot: string;
+  credits_used: number;
+  used_at: string;
+}
+
+interface CreditHistoryResponse {
+  purchases: CreditPurchase[];
+  usage: CreditUsageRecord[];
+  total_count: number;
+}
+
+// Inline Supabase client for Vercel bundling
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
 
 export default async function handler(
   req: VercelRequest,
