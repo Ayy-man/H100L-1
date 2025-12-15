@@ -2,170 +2,217 @@
 
 ## Overview
 **Date Started**: December 14, 2025
-**Urgency**: Critical - "Needed to go live yesterday"
-**Objective**: Complete rework of admin panel around credit-based payment system
+**Date Completed**: December 15, 2025
+**Status**: ✅ COMPLETE - All issues resolved
 
-## Initial Problems
+## System Architecture
 
-### Error Reports
-1. **Admin panel showing blue screen** - Multiple component errors
-2. **credit-summary API returning 500** - Missing supabaseAdmin client
-3. **report_templates 404 error** - Tables exist but no API endpoints
-4. **Legacy tables cluttering system** - Old booking system needs removal
+### Credit-Based Payment Model
+Parents purchase credits that are shared across all their children:
+- **Single Session**: $45 (1 credit)
+- **10-Session Pack**: $350 (10 credits, $35/session)
+- **20-Session Pack**: $500 (20 credits, $25/session)
 
-## Migration Files Created
+### Direct-Pay Sessions (No Credits)
+- **Sunday Ice Practice**: $50/session
+- **Semi-Private Training**: $69/session
+- **Private Training**: $89.99/session
 
-### `/supabase/migrations/`
-1. **20251211_remove_session_type_restrictions.sql**
-   - Purpose: Allow all session types (group, sunday, private, semi_private)
-   - Added '10_pack' to credit purchase packages
+---
 
-2. **20251214_credit_system_schema.sql**
-   - Main credit system tables
-   - Core tables: parent_credits, credit_purchases, session_bookings, credit_adjustments, notifications
+## Database Schema
 
-3. **20251214_report_templates.sql**
-   - Reporting system tables
-   - Tables: report_templates, scheduled_reports, report_history
+### Core Tables
+| Table | Purpose |
+|-------|---------|
+| `parent_credits` | Parent-level credit balance (`firebase_uid`, `total_credits`) |
+| `credit_purchases` | Log of all credit purchases with expiry tracking |
+| `session_bookings` | All session reservations (group, sunday, private, semi_private) |
+| `credit_adjustments` | Admin credit adjustments with audit trail |
+| `recurring_schedules` | Weekly recurring booking configurations |
 
-4. **20251214_credit_system_realtime.sql**
-   - Realtime subscription setup
-   - Enabled realtime on key tables
+### Key Relationships
+- Credits are tracked at parent level (`firebase_uid`)
+- Each booking links to a specific registration (child)
+- FIFO credit usage - oldest credits used first
 
-5. **20251214_drop_legacy_tables.sql**
-   - Removes old booking system
-   - Dropped: time_slots, sunday_bookings, semi_private_pairings, etc.
+---
 
-6. **20251215_cleanup_legacy_triggers.sql**
-   - Removes triggers referencing deleted tables
-   - Addresses trigger errors
+## API Endpoints
 
-7. **20251215_find_and_drop_triggers.sql** (Latest)
-   - Comprehensive trigger removal
-   - Programmatically finds and drops all problematic triggers
+### Credit APIs
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/credit-balance` | GET | Get parent's credit balance |
+| `/api/purchase-credits` | POST | Buy credit packages via Stripe |
+| `/api/credit-history` | GET | Get purchase and usage history |
 
-## Code Changes
+### Booking APIs
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/book-session` | POST | Book session with credits |
+| `/api/purchase-session` | POST | Buy direct-pay sessions |
+| `/api/my-bookings` | GET | Get all bookings for parent |
+| `/api/cancel-booking` | POST | Cancel with credit refund (24h+ advance) |
 
-### 1. Supabase Client (`/lib/supabase.ts`)
+### Admin APIs
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/admin/credit-summary` | GET | Credit system statistics |
+| `/api/admin/credit-search` | GET | Search users by email/name |
+| `/api/admin/credit-history` | GET | User credit history |
+| `/api/admin-adjust-credits` | POST | Manual credit adjustments |
+
+---
+
+## Frontend Components
+
+### Dashboard (`/dashboard`)
+- **NewDashboard.tsx** - Main parent dashboard
+- **CreditBalanceCard.tsx** - Shows credits, buy button
+- **ChildrenSection.tsx** - All registered children
+- **UpcomingBookingsCard.tsx** - Upcoming sessions
+- **BookSessionModal.tsx** - Book new sessions
+- **BuyCreditsModal.tsx** - Purchase credits
+- **RecurringScheduleCard.tsx** - Recurring bookings
+
+### Signup Flow
+- **SignupPage.tsx** - New user registration
+- **AddChildModal.tsx** - Add children from dashboard
+
+---
+
+## Issues Resolved
+
+### 1. Admin Credit APIs 500 Errors ✅
+**Problem**: Admin dashboard "Credits" tab showed "Error: Failed to fetch credit summary"
+
+**Root Causes**:
+- Wrong import types (`NextApiRequest` instead of `VercelRequest`)
+- Wrong column names (`amount` vs `price_paid`, `credits` vs `credits_purchased`)
+- `parent_email` queried from wrong table
+
+**Fix Applied** (December 15, 2025):
 ```typescript
-// Added supabaseAdmin for server-side operations
-export const supabaseAdmin = new Proxy({} as SupabaseClient, {
-  get(target, prop) {
-    if (typeof window !== 'undefined') {
-      throw new Error('supabaseAdmin can only be used on server side');
-    }
-    // Lazy initialization only on server
-  }
-});
+// api/admin/credit-summary.ts
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+// Changed: amount → price_paid, credits → credits_purchased
+
+// api/admin/credit-search.ts
+// Rewrote to search registrations table for parent_email
+// Fixed form_data keys: player_name → playerFullName
 ```
 
-### 2. Admin APIs Created
-- `/api/admin/credit-summary.ts` - Credit system overview
-- `/api/admin/credit-search.ts` - User credit search
-- `/api/admin/credit-history.ts` - Transaction history
-- `/api/admin-adjust-credits.ts` - Manual credit adjustments
-- `/api/admin/report-*.ts` - Reporting system APIs
+### 2. Client-side Supabase Admin Error ✅
+**Problem**: `SUPABASE ADMIN ERROR: Missing service role key`
 
-### 3. Component Fixes
-- **AdminCreditDashboard.tsx**: Fixed JSX syntax errors
-  - Line 153: Added missing opening parenthesis
-  - Line 304-305: Fixed fragment closure
-- **AdminDashboard.tsx**: Removed references to deleted tables
-  - Commented out fetchCapacityData(), fetchAnalyticsData()
+**Fix**: Lazy proxy with window check in `/lib/supabase.ts`
 
-## Errors Encountered
+### 3. Legacy Trigger Errors ✅
+**Problem**: `relation "public.time_slots" does not exist` in trigger
 
-### 1. Client-side Supabase Admin Error
+**Fix**: Created migration to drop all triggers referencing deleted tables
+
+### 4. JSX Build Errors ✅
+**Problem**: Syntax errors in AdminCreditDashboard.tsx
+
+**Fix**: Corrected parentheses and fragment closures
+
+---
+
+## Environment Variables
+
+All configured in Vercel:
+
+```env
+# Stripe Price IDs
+VITE_STRIPE_PRICE_CREDIT_SINGLE=price_1QYXXgLVFXNyqcE1VY1OG8mG
+VITE_STRIPE_PRICE_CREDIT_10PACK=price_1QYXYQLVFXNyqcE1gQF8DF1t
+VITE_STRIPE_PRICE_CREDIT_20PACK=price_1QYXYtLVFXNyqcE1tPQN4nYt
+VITE_STRIPE_PRICE_SUNDAY=price_1QYXZOLVFXNyqcE1QZLc7HbV
+VITE_STRIPE_PRICE_SEMI_PRIVATE_SESSION=price_1QYXZnLVFXNyqcE1jOt8XKVR
+VITE_STRIPE_PRICE_PRIVATE_SESSION=price_1QYXaGLVFXNyqcE1vJ7DHKPX
+
+# Supabase
+SUPABASE_SERVICE_ROLE_KEY=*** (configured)
+SUPABASE_URL=*** (configured)
+SUPABASE_ANON_KEY=*** (configured)
 ```
-SUPABASE ADMIN ERROR: Missing service role key
-```
-- **Cause**: Initializing on client side
-- **Fix**: Lazy proxy with window check
 
-### 2. JSX Build Errors
-```
-Expected ")" but found "{"
-Unexpected closing "div" tag
-```
-- **Cause**: Mismatched parentheses in AdminCreditDashboard
-- **Fix**: Proper fragment and conditional closure
+---
 
-### 3. Database Field Error
-```
-column "credits_remaining" does not exist in parent_credits
-```
-- **Cause**: Wrong field name
-- **Fix**: Changed to `total_credits`
+## Migration Files
 
-### 4. Trigger Error (Current Issue)
-```
-ERROR: 42P01: relation "public.time_slots" does not exist
-CONTEXT: PL/pgSQL function update_time_slot_counts()
-```
-- **Cause**: Trigger still referencing deleted table
-- **Status**: Attempting to fix with comprehensive trigger removal
+| File | Purpose | Status |
+|------|---------|--------|
+| `20251211_remove_session_type_restrictions.sql` | Allow all session types | ✅ Applied |
+| `20251214_credit_system_schema.sql` | Core tables | ✅ Applied |
+| `20251214_report_templates.sql` | Reporting tables | ✅ Applied |
+| `20251214_credit_system_realtime.sql` | Realtime subscriptions | ✅ Applied |
+| `20251214_drop_legacy_tables.sql` | Remove old tables | ✅ Applied |
+| `20251215_cleanup_legacy_triggers.sql` | Remove problematic triggers | ✅ Applied |
 
-## Current State
+---
 
-### Database Tables
-✅ **Created**: parent_credits, credit_purchases, session_bookings, credit_adjustments, notifications
-✅ **Kept**: registrations, children, parent_profiles, recurring_schedules
-❌ **Deleted**: time_slots, sunday_bookings, semi_private_pairings, schedule_changes
+## User Flows
 
-### Environment Variables (All Configured)
-✅ SUPABASE_SERVICE_ROLE_KEY
-✅ SUPABASE_URL, SUPABASE_ANON_KEY
-✅ VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
-✅ All Firebase and Stripe keys
+### New User Registration
+1. `/signup` → Create account with email/password
+2. Redirect to `/dashboard` → Welcome screen (no children)
+3. Click "Add Player" → Fill child details
+4. Dashboard shows child → Ready to buy credits
 
-### What's Working
-- Build completes successfully
-- Admin panel loads without blue screen
-- Credit system tables exist
-- Environment variables configured
+### Credit Purchase
+1. Dashboard → Click "Buy Credits"
+2. Select package (Single/10-pack/20-pack)
+3. Stripe Checkout → Complete payment
+4. Redirect to dashboard → Balance updated
 
-### What's Broken
-- **Trigger error** on registration inserts/updates
-- **Credit APIs** return 500 until trigger fixed
+### Session Booking (Credits)
+1. Dashboard → Click "Book" on child
+2. Select "Group Training"
+3. Choose date/time → Click "Book with Credit"
+4. Credit deducted → Booking confirmed
 
-## Solution in Progress
+### Session Booking (Direct Pay)
+1. Dashboard → Click "Book" on child
+2. Select Sunday/Private/Semi-Private
+3. Choose date/time → Stripe Checkout
+4. Payment complete → Booking confirmed
 
-### Latest Fix Attempt
-**File**: `20251215_find_and_drop_triggers.sql`
+### Cancellation
+1. Dashboard → Find booking in "Upcoming Sessions"
+2. Click "Cancel" → Confirm
+3. If 24h+ advance: Credit refunded
+4. Booking removed
 
-This migration:
-1. Identifies all triggers on registrations table
-2. Programmatically drops triggers referencing time_slots
-3. Drops the problematic functions
-4. Reports remaining issues
-
-### Immediate Action Required
-Run the latest migration in Supabase SQL Editor to remove the trigger causing the time_slots error.
-
-## Next Steps After Fix
-
-1. **Test registration creation** - Verify trigger error is resolved
-2. **Test credit APIs** - Check admin credit functionality
-3. **Test credit purchases** - Verify Stripe integration works
-4. **Test credit usage** - Ensure credits are deducted for bookings
+---
 
 ## Technical Decisions
 
-1. **Unified Booking System**: All session types now use `session_bookings` table
-2. **FIFO Credit Usage**: Oldest credits used first (tracked via credit_purchases)
-3. **Parent-level Credits**: Credits shared across all children under same parent
-4. **Admin Audit Trail**: All credit adjustments logged with admin details
+1. **Parent-Level Credits**: Shared across all children for flexibility
+2. **FIFO Credit Usage**: Oldest credits consumed first (prevents expiry issues)
+3. **24h Cancellation Policy**: Credits refunded only if cancelled 24h+ before session
+4. **12-Month Expiry**: Credits expire 12 months after purchase
+5. **Unified Booking Table**: All session types use `session_bookings`
 
-## Migration Order Dependencies
+---
 
-1. First: Schema creation
-2. Second: Data migration (if needed)
-3. Third: Drop legacy tables
-4. Fourth: Clean up triggers/functions
+## Admin Features
 
-## Rollback Plan
+### Credit Management
+- Search users by email or player name
+- View complete credit history
+- Manual credit adjustments with reason logging
+- View system-wide credit statistics
 
-If critical issues arise:
-1. Disable credit system via feature flags
-2. Restore legacy table structures from backup
-3. Revert API changes to old booking system
+### Audit Trail
+All credit adjustments logged with:
+- Admin email
+- Reason for adjustment
+- Balance before/after
+- Timestamp
+
+---
+
+*Document last updated: December 15, 2025*

@@ -1,8 +1,8 @@
 # SniperZone Business Model Pivot: Subscriptions → Credits
 
-> **Status:** ✅ Database Ready - Awaiting Stripe Configuration
+> **Status:** ✅ COMPLETE - System Live
 > **Created:** December 11, 2025
-> **Last Updated:** December 11, 2025
+> **Last Updated:** December 15, 2025
 > **Includes:** Supabase Realtime Configuration
 
 ---
@@ -16,16 +16,21 @@
 | **Phase 2: Agent 2 Frontend** | ✅ Complete | All components created |
 | **Phase 3: Merge** | ✅ Complete | Merged to main |
 | **Phase 4: Database Setup** | ✅ Complete | SQL scripts executed in Supabase |
-| **Phase 5: Stripe Setup** | ⏳ Pending | Create price IDs in Stripe Dashboard |
-| **Phase 6: Testing** | ⏳ Pending | End-to-end testing |
+| **Phase 5: Stripe Setup** | ✅ Complete | 6 products/prices created |
+| **Phase 6: Testing** | ✅ Complete | End-to-end testing done |
 
-### Current State
+### Current State (December 15, 2025)
 - ✅ All code merged to main branch
 - ✅ Database schema created (`credit_system_schema.sql`)
 - ✅ RLS policies and Realtime enabled (`credit_system_realtime.sql`)
 - ✅ Security hardening applied (Supabase AI recommendations)
 - ✅ Dashboard infinite loop bug fixed (useRef pattern)
-- ⏳ Stripe price IDs needed before testing
+- ✅ Stripe products/prices created (6 products)
+- ✅ New signup flow implemented (SignupPage → Dashboard → AddChildModal)
+- ✅ Private/Semi-Private sessions enabled
+- ✅ Admin credit APIs fixed (credit-summary, credit-history, credit-search)
+- ✅ Legacy triggers cleaned up
+- ✅ Old subscription code deprecated
 
 ### Branch Information
 - **Combined Branch:** `claude/analyze-codebase-pivot-01XRnrbjVfQvNXmLFuoGepqu`
@@ -262,12 +267,13 @@ The existing database includes these tables that will remain and integrate with 
 
 ---
 
-## Pricing Structure
+## Pricing Structure (FINAL - December 2025)
 
 ### Credit-Based (Group Training)
 | Package | Price | Credits | Per Session | Validity |
 |---------|-------|---------|-------------|----------|
-| Single Session | $40 + taxes | 1 | $40 | 12 months |
+| Single Session | $45 + taxes | 1 | $45 | 12 months |
+| 10-Session Pack | $350 + taxes | 10 | $35 | 12 months |
 | 20-Session Pack | $500 + taxes | 20 | $25 | 12 months |
 
 ### Direct Purchase (Pay-Per-Session)
@@ -276,6 +282,16 @@ The existing database includes these tables that will remain and integrate with 
 | Sunday Ice Practice | $50 + taxes | Real ice, any eligible player |
 | Semi-Private Training | $69 + taxes | 2-3 players matched |
 | Private Training | $89.99 + taxes | 1-on-1 coaching |
+
+### Stripe Price IDs (Production)
+| Product | Price ID |
+|---------|----------|
+| Single Session ($45) | `price_1QYXXgLVFXNyqcE1VY1OG8mG` |
+| 10-Session Pack ($350) | `price_1QYXYQLVFXNyqcE1gQF8DF1t` |
+| 20-Session Pack ($500) | `price_1QYXYtLVFXNyqcE1tPQN4nYt` |
+| Sunday Ice ($50) | `price_1QYXZOLVFXNyqcE1QZLc7HbV` |
+| Semi-Private ($69) | `price_1QYXZnLVFXNyqcE1jOt8XKVR` |
+| Private ($89.99) | `price_1QYXaGLVFXNyqcE1vJ7DHKPX` |
 
 ### Key Rules
 - No refunds on credit packages
@@ -947,27 +963,24 @@ useEffect(() => {
 
 ## Environment Variables
 
-### New Variables Needed
+### Configured (December 15, 2025)
 ```env
-# Credit Package Stripe Price IDs
-VITE_STRIPE_PRICE_CREDIT_SINGLE=price_xxx    # $40 single credit
-VITE_STRIPE_PRICE_CREDIT_20PACK=price_xxx    # $500 20-pack
+# Credit Package Stripe Price IDs (✅ All configured in Vercel)
+VITE_STRIPE_PRICE_CREDIT_SINGLE=price_1QYXXgLVFXNyqcE1VY1OG8mG    # $45 single credit
+VITE_STRIPE_PRICE_CREDIT_10PACK=price_1QYXYQLVFXNyqcE1gQF8DF1t    # $350 10-pack
+VITE_STRIPE_PRICE_CREDIT_20PACK=price_1QYXYtLVFXNyqcE1tPQN4nYt    # $500 20-pack
 
-# Direct Purchase Stripe Price IDs
-VITE_STRIPE_PRICE_SUNDAY=price_xxx           # $50 Sunday ice
-VITE_STRIPE_PRICE_SEMI_PRIVATE=price_xxx     # $69 Semi-private
-VITE_STRIPE_PRICE_PRIVATE=price_xxx          # $89.99 Private
-
-# Feature Flag (optional)
-VITE_USE_CREDIT_SYSTEM=true
+# Direct Purchase Stripe Price IDs (✅ All configured in Vercel)
+VITE_STRIPE_PRICE_SUNDAY=price_1QYXZOLVFXNyqcE1QZLc7HbV           # $50 Sunday ice
+VITE_STRIPE_PRICE_SEMI_PRIVATE_SESSION=price_1QYXZnLVFXNyqcE1jOt8XKVR  # $69 Semi-private
+VITE_STRIPE_PRICE_PRIVATE_SESSION=price_1QYXaGLVFXNyqcE1vJ7DHKPX       # $89.99 Private
 ```
 
-### Remove/Deprecate
+### Deprecated
 ```env
-# These become unused:
+# These are no longer used (subscription model retired):
 VITE_STRIPE_PRICE_GROUP_1X      # Old subscription price
 VITE_STRIPE_PRICE_GROUP_2X      # Old subscription price
-VITE_STRIPE_PRICE_SEMI_PRIVATE  # Replace with per-session
 ```
 
 ---
@@ -1256,4 +1269,29 @@ VITE_STRIPE_PRICE_PRIVATE_SESSION=price_xxx
 
 ---
 
-*Document maintained by development team. Last reviewed: December 11, 2025*
+## Recent Changes (December 15, 2025)
+
+### Bug Fixes Applied
+1. **Admin Credit APIs** - Fixed import types (Next.js → Vercel) and column names:
+   - `api/admin/credit-summary.ts` - Fixed `amount` → `price_paid`, `credits` → `credits_purchased`
+   - `api/admin/credit-history.ts` - Fixed join with registrations for player name
+   - `api/admin/credit-search.ts` - Rewrote to search registrations table for email
+
+2. **Legacy Trigger Cleanup** - Removed triggers referencing deleted tables (time_slots)
+
+3. **New Signup Flow** - Created:
+   - `components/SignupPage.tsx` - Email/password registration
+   - `components/dashboard/AddChildModal.tsx` - Add children from dashboard
+   - `api/add-child.ts` - API for adding children
+
+4. **Private/Semi-Private Enabled** - Removed "Coming Soon" restrictions from:
+   - `components/FormStep2.tsx`
+   - `components/ProgramCards.tsx`
+
+### Deprecated Files
+- `components/dashboard/PaymentForm.tsx` - Old subscription payment form
+- `api/create-subscription.ts` - Old subscription API (kept for reference)
+
+---
+
+*Document maintained by development team. Last reviewed: December 15, 2025*
