@@ -69,8 +69,13 @@ export default async function handler(
       return res.status(400).json({ error: 'Invalid date_of_birth format' });
     }
 
-    // Validate category
-    const validCategories = ['M7', 'M9', 'M11', 'M13', 'M15', 'M18', 'Adult'];
+    // Validate category (must match types.ts PlayerCategory, excluding Unknown)
+    const validCategories = [
+      'M7', 'M9', 'M11',
+      'M13', 'M13 Elite',
+      'M15', 'M15 Elite',
+      'M18', 'Junior'
+    ];
     if (!validCategories.includes(player_category)) {
       return res.status(400).json({
         error: `Invalid player_category. Must be one of: ${validCategories.join(', ')}`,
