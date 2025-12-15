@@ -1154,7 +1154,7 @@ const AdminDashboard: React.FC = () => {
         {/* Live Activity Feed */}
         <div className="mb-8">
           <AdminActivityFeed
-            isAuthenticated={authenticated}
+            isAuthenticated={isAuthenticated}
             maxEvents={50}
             showToasts={true}
           />
