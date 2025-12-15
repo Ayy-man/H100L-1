@@ -101,12 +101,36 @@ The credit-based payment system has been fully implemented and deployed. Parents
 
 ## Time Slots by Age Category
 
-| Category | Weekday Time | Sunday Ice |
-|----------|--------------|------------|
-| M7, M9, M11 | 4:30-5:30 PM | 7:30-8:30 AM |
-| M13, M13 Elite | 5:45-6:45 PM | 8:30-9:30 AM |
-| M15, M15 Elite | 7:00-8:00 PM | 8:30-9:30 AM |
-| M18, Junior | 8:15-9:15 PM | Not eligible |
+### Group Training (1 Credit - Weekdays Only)
+| Category | Time Slot | Max Capacity |
+|----------|-----------|--------------|
+| M7, M9, M11 | 4:30 PM | 6 players |
+| M13, M13 Elite | 5:45 PM | 6 players |
+| M15, M15 Elite | 7:00 PM | 6 players |
+| M18, Junior | 8:15 PM | 6 players |
+
+**Note:** Group training is NOT available on Sundays. Each age category can only book their assigned time slot.
+
+### Sunday Ice ($50 Direct Pay - Sundays Only)
+| Category | Time Slot | Max Capacity |
+|----------|-----------|--------------|
+| M7, M9, M11 | 7:30 AM | 15 players |
+| M13, M13 Elite, M15, M15 Elite | 8:30 AM | 15 players |
+| M18, Junior | **Not eligible** | - |
+
+**Note:** Sunday Ice is only available on Sundays. M18/Junior are not eligible.
+
+### Private Training ($89.99 Direct Pay)
+- **Available:** 7 days a week
+- **Time Slots:** 8:00 AM - 4:00 PM (hourly)
+- **Capacity:** 1 player per slot
+- **No age category restrictions** - all players see all times
+
+### Semi-Private Training ($69 Direct Pay)
+- **Available:** 7 days a week
+- **Time Slots:** 8:00 AM - 4:00 PM (hourly)
+- **Capacity:** 3 players per slot
+- **No age category restrictions** - all players see all times
 
 ---
 

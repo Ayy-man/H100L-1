@@ -3,7 +3,7 @@ export enum Language {
   EN = 'en',
 }
 
-export type PlayerCategory = 'M9' | 'M11' | 'M13' | 'M13 Elite' | 'M15' | 'M15 Elite' | 'M18' | 'Junior' | 'Unknown';
+export type PlayerCategory = 'M7' | 'M9' | 'M11' | 'M13' | 'M13 Elite' | 'M15' | 'M15 Elite' | 'M18' | 'Junior' | 'Unknown';
 /** @deprecated Credit system - no longer used. Parents book any number of sessions they want. */
 export type BookingFrequency = '1x' | '2x';
 /** @deprecated Credit system - no longer used. */
