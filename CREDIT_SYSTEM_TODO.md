@@ -2,146 +2,131 @@
 
 > **Created:** December 11, 2025
 > **Last Updated:** December 15, 2025
-> **Status:** ✅ COMPLETE - System Live
+> **Status:** COMPLETE - System Live
 
 ---
 
 ## Summary
 
-The credit-based payment system has been fully implemented and deployed. All major features are working.
-
-### Completed Work
-- ✅ Database schema (`credit_system_schema.sql`)
-- ✅ RLS policies and Realtime (`credit_system_realtime.sql`)
-- ✅ All credit system APIs (purchase, balance, history, booking, cancellation)
-- ✅ All frontend components (NewDashboard, CreditBalanceCard, ChildrenSection, etc.)
-- ✅ Recurring schedule management API (`recurring-schedule.ts`)
-- ✅ CRON job for processing recurring bookings (`cron-process-recurring.ts`)
-- ✅ Stripe products/prices created (6 products)
-- ✅ New signup flow (SignupPage → Dashboard → AddChildModal)
-- ✅ Private/Semi-Private sessions enabled
-- ✅ Admin credit APIs fixed
-
----
-
-## Completed Tasks
-
-### Phase 1: Bug Fixes (Critical) ✅
-| # | Task | File | Status | Notes |
-|---|------|------|--------|-------|
-| 1.1 | Fix SchedulePage redirect loop | `SchedulePage.tsx` | ✅ DONE | Added `requireProfile={false}` |
-| 1.2 | Fix BillingPage redirect loop | `BillingPage.tsx` | ✅ DONE | Added `requireProfile={false}` |
-| 1.3 | Deploy code to Vercel | - | ✅ DONE | Multiple deployments completed |
-
-### Phase 2: UI/UX Improvements (Medium Priority)
-| # | Task | File | Status | Notes |
-|---|------|------|--------|-------|
-| 2.1 | Create SetupRecurringModal | `components/dashboard/SetupRecurringModal.tsx` | **OPTIONAL** | Manual booking available |
-| 2.2 | Wire up "Add Recurring" button | `RecurringScheduleCard.tsx` | **OPTIONAL** | Low priority |
-| 2.3 | Update SchedulePage for credit model | `SchedulePage.tsx` | **OPTIONAL** | Works with current setup |
-
-### Phase 3: Stripe Configuration (Critical) ✅
-| # | Task | Location | Status | Notes |
-|---|------|----------|--------|-------|
-| 3.1 | Create credit products in Stripe | Stripe Dashboard | ✅ DONE | Single ($45), 10-pack ($350), 20-pack ($500) |
-| 3.2 | Create session products in Stripe | Stripe Dashboard | ✅ DONE | Sunday ($50), Semi-Private ($69), Private ($89.99) |
-| 3.3 | Add Price IDs to environment | Vercel Env Vars | ✅ DONE | All 6 price IDs configured |
-| 3.4 | Update `lib/stripe.ts` with price IDs | `lib/stripe.ts` | ✅ DONE | Price mapping complete |
-
-### Phase 4: Cleanup ✅
-| # | Task | File | Status | Notes |
-|---|------|------|--------|-------|
-| 4.1 | Deprecate old subscription API | `api/create-subscription.ts` | ✅ DONE | Kept for reference |
-| 4.2 | Deprecate old cancellation API | `api/cancel-subscription.ts` | ✅ DONE | Kept for reference |
-| 4.3 | Review/delete reschedule APIs | `api/reschedule-*.ts` | ✅ REVIEWED | Kept for backward compatibility |
-
-### Phase 5: Testing (Critical) ✅
-| # | Test Case | Status | Notes |
-|---|-----------|--------|-------|
-| 5.1 | Dashboard loads without errors | ✅ PASS | - |
-| 5.2 | Credit balance displays correctly | ✅ PASS | - |
-| 5.3 | Buy single credit flow | ✅ PASS | Stripe integration working |
-| 5.4 | Buy 10-pack flow | ✅ PASS | - |
-| 5.5 | Buy 20-pack flow | ✅ PASS | - |
-| 5.6 | Book group session (credit deduction) | ✅ PASS | - |
-| 5.7 | Book Sunday session (direct pay) | ✅ PASS | - |
-| 5.8 | Cancel booking (credit refund) | ✅ PASS | - |
-| 5.9 | Schedule page loads | ✅ PASS | - |
-| 5.10 | Billing page loads | ✅ PASS | - |
-| 5.11 | Realtime balance updates | ✅ PASS | - |
-
----
-
-## Stripe Products (Production)
-
-### Session Packages (Group Training)
-| Product | Price (CAD) | Price ID |
-|---------|-------------|----------|
-| 1 Session | $45.00 | `price_1QYXXgLVFXNyqcE1VY1OG8mG` |
-| 10-Session Package | $350.00 | `price_1QYXYQLVFXNyqcE1gQF8DF1t` |
-| 20-Session Package | $500.00 | `price_1QYXYtLVFXNyqcE1tPQN4nYt` |
-
-### Other Sessions (Direct Purchase)
-| Product | Price (CAD) | Price ID |
-|---------|-------------|----------|
-| Sunday Ice Practice | $50.00 | `price_1QYXZOLVFXNyqcE1QZLc7HbV` |
-| Semi-Private Session | $69.00 | `price_1QYXZnLVFXNyqcE1jOt8XKVR` |
-| Private Session | $89.99 | `price_1QYXaGLVFXNyqcE1vJ7DHKPX` |
-
----
-
-## Environment Variables (All Configured)
-
-```env
-# Session Package Price IDs (Vite frontend)
-VITE_STRIPE_PRICE_CREDIT_SINGLE=price_1QYXXgLVFXNyqcE1VY1OG8mG
-VITE_STRIPE_PRICE_CREDIT_10PACK=price_1QYXYQLVFXNyqcE1gQF8DF1t
-VITE_STRIPE_PRICE_CREDIT_20PACK=price_1QYXYtLVFXNyqcE1tPQN4nYt
-VITE_STRIPE_PRICE_SUNDAY=price_1QYXZOLVFXNyqcE1QZLc7HbV
-VITE_STRIPE_PRICE_SEMI_PRIVATE_SESSION=price_1QYXZnLVFXNyqcE1jOt8XKVR
-VITE_STRIPE_PRICE_PRIVATE_SESSION=price_1QYXaGLVFXNyqcE1vJ7DHKPX
-```
+The credit-based payment system has been fully implemented and deployed. Parents can now:
+- Sign up and add multiple children
+- Buy credit packages ($45 single, $350 for 10, $500 for 20)
+- Book any available session using credits
+- Set up recurring weekly bookings
+- View schedule and upcoming sessions
 
 ---
 
 ## User Flows
 
-### New User Flow
-1. Visit `/signup` → Create account with email/password
+### New Parent Registration
+1. Visit `/signup` → Create account (email + password + name)
 2. Redirected to `/dashboard` → Welcome screen
-3. Click "Add Player" → Fill in child details
-4. Dashboard shows child → Can now buy credits and book sessions
+3. Click "Add Player" → Enter child's name, DOB (category auto-calculated)
+4. Child appears in dashboard → Ready to buy credits and book!
 
-### Existing User Adding Child
-1. From Dashboard, click "Add Player" button
-2. Fill in AddChildModal form
-3. Child appears in "Your Players" section
+### Buying Credits
+1. From Dashboard, click "Buy Credits"
+2. Select package: 1 ($45), 10 ($350), or 20 ($500)
+3. Complete Stripe checkout
+4. Credits added to balance (shared across all children)
 
-### Booking Flow
+### Booking a Session
 1. From Dashboard, click "Book" on any child
-2. Select session type (Group/Sunday/Private/Semi-Private)
-3. For Group: Deduct credits → Confirm booking
-4. For Others: Stripe checkout → Confirm booking
+2. Select session type:
+   - **Group Training** (1 credit)
+   - **Sunday Ice** ($50 direct pay)
+   - **Semi-Private** ($69 direct pay)
+   - **Private** ($89.99 direct pay)
+3. Pick date and time slot
+4. Confirm booking
+
+### Setting Up Recurring Bookings
+1. From Dashboard, find "Recurring Schedules" card
+2. Click "Set Up Recurring"
+3. Select child and day of week
+4. Time slot auto-assigned based on age category
+5. 1 credit deducted weekly (pauses if credits run out)
 
 ---
 
-## Notes
+## Completed Features
 
-### Private/Semi-Private Sessions
-Both session types are now enabled and available for booking:
-- Removed "Coming Soon" from `FormStep2.tsx`
-- Removed "Coming Soon" from `ProgramCards.tsx`
-- Stripe prices configured for both
+### Core Credit System
+- [x] Database schema (parent_credits, credit_purchases, session_bookings, recurring_schedules)
+- [x] RLS policies for security
+- [x] Realtime subscriptions for live balance updates
 
-### Recurring Schedules
-The backend API for recurring schedules exists and works. The CRON job processes weekly bookings. A UI modal for creating recurring schedules is optional - users can book sessions individually.
+### APIs
+- [x] `/api/credit-balance` - Get parent's credit balance
+- [x] `/api/purchase-credits` - Buy credit packages via Stripe
+- [x] `/api/book-session` - Book using credits or pay directly
+- [x] `/api/cancel-booking` - Cancel and refund credits
+- [x] `/api/my-bookings` - List all bookings for a parent
+- [x] `/api/recurring-schedule` - CRUD for recurring schedules
+- [x] `/api/add-child` - Add a child to parent account
 
-### Admin Credit Management
-Admin can:
-- Search users by email or player name
-- View credit history
-- Adjust credits manually
-- View credit summary statistics
+### Frontend Components
+- [x] `NewDashboard` - Main parent dashboard with all features
+- [x] `CreditBalanceCard` - Shows balance + buy options
+- [x] `ChildrenSection` - List all children with book buttons
+- [x] `UpcomingBookingsCard` - Shows upcoming sessions
+- [x] `RecurringScheduleCard` - Manage recurring bookings
+- [x] `BookSessionModal` - Date/time picker for booking
+- [x] `SetupRecurringModal` - Configure recurring schedule
+- [x] `SchedulePage` - Calendar view of actual bookings
+- [x] `AddChildModal` - Quick add child form
+- [x] `SignupPage` - Simple signup for new parents
+
+### Admin Features
+- [x] Credit summary dashboard
+- [x] Search users by email/name
+- [x] View credit history
+- [x] Adjust credits manually (admin only)
+
+---
+
+## Stripe Products (Production)
+
+| Product | Price (CAD) | Type |
+|---------|-------------|------|
+| 1 Session | $45.00 | Credit purchase |
+| 10-Session Package | $350.00 ($35/session) | Credit purchase |
+| 20-Session Package | $500.00 ($25/session) | Credit purchase |
+| Sunday Ice Practice | $50.00 | Direct purchase |
+| Semi-Private Session | $69.00 | Direct purchase |
+| Private Session | $89.99 | Direct purchase |
+
+---
+
+## Time Slots by Age Category
+
+| Category | Weekday Time | Sunday Ice |
+|----------|--------------|------------|
+| M7, M9, M11 | 4:30-5:30 PM | 7:30-8:30 AM |
+| M13, M13 Elite | 5:45-6:45 PM | 8:30-9:30 AM |
+| M15, M15 Elite | 7:00-8:00 PM | 8:30-9:30 AM |
+| M18, Junior | 8:15-9:15 PM | Not eligible |
+
+---
+
+## Technical Notes
+
+### Why Inline Supabase Clients?
+Admin API files use inline Supabase client creation instead of importing from `lib/supabase.ts`. This is because Vercel's serverless bundling only includes files matching `api/_lib/**` in the function bundle.
+
+### Database Tables
+- `parent_credits` - Credit balance per parent (firebase_uid)
+- `credit_purchases` - Purchase history with Stripe payment IDs
+- `session_bookings` - Individual session bookings
+- `recurring_schedules` - Weekly recurring booking configurations
+- `registrations` - Child profiles (form_data contains player info)
+
+### Deprecated Fields
+The following fields in `form_data` are deprecated (from old subscription model):
+- `groupFrequency` (1x/2x per week)
+- `groupSelectedDays` (pre-assigned training days)
+- `groupMonthlyDates` (calculated dates)
 
 ---
 

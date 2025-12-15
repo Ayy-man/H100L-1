@@ -2,15 +2,15 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 // Inline Supabase client - lib/supabase.ts is not bundled by Vercel
-let _getSupabaseAdmin(): ReturnType<typeof createClient> | null = null;
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
 const getSupabaseAdmin = () => {
-  if (!_getSupabaseAdmin()) {
-    _getSupabaseAdmin() = createClient(
+  if (!_supabaseAdmin) {
+    _supabaseAdmin = createClient(
       process.env.VITE_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
   }
-  return _getSupabaseAdmin();
+  return _supabaseAdmin;
 };
 import type {
   AdminAdjustCreditsRequest,

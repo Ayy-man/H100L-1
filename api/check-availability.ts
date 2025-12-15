@@ -28,10 +28,25 @@ const getSupabase = (): SupabaseClient => {
  *   Checks registrations table for scheduled days
  */
 
-// Time slots for different session types
-const GROUP_TRAINING_TIMES = ['5:00 PM', '5:45 PM', '6:30 PM', '7:15 PM'];
-const SUNDAY_ICE_TIMES = ['9:00 AM', '10:00 AM', '11:00 AM'];
-const PRIVATE_TRAINING_TIMES = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM'];
+// Time slots by age category (must match lib/timeSlots.ts)
+// Format: 'display time' => [applicable categories]
+const GROUP_SLOTS_BY_CATEGORY: Record<string, string[]> = {
+  '4:30 PM': ['M7', 'M9', 'M11'],           // 4:30-5:30 PM slot
+  '5:45 PM': ['M13', 'M13 Elite'],          // 5:45-6:45 PM slot
+  '7:00 PM': ['M15', 'M15 Elite'],          // 7:00-8:00 PM slot
+  '8:15 PM': ['M18', 'Junior'],             // 8:15-9:15 PM slot
+};
+
+const SUNDAY_SLOTS_BY_CATEGORY: Record<string, string[]> = {
+  '7:30 AM': ['M7', 'M9', 'M11'],           // 7:30-8:30 AM slot
+  '8:30 AM': ['M13', 'M13 Elite', 'M15', 'M15 Elite'], // 8:30-9:30 AM slot
+  // M18, Junior not eligible for Sunday ice
+};
+
+// All time slots (for reference)
+const ALL_GROUP_TIMES = ['4:30 PM', '5:45 PM', '7:00 PM', '8:15 PM'];
+const ALL_SUNDAY_TIMES = ['7:30 AM', '8:30 AM'];
+const PRIVATE_TRAINING_TIMES = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
 
 // Legacy times (for registration form compatibility)
 const LEGACY_GROUP_TIMES = ['4:30 PM', '5:45 PM', '7:00 PM', '8:15 PM'];
@@ -52,16 +67,74 @@ interface TimeSlotOption {
 // ================== NEW CREDIT SYSTEM FUNCTIONS ==================
 
 /**
+ * Get player category from registration_id
+ */
+async function getPlayerCategory(registrationId: string): Promise<string | null> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('registrations')
+    .select('form_data')
+    .eq('id', registrationId)
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching player category:', error);
+    return null;
+  }
+
+  return data.form_data?.playerCategory || null;
+}
+
+/**
+ * Get allowed time slots for a player category and session type
+ */
+function getAllowedSlotsForCategory(
+  category: string | null,
+  sessionType: string
+): string[] {
+  // Private and semi-private have no category restrictions
+  if (sessionType === 'private' || sessionType === 'semi_private') {
+    return PRIVATE_TRAINING_TIMES;
+  }
+
+  // If no category, return empty (shouldn't happen)
+  if (!category) {
+    return [];
+  }
+
+  if (sessionType === 'sunday') {
+    // Find Sunday slots that include this category
+    return Object.entries(SUNDAY_SLOTS_BY_CATEGORY)
+      .filter(([_, categories]) => categories.includes(category))
+      .map(([time]) => time);
+  }
+
+  // Group training - find slots for this category
+  return Object.entries(GROUP_SLOTS_BY_CATEGORY)
+    .filter(([_, categories]) => categories.includes(category))
+    .map(([time]) => time);
+}
+
+/**
  * NEW: Check availability for a specific date and session type
  * Used by BookSessionModal in the credit system
  * Checks session_bookings table for actual bookings
+ * Filters slots by player category when registration_id is provided
  */
 async function checkDateAvailability(
   date: string,
-  sessionType: string
+  sessionType: string,
+  registrationId?: string
 ): Promise<TimeSlotOption[]> {
   const supabase = getSupabase();
   const slots: TimeSlotOption[] = [];
+
+  // Get player category if registration_id provided
+  let playerCategory: string | null = null;
+  if (registrationId) {
+    playerCategory = await getPlayerCategory(registrationId);
+  }
 
   // Determine time slots and capacity based on session type
   let timeSlots: string[];
@@ -69,11 +142,17 @@ async function checkDateAvailability(
 
   switch (sessionType) {
     case 'group':
-      timeSlots = GROUP_TRAINING_TIMES;
+      // Filter by player category
+      timeSlots = registrationId
+        ? getAllowedSlotsForCategory(playerCategory, 'group')
+        : ALL_GROUP_TIMES;
       maxCapacity = MAX_GROUP_CAPACITY;
       break;
     case 'sunday':
-      timeSlots = SUNDAY_ICE_TIMES;
+      // Filter by player category (M18/Junior not eligible)
+      timeSlots = registrationId
+        ? getAllowedSlotsForCategory(playerCategory, 'sunday')
+        : ALL_SUNDAY_TIMES;
       maxCapacity = MAX_SUNDAY_CAPACITY;
       break;
     case 'private':
@@ -85,7 +164,9 @@ async function checkDateAvailability(
       maxCapacity = MAX_SEMI_PRIVATE_CAPACITY;
       break;
     default:
-      timeSlots = GROUP_TRAINING_TIMES;
+      timeSlots = registrationId
+        ? getAllowedSlotsForCategory(playerCategory, 'group')
+        : ALL_GROUP_TIMES;
       maxCapacity = MAX_GROUP_CAPACITY;
   }
 
@@ -103,6 +184,11 @@ async function checkDateAvailability(
     return [];
   }
 
+  // If no valid slots for this category, return empty
+  if (timeSlots.length === 0) {
+    return [];
+  }
+
   // Get current bookings for this date and session type from session_bookings table
   const { data: bookings, error } = await supabase
     .from('session_bookings')
@@ -113,7 +199,7 @@ async function checkDateAvailability(
 
   if (error) {
     console.error('Error checking bookings:', error);
-    // Return all slots as available if we can't check (fail open for UX)
+    // Return slots as available if we can't check (fail open for UX)
     return timeSlots.map(time => ({
       time,
       available: true,
@@ -311,13 +397,14 @@ export default async function handler(
 
   try {
     // NEW: Handle credit system queries (GET with date param)
-    // Used by BookSessionModal: /api/check-availability?date=2025-01-15&session_type=group
+    // Used by BookSessionModal: /api/check-availability?date=2025-01-15&session_type=group&registration_id=xxx
     if (req.method === 'GET' && req.query.date) {
-      const { date, session_type = 'group' } = req.query;
+      const { date, session_type = 'group', registration_id } = req.query;
 
       const slots = await checkDateAvailability(
         date as string,
-        session_type as string
+        session_type as string,
+        registration_id as string | undefined
       );
 
       return res.status(200).json({ slots });

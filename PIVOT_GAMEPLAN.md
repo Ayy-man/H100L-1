@@ -1271,7 +1271,32 @@ VITE_STRIPE_PRICE_PRIVATE_SESSION=price_xxx
 
 ## Recent Changes (December 15, 2025)
 
-### Bug Fixes Applied
+### Latest Updates (Session 2)
+1. **Admin Credit APIs - Module Not Found Fix** - Inlined Supabase client in 7 admin API files:
+   - Root cause: `vercel.json` only bundles `api/_lib/**`, but admin APIs imported from `../../lib/supabase`
+   - Fixed files: `credit-summary.ts`, `credit-history.ts`, `credit-search.ts`, `report-templates.ts`, `scheduled-reports.ts`, `reports/history.ts`, `admin-adjust-credits.ts`
+
+2. **SetupRecurringModal Fix** - Auto-assigns time slot based on player's age category:
+   - Removed manual time dropdown with wrong times
+   - Now uses `findSlotForCategory()` to auto-assign: M9/M11 → 4:30 PM, M13 → 5:45 PM, etc.
+
+3. **SchedulePage Complete Rewrite** - Now uses credit model:
+   - Fetches actual bookings from `session_bookings` table (not deprecated `groupSelectedDays`)
+   - Filter by child or view all children
+   - Click calendar days to book new sessions
+   - Color-coded by session type
+
+4. **BookSessionModal Enhanced** - Added new props:
+   - `children` prop for SchedulePage integration
+   - `preSelectedDate` prop for clicking calendar days
+   - `onSuccess` callback for refreshing data
+
+5. **Removed 1x/2x Frequency** - Updated across codebase:
+   - `ProgramCards.tsx` - Combined into single Group Training card
+   - `FormStep2.tsx` - Removed frequency dropdown
+   - `types.ts` - Deprecated frequency types
+
+### Earlier Updates (Session 1)
 1. **Admin Credit APIs** - Fixed import types (Next.js → Vercel) and column names:
    - `api/admin/credit-summary.ts` - Fixed `amount` → `price_paid`, `credits` → `credits_purchased`
    - `api/admin/credit-history.ts` - Fixed join with registrations for player name
@@ -1287,6 +1312,11 @@ VITE_STRIPE_PRICE_PRIVATE_SESSION=price_xxx
 4. **Private/Semi-Private Enabled** - Removed "Coming Soon" restrictions from:
    - `components/FormStep2.tsx`
    - `components/ProgramCards.tsx`
+
+### Deprecated Fields in form_data
+- `groupFrequency` (1x/2x per week) - No longer used
+- `groupSelectedDays` - No longer used (users book any available slot)
+- `groupMonthlyDates` - No longer used
 
 ### Deprecated Files
 - `components/dashboard/PaymentForm.tsx` - Old subscription payment form
