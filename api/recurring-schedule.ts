@@ -1,41 +1,78 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import type {
-  RecurringScheduleRequest,
-  RecurringScheduleResponse,
-  RecurringSchedule,
-} from '../types/credits';
-import { isDayOfWeek, isSessionType } from '../types/credits';
 
-// Lazy-initialized Supabase client
-let _supabase: ReturnType<typeof createClient> | null = null;
-const getSupabase = () => {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+// Inline types (Vercel bundling doesn't resolve ../types/credits)
+type SessionType = 'group' | 'sunday' | 'private' | 'semi_private';
+type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+const SESSION_TYPES = ['group', 'sunday', 'private', 'semi_private'] as const;
+const DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+
+function isSessionType(value: string): value is SessionType {
+  return SESSION_TYPES.includes(value as SessionType);
+}
+
+function isDayOfWeek(value: string): value is DayOfWeek {
+  return DAYS_OF_WEEK.includes(value as DayOfWeek);
+}
+
+interface RecurringScheduleRequest {
+  firebase_uid: string;
+  registration_id: string;
+  session_type: SessionType;
+  day_of_week: DayOfWeek;
+  time_slot: string;
+}
+
+interface RecurringSchedule {
+  id: string;
+  firebase_uid: string;
+  registration_id: string;
+  session_type: SessionType;
+  day_of_week: DayOfWeek;
+  time_slot: string;
+  is_active: boolean;
+  paused_reason: string | null;
+  last_booked_date: string | null;
+  next_booking_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Inline Supabase client for Vercel bundling
+function getSupabase() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _supabase;
-};
+
+  return createClient(url, key);
+}
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  const supabase = getSupabase();
+  try {
+    const supabase = getSupabase();
 
-  switch (req.method) {
-    case 'GET':
-      return handleGet(req, res, supabase);
-    case 'POST':
-      return handlePost(req, res, supabase);
-    case 'PUT':
-      return handlePut(req, res, supabase);
-    case 'DELETE':
-      return handleDelete(req, res, supabase);
-    default:
-      return res.status(405).json({ error: 'Method not allowed' });
+    switch (req.method) {
+      case 'GET':
+        return handleGet(req, res, supabase);
+      case 'POST':
+        return handlePost(req, res, supabase);
+      case 'PUT':
+        return handlePut(req, res, supabase);
+      case 'DELETE':
+        return handleDelete(req, res, supabase);
+      default:
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+  } catch (error: any) {
+    console.error('Recurring schedule handler error:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 }
 
@@ -67,7 +104,7 @@ async function handleGet(
 
     if (error) {
       console.error('Error fetching recurring schedules:', error);
-      return res.status(500).json({ error: 'Database error' });
+      return res.status(500).json({ error: 'Database error fetching schedules' });
     }
 
     // Transform to include player info
@@ -80,7 +117,7 @@ async function handleGet(
     return res.status(200).json({ schedules: schedulesWithDetails });
   } catch (error: any) {
     console.error('Get recurring schedules error:', error);
-    return res.status(500).json({ error: 'Failed to fetch recurring schedules' });
+    return res.status(500).json({ error: error.message || 'Failed to fetch recurring schedules' });
   }
 }
 
@@ -109,14 +146,14 @@ async function handlePost(
     // Validate session type
     if (!isSessionType(session_type)) {
       return res.status(400).json({
-        error: 'Invalid session_type',
+        error: `Invalid session_type. Must be one of: ${SESSION_TYPES.join(', ')}`,
       });
     }
 
     // Validate day of week
     if (!isDayOfWeek(day_of_week)) {
       return res.status(400).json({
-        error: 'Invalid day_of_week',
+        error: `Invalid day_of_week. Must be one of: ${DAYS_OF_WEEK.join(', ')}`,
       });
     }
 
@@ -137,38 +174,70 @@ async function handlePost(
     // Calculate next booking date (next occurrence of the day)
     const nextBookingDate = getNextDayOfWeek(day_of_week);
 
-    // Create recurring schedule (upsert to handle existing)
-    const { data: schedule, error: createError } = await supabase
+    // Check for existing schedule
+    const { data: existing } = await supabase
       .from('recurring_schedules')
-      .upsert({
-        firebase_uid,
-        registration_id,
-        session_type,
-        day_of_week,
-        time_slot,
-        is_active: true,
-        paused_reason: null,
-        next_booking_date: nextBookingDate,
-      }, {
-        onConflict: 'registration_id,day_of_week,time_slot',
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('registration_id', registration_id)
+      .eq('day_of_week', day_of_week)
+      .eq('time_slot', time_slot)
+      .maybeSingle();
 
-    if (createError) {
-      console.error('Error creating recurring schedule:', createError);
-      return res.status(500).json({ error: 'Failed to create recurring schedule' });
+    let schedule: RecurringSchedule;
+    let createError: any;
+
+    if (existing) {
+      // Update existing schedule
+      const { data, error } = await supabase
+        .from('recurring_schedules')
+        .update({
+          session_type,
+          is_active: true,
+          paused_reason: null,
+          next_booking_date: nextBookingDate,
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      schedule = data as RecurringSchedule;
+      createError = error;
+    } else {
+      // Create new schedule
+      const { data, error } = await supabase
+        .from('recurring_schedules')
+        .insert({
+          firebase_uid,
+          registration_id,
+          session_type,
+          day_of_week,
+          time_slot,
+          is_active: true,
+          paused_reason: null,
+          next_booking_date: nextBookingDate,
+        })
+        .select()
+        .single();
+
+      schedule = data as RecurringSchedule;
+      createError = error;
     }
 
-    const response: RecurringScheduleResponse = {
-      schedule: schedule as RecurringSchedule,
-      message: `Recurring ${day_of_week} ${time_slot} schedule created. Auto-booking will start from ${nextBookingDate}.`,
-    };
+    if (createError) {
+      console.error('Error creating/updating recurring schedule:', createError);
+      return res.status(500).json({
+        error: 'Failed to create recurring schedule',
+        details: createError.message,
+      });
+    }
 
-    return res.status(201).json(response);
+    return res.status(201).json({
+      schedule,
+      message: `Recurring ${day_of_week} ${time_slot} schedule created. Auto-booking will start from ${nextBookingDate}.`,
+    });
   } catch (error: any) {
     console.error('Create recurring schedule error:', error);
-    return res.status(500).json({ error: 'Failed to create recurring schedule' });
+    return res.status(500).json({ error: error.message || 'Failed to create recurring schedule' });
   }
 }
 
@@ -234,7 +303,7 @@ async function handlePut(
     });
   } catch (error: any) {
     console.error('Update recurring schedule error:', error);
-    return res.status(500).json({ error: 'Failed to update recurring schedule' });
+    return res.status(500).json({ error: error.message || 'Failed to update recurring schedule' });
   }
 }
 
@@ -285,7 +354,7 @@ async function handleDelete(
     });
   } catch (error: any) {
     console.error('Delete recurring schedule error:', error);
-    return res.status(500).json({ error: 'Failed to delete recurring schedule' });
+    return res.status(500).json({ error: error.message || 'Failed to delete recurring schedule' });
   }
 }
 
