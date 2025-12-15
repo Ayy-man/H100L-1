@@ -27,15 +27,17 @@ interface AddChildModalProps {
   onSuccess?: () => void;
 }
 
-// Player categories based on age
+// Player categories based on age (must match types.ts PlayerCategory)
 const PLAYER_CATEGORIES = [
   { value: 'M7', label: 'M7 (Under 7)', minAge: 0, maxAge: 6 },
   { value: 'M9', label: 'M9 (Under 9)', minAge: 7, maxAge: 8 },
   { value: 'M11', label: 'M11 (Under 11)', minAge: 9, maxAge: 10 },
   { value: 'M13', label: 'M13 (Under 13)', minAge: 11, maxAge: 12 },
+  { value: 'M13 Elite', label: 'M13 Elite', minAge: 11, maxAge: 12 },
   { value: 'M15', label: 'M15 (Under 15)', minAge: 13, maxAge: 14 },
+  { value: 'M15 Elite', label: 'M15 Elite', minAge: 13, maxAge: 14 },
   { value: 'M18', label: 'M18 (Under 18)', minAge: 15, maxAge: 17 },
-  { value: 'Adult', label: 'Adult (18+)', minAge: 18, maxAge: 99 },
+  { value: 'Junior', label: 'Junior (18+)', minAge: 18, maxAge: 99 },
 ];
 
 // Calculate category from date of birth
@@ -55,7 +57,7 @@ const calculateCategory = (dateOfBirth: string): string => {
     cat => age >= cat.minAge && age <= cat.maxAge
   );
 
-  return category?.value || 'Adult';
+  return category?.value || 'Junior';
 };
 
 /**
