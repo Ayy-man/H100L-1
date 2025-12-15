@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
   Calendar,
   Clock,
@@ -123,33 +124,60 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
     if (open) fetchBalance();
   }, [user, open]);
 
-  // Fetch available slots when date changes
-  useEffect(() => {
-    const fetchSlots = async () => {
-      if (!selectedDate || !selectedChild) return;
+  // Fetch available slots function (memoized for realtime subscription)
+  const fetchSlots = useCallback(async () => {
+    if (!selectedDate || !selectedChild) return;
 
-      setLoadingSlots(true);
-      try {
-        const response = await fetch(
-          `/api/check-availability?date=${selectedDate}&session_type=${sessionType}&registration_id=${selectedChild}`
-        );
-        const data = await response.json();
+    setLoadingSlots(true);
+    try {
+      const response = await fetch(
+        `/api/check-availability?date=${selectedDate}&session_type=${sessionType}&registration_id=${selectedChild}`
+      );
+      const data = await response.json();
 
-        if (data.slots) {
-          setAvailableSlots(data.slots);
-        } else {
-          setAvailableSlots([]);
-        }
-      } catch (err) {
-        console.error('Error fetching slots:', err);
+      if (data.slots) {
+        setAvailableSlots(data.slots);
+      } else {
         setAvailableSlots([]);
-      } finally {
-        setLoadingSlots(false);
       }
-    };
-
-    fetchSlots();
+    } catch (err) {
+      console.error('Error fetching slots:', err);
+      setAvailableSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
   }, [selectedDate, sessionType, selectedChild]);
+
+  // Fetch slots when date/type/child changes
+  useEffect(() => {
+    fetchSlots();
+  }, [fetchSlots]);
+
+  // Subscribe to capacity updates for real-time slot availability
+  useEffect(() => {
+    if (!open || !selectedDate || !sessionType) return;
+
+    // Subscribe to capacity channel for this session type and date
+    const capacityTopic = `capacity:${sessionType}:${selectedDate}`;
+    const channel = supabase.channel(capacityTopic, {
+      config: { private: true }
+    });
+
+    channel
+      .on('broadcast', { event: 'session_booking_changed' }, () => {
+        // Refetch slots when someone books/cancels on this date
+        fetchSlots();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[BookSessionModal] Subscribed to ${capacityTopic}`);
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [open, selectedDate, sessionType, fetchSlots]);
 
   // Handle booking
   const handleBook = async () => {

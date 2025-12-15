@@ -14,6 +14,7 @@ import ConfirmPaymentButton from './ConfirmPaymentButton';
 import { NotificationBell } from './notifications';
 import AdminCreditDashboard from './admin/AdminCreditDashboard';
 import AdminBookingsPanel from './admin/AdminBookingsPanel';
+import AdminActivityFeed from './admin/AdminActivityFeed';
 import { MedicalFiles, WeekDay, Language } from '../types';
 
 interface Registration {
@@ -1147,6 +1148,15 @@ const AdminDashboard: React.FC = () => {
             value={stats.todayCount}
             icon="🆕"
             color="text-[#9BD4FF]"
+          />
+        </div>
+
+        {/* Live Activity Feed */}
+        <div className="mb-8">
+          <AdminActivityFeed
+            isAuthenticated={authenticated}
+            maxEvents={50}
+            showToasts={true}
           />
         </div>
 
