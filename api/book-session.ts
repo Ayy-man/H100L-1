@@ -151,7 +151,7 @@ export default async function handler(
     }
 
     // Find oldest active purchase with remaining credits (FIFO)
-    const { data: activePurchase, error: purchaseError } = await supabase
+    const { data: activePurchase } = await supabase
       .from('credit_purchases')
       .select('id, credits_remaining')
       .eq('firebase_uid', firebase_uid)
@@ -162,27 +162,27 @@ export default async function handler(
       .limit(1)
       .maybeSingle();
 
-    if (purchaseError || !activePurchase) {
-      console.error('Error finding active purchase:', purchaseError);
-      return res.status(402).json({
-        error: 'No active credits available. Please purchase more credits.',
-      });
-    }
+    let creditPurchaseId: string | null = null;
 
-    // Deduct credit from purchase
-    const newRemaining = activePurchase.credits_remaining - creditsRequired;
-    const { error: deductPurchaseError } = await supabase
-      .from('credit_purchases')
-      .update({
-        credits_remaining: newRemaining,
-        status: newRemaining === 0 ? 'exhausted' : 'active',
-      })
-      .eq('id', activePurchase.id);
+    if (activePurchase) {
+      // Deduct credit from purchase (FIFO)
+      const newRemaining = activePurchase.credits_remaining - creditsRequired;
+      const { error: deductPurchaseError } = await supabase
+        .from('credit_purchases')
+        .update({
+          credits_remaining: newRemaining,
+          status: newRemaining === 0 ? 'exhausted' : 'active',
+        })
+        .eq('id', activePurchase.id);
 
-    if (deductPurchaseError) {
-      console.error('Error deducting from purchase:', deductPurchaseError);
-      return res.status(500).json({ error: 'Failed to deduct credit' });
+      if (deductPurchaseError) {
+        console.error('Error deducting from purchase:', deductPurchaseError);
+        return res.status(500).json({ error: 'Failed to deduct credit' });
+      }
+      creditPurchaseId = activePurchase.id;
     }
+    // If no active purchase found but parent has credits (e.g., admin-added credits),
+    // we still allow booking - just deduct from parent_credits total
 
     // Update parent total credits
     const { error: updateTotalError } = await supabase
@@ -192,14 +192,16 @@ export default async function handler(
 
     if (updateTotalError) {
       console.error('Error updating total credits:', updateTotalError);
-      // Rollback the purchase deduction
-      await supabase
-        .from('credit_purchases')
-        .update({
-          credits_remaining: activePurchase.credits_remaining,
-          status: 'active',
-        })
-        .eq('id', activePurchase.id);
+      // Rollback the purchase deduction if we did one
+      if (activePurchase) {
+        await supabase
+          .from('credit_purchases')
+          .update({
+            credits_remaining: activePurchase.credits_remaining,
+            status: 'active',
+          })
+          .eq('id', activePurchase.id);
+      }
       return res.status(500).json({ error: 'Failed to update credit balance' });
     }
 
@@ -213,7 +215,7 @@ export default async function handler(
         session_date,
         time_slot,
         credits_used: creditsRequired,
-        credit_purchase_id: activePurchase.id,
+        credit_purchase_id: creditPurchaseId,
         is_recurring,
         status: 'booked',
       })
@@ -223,13 +225,15 @@ export default async function handler(
     if (bookingError) {
       console.error('Error creating booking:', bookingError);
       // Rollback credit deductions
-      await supabase
-        .from('credit_purchases')
-        .update({
-          credits_remaining: activePurchase.credits_remaining,
-          status: 'active',
-        })
-        .eq('id', activePurchase.id);
+      if (activePurchase) {
+        await supabase
+          .from('credit_purchases')
+          .update({
+            credits_remaining: activePurchase.credits_remaining,
+            status: 'active',
+          })
+          .eq('id', activePurchase.id);
+      }
       await supabase
         .from('parent_credits')
         .update({ total_credits: currentCredits })
