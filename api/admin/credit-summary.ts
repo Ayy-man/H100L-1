@@ -2,16 +2,16 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 // Inline Supabase client - lib/supabase.ts is not bundled by Vercel
-let _getSupabaseAdmin(): ReturnType<typeof createClient> | null = null;
-const getSupabaseAdmin = () => {
-  if (!_getSupabaseAdmin()) {
-    _getSupabaseAdmin() = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+function getSupabaseAdmin() {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
   }
-  return _getSupabaseAdmin();
-};
+
+  return createClient(url, key);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
