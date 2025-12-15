@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { sendBookingCancelled, createMinimalContact } from './_lib/n8nWebhook';
 
 // Inline types and constants (Vercel bundling doesn't resolve ../types/credits)
 const CANCELLATION_WINDOW_HOURS = 24;
@@ -131,6 +132,42 @@ export default async function handler(
       message = `Booking cancelled. Cancellation was less than ${CANCELLATION_WINDOW_HOURS} hours before the session, so credits cannot be refunded.`;
     } else {
       message = 'Booking cancelled successfully.';
+    }
+
+    // Send n8n webhook (fire and forget)
+    try {
+      // Get parent and player info
+      const { data: regData } = await supabase
+        .from('registrations')
+        .select('form_data, parent_email')
+        .eq('id', booking.registration_id)
+        .single();
+
+      if (regData) {
+        const formData = regData.form_data || {};
+        const contact = createMinimalContact(
+          firebase_uid,
+          regData.parent_email || formData.parentEmail || '',
+          formData.parentPhone || '',
+          formData.parentFullName || '',
+          formData.communicationLanguage || 'English'
+        );
+
+        await sendBookingCancelled(
+          contact,
+          {
+            id: booking_id,
+            player_name: formData.playerFullName || 'Your child',
+            session_type: booking.session_type,
+            session_date: booking.session_date,
+            time_slot: booking.time_slot,
+            credits_used: booking.credits_used,
+          },
+          creditsRefunded
+        );
+      }
+    } catch (webhookError) {
+      console.error('[n8n] Cancellation webhook error:', webhookError);
     }
 
     const response: CancelBookingResponse = {

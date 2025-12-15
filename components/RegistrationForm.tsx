@@ -315,6 +315,15 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onClose, preSelecte
         throw insertError || new Error('Failed to create registration');
       }
 
+      // Send webhook to n8n for GHL contact creation (fire and forget)
+      fetch('/api/webhook-contact-created', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registration_id: registrationData.id,
+          firebase_uid: firebaseUid,
+        }),
+      }).catch(err => console.error('Webhook trigger failed:', err));
 
       // Success! Clear form data
       localStorage.removeItem('registrationFormData');

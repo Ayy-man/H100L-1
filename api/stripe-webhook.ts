@@ -2,6 +2,14 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { Readable } from 'stream';
+import {
+  sendCreditsPurchased,
+  sendContactUpdated,
+  sendBookingConfirmed,
+  createMinimalContact,
+  type ContactInfo,
+  type PaymentInfo,
+} from './_lib/n8nWebhook';
 
 // Inline types (Vercel bundling doesn't resolve ../types/credits)
 type CreditPackageType = 'single' | '10_pack' | '20_pack';
@@ -286,6 +294,51 @@ async function handleCreditPurchase(
         expires_at: expiresAt.toISOString(),
       },
     });
+
+  // Send n8n webhooks for GHL (fire and forget)
+  try {
+    // Get parent contact info
+    const { data: registration } = await supabase
+      .from('registrations')
+      .select('form_data, parent_email')
+      .eq('firebase_uid', firebase_uid)
+      .limit(1)
+      .single();
+
+    if (registration) {
+      const formData = registration.form_data || {};
+      const contact: ContactInfo = createMinimalContact(
+        firebase_uid,
+        registration.parent_email || formData.parentEmail || '',
+        formData.parentPhone || '',
+        formData.parentFullName || '',
+        formData.communicationLanguage || 'English'
+      );
+
+      const newBalance = currentBalance + creditsNum;
+
+      // Send credits_purchased webhook
+      await sendCreditsPurchased(contact, {
+        action: 'purchased',
+        amount: creditsNum,
+        new_balance: newBalance,
+        package_type,
+        price_paid: pricePaid,
+        expires_at: expiresAt.toISOString(),
+      });
+
+      // Send contact_updated with payment info
+      const paymentInfo: PaymentInfo = {
+        total_spent: pricePaid,
+        credits_purchased: creditsNum,
+        last_purchase_date: new Date().toISOString().split('T')[0],
+      };
+      await sendContactUpdated(contact, paymentInfo);
+    }
+  } catch (webhookError) {
+    // Fire and forget - just log the error
+    console.error('[n8n] Credit purchase webhook error:', webhookError);
+  }
 }
 
 /**
@@ -379,6 +432,39 @@ async function handleSessionPurchase(
         price_paid: pricePaid,
       },
     });
+
+  // Send n8n webhook for GHL (fire and forget)
+  try {
+    // Get parent contact info from any registration
+    const { data: parentReg } = await supabase
+      .from('registrations')
+      .select('form_data, parent_email')
+      .eq('firebase_uid', firebase_uid)
+      .limit(1)
+      .single();
+
+    if (parentReg) {
+      const formData = parentReg.form_data || {};
+      const contact: ContactInfo = createMinimalContact(
+        firebase_uid,
+        parentReg.parent_email || formData.parentEmail || '',
+        formData.parentPhone || '',
+        formData.parentFullName || '',
+        formData.communicationLanguage || 'English'
+      );
+
+      await sendBookingConfirmed(contact, {
+        id: '', // No booking ID available here since we didn't select it
+        player_name: playerName,
+        session_type,
+        session_date,
+        time_slot,
+        price_paid: pricePaid,
+      });
+    }
+  } catch (webhookError) {
+    console.error('[n8n] Session booking webhook error:', webhookError);
+  }
 }
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {

@@ -1,5 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import {
+  sendBookingConfirmed,
+  sendCreditsLow,
+  createMinimalContact,
+} from './_lib/n8nWebhook';
 
 // Session types and credits
 const SESSION_TYPES = ['group', 'sunday', 'private', 'semi_private'] as const;
@@ -243,9 +248,48 @@ export default async function handler(
       });
     }
 
+    // Send n8n webhooks (fire and forget)
+    const newBalance = currentCredits - creditsRequired;
+    try {
+      // Get parent and player info
+      const { data: regData } = await supabase
+        .from('registrations')
+        .select('form_data, parent_email')
+        .eq('id', registration_id)
+        .single();
+
+      if (regData) {
+        const formData = regData.form_data || {};
+        const contact = createMinimalContact(
+          firebase_uid,
+          regData.parent_email || formData.parentEmail || '',
+          formData.parentPhone || '',
+          formData.parentFullName || '',
+          formData.communicationLanguage || 'English'
+        );
+
+        // Send booking confirmation
+        await sendBookingConfirmed(contact, {
+          id: booking.id,
+          player_name: formData.playerFullName || 'Your child',
+          session_type,
+          session_date,
+          time_slot,
+          credits_used: creditsRequired,
+        });
+
+        // Send low credit alert if balance is below 3
+        if (newBalance < 3 && newBalance >= 0) {
+          await sendCreditsLow(contact, newBalance);
+        }
+      }
+    } catch (webhookError) {
+      console.error('[n8n] Booking webhook error:', webhookError);
+    }
+
     return res.status(201).json({
       booking,
-      credits_remaining: currentCredits - creditsRequired,
+      credits_remaining: newBalance,
       message: `Session booked successfully! ${creditsRequired} credit used.`,
     });
   } catch (error: any) {
