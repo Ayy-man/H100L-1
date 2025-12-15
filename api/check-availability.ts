@@ -87,6 +87,37 @@ async function getPlayerCategory(registrationId: string): Promise<string | null>
 }
 
 /**
+ * Normalize category to match expected format
+ * Handles: case variations, 'Adult' -> 'Junior' mapping, whitespace
+ */
+function normalizeCategory(category: string | null): string | null {
+  if (!category) return null;
+
+  const trimmed = category.trim();
+
+  // Map 'Adult' to 'Junior' (Adult was incorrectly allowed before)
+  if (trimmed.toLowerCase() === 'adult') {
+    return 'Junior';
+  }
+
+  // Normalize common categories (case-insensitive matching)
+  const categoryMap: Record<string, string> = {
+    'm7': 'M7',
+    'm9': 'M9',
+    'm11': 'M11',
+    'm13': 'M13',
+    'm13 elite': 'M13 Elite',
+    'm15': 'M15',
+    'm15 elite': 'M15 Elite',
+    'm18': 'M18',
+    'junior': 'Junior',
+  };
+
+  const normalized = categoryMap[trimmed.toLowerCase()];
+  return normalized || trimmed; // Return original if no mapping found
+}
+
+/**
  * Get allowed time slots for a player category and session type
  */
 function getAllowedSlotsForCategory(
@@ -98,22 +129,39 @@ function getAllowedSlotsForCategory(
     return PRIVATE_TRAINING_TIMES;
   }
 
-  // If no category, return empty (shouldn't happen)
-  if (!category) {
-    return [];
+  // Normalize the category
+  const normalizedCategory = normalizeCategory(category);
+
+  // If no category after normalization, return ALL slots as fallback
+  // This prevents blocking users with data issues
+  if (!normalizedCategory) {
+    console.warn('[check-availability] No category found, returning all slots as fallback');
+    return sessionType === 'sunday' ? ALL_SUNDAY_TIMES : ALL_GROUP_TIMES;
   }
 
   if (sessionType === 'sunday') {
     // Find Sunday slots that include this category
-    return Object.entries(SUNDAY_SLOTS_BY_CATEGORY)
-      .filter(([_, categories]) => categories.includes(category))
+    const slots = Object.entries(SUNDAY_SLOTS_BY_CATEGORY)
+      .filter(([_, categories]) => categories.includes(normalizedCategory))
       .map(([time]) => time);
+
+    // If category doesn't match any Sunday slot (e.g., M18/Junior), return empty
+    // This is intentional - M18/Junior are not eligible for Sunday ice
+    return slots;
   }
 
   // Group training - find slots for this category
-  return Object.entries(GROUP_SLOTS_BY_CATEGORY)
-    .filter(([_, categories]) => categories.includes(category))
+  const slots = Object.entries(GROUP_SLOTS_BY_CATEGORY)
+    .filter(([_, categories]) => categories.includes(normalizedCategory))
     .map(([time]) => time);
+
+  // Fallback: if no slots found for category, log and return all
+  if (slots.length === 0) {
+    console.warn(`[check-availability] No slots for category "${normalizedCategory}", returning all`);
+    return ALL_GROUP_TIMES;
+  }
+
+  return slots;
 }
 
 /**
