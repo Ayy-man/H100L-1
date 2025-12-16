@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 // Inline types (Vercel bundling doesn't resolve ../types/credits)
-type CreditPackageType = 'single' | '10_pack' | '20_pack';
+type CreditPackageType = 'single' | '10_pack' | '20_pack' | '50_pack';
 type CreditPurchaseStatus = 'active' | 'expired' | 'exhausted';
 type SessionType = 'group' | 'sunday' | 'private' | 'semi_private';
 

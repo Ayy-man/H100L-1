@@ -5,7 +5,7 @@ A comprehensive hockey training registration system with credit-based booking, S
 ## Features
 
 - **Credit-Based Booking System**
-  - Buy credit packages ($45 single, $350 for 10, $500 for 20)
+  - Buy credit packages ($45 single, $350 for 10, $500 for 20, $1,000 for 50)
   - 1 credit = 1 group training session
   - Credits valid for 12 months
   - Shared across all children in family

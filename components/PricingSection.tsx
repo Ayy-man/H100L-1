@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type PackageType = "single" | "10_pack" | "20_pack" | "sunday" | "semi_private" | "private";
+type PackageType = "single" | "10_pack" | "20_pack" | "50_pack" | "sunday" | "semi_private" | "private";
 
 interface PricingCardProps {
   title: string;
@@ -51,7 +51,7 @@ const pricingData: PricingCardProps[] = [
     title: "20-Session Pack",
     price: "$500",
     perSession: "$25/session",
-    description: "Maximum savings for committed players.",
+    description: "Great for committed players.",
     features: [
       "20 group training credits",
       "Save $400 vs single sessions",
@@ -59,6 +59,21 @@ const pricingData: PricingCardProps[] = [
       "Best for 2x/week training",
     ],
     cta: "Buy 20 Credits",
+    onSelect: () => {},
+    badge: "Popular",
+  },
+  {
+    title: "50-Session Pack",
+    price: "$1,000",
+    perSession: "$20/session",
+    description: "Maximum savings for serious athletes.",
+    features: [
+      "50 group training credits",
+      "Save $1,250 vs single sessions",
+      "Valid for 12 months",
+      "Best for multi-child families",
+    ],
+    cta: "Buy 50 Credits",
     onSelect: () => {},
     featured: true,
     badge: "Best Value",
@@ -116,6 +131,7 @@ export default function PricingSection({ onPackageSelect }: PricingSectionProps)
       "Single Session": "single",
       "10-Session Pack": "10_pack",
       "20-Session Pack": "20_pack",
+      "50-Session Pack": "50_pack",
       "Sunday Ice": "sunday",
       "Semi-Private": "semi_private",
       "Private": "private",

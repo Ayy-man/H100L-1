@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS credit_purchases (
     firebase_uid TEXT NOT NULL,
 
     -- Package details
-    package_type TEXT NOT NULL CHECK (package_type IN ('single', '10_pack', '20_pack')),
+    package_type TEXT NOT NULL CHECK (package_type IN ('single', '10_pack', '20_pack', '50_pack')),
     credits_purchased INTEGER NOT NULL CHECK (credits_purchased > 0),
     price_paid NUMERIC NOT NULL CHECK (price_paid >= 0),
     currency TEXT DEFAULT 'cad',

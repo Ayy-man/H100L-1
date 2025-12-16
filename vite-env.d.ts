@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_STRIPE_PRICE_CREDIT_SINGLE: string;
   readonly VITE_STRIPE_PRICE_CREDIT_10PACK: string;
   readonly VITE_STRIPE_PRICE_CREDIT_20PACK: string;
+  readonly VITE_STRIPE_PRICE_CREDIT_50PACK: string;
   readonly VITE_STRIPE_PRICE_SUNDAY: string;
   readonly VITE_STRIPE_PRICE_SEMI_PRIVATE_SESSION: string;
   readonly VITE_STRIPE_PRICE_PRIVATE_SESSION: string;
