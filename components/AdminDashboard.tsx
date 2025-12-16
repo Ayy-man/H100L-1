@@ -1473,25 +1473,25 @@ const AdminDashboard: React.FC = () => {
             {analyticsSummary && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsCard
-                  title="Total MRR"
+                  title={isFrench ? 'Revenu mensuel récurrent' : 'Total MRR'}
                   value={`$${analyticsSummary.total_mrr.toLocaleString()}`}
                   icon="💰"
                   color="text-green-400"
                 />
                 <StatsCard
-                  title="Avg Registration Value"
+                  title={isFrench ? 'Valeur moy. inscription' : 'Avg Registration Value'}
                   value={`$${Math.round(analyticsSummary.avg_registration_value)}`}
                   icon="📊"
                   color="text-[#9BD4FF]"
                 />
                 <StatsCard
-                  title="Fill Rate"
+                  title={isFrench ? 'Taux de remplissage' : 'Fill Rate'}
                   value={`${analyticsSummary.fill_rate_percentage}%`}
                   icon="📈"
                   color="text-yellow-400"
                 />
                 <StatsCard
-                  title="Week-over-Week Growth"
+                  title={isFrench ? 'Croissance hebdomadaire' : 'Week-over-Week Growth'}
                   value={`${analyticsSummary.this_week_registrations > analyticsSummary.last_week_registrations ? '+' : ''}${analyticsSummary.this_week_registrations - analyticsSummary.last_week_registrations}`}
                   icon={analyticsSummary.this_week_registrations >= analyticsSummary.last_week_registrations ? '📈' : '📉'}
                   color={analyticsSummary.this_week_registrations >= analyticsSummary.last_week_registrations ? 'text-green-400' : 'text-red-400'}
@@ -1504,7 +1504,7 @@ const AdminDashboard: React.FC = () => {
               {/* Registration Trends - Line Chart */}
               <div className="bg-black border border-white/10 rounded-lg p-6">
                 <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
-                  📈 Registration Trends (30 Days)
+                  📈 {isFrench ? 'Tendances d\'inscription (30 jours)' : 'Registration Trends (30 Days)'}
                 </h3>
                 {dailyRegistrations.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
@@ -1514,7 +1514,7 @@ const AdminDashboard: React.FC = () => {
                         dataKey="date"
                         stroke="#9BD4FF"
                         tick={{ fill: '#9BD4FF' }}
-                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        tickFormatter={(value) => new Date(value).toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', { month: 'short', day: 'numeric' })}
                       />
                       <YAxis stroke="#9BD4FF" tick={{ fill: '#9BD4FF' }} />
                       <Tooltip
@@ -1528,14 +1528,14 @@ const AdminDashboard: React.FC = () => {
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-500 text-center py-12">No data available</p>
+                  <p className="text-gray-500 text-center py-12">{isFrench ? 'Aucune donnée disponible' : 'No data available'}</p>
                 )}
               </div>
 
               {/* Program Distribution - Pie Chart */}
               <div className="bg-black border border-white/10 rounded-lg p-6">
                 <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
-                  🥧 Program Distribution
+                  🥧 {isFrench ? 'Répartition des programmes' : 'Program Distribution'}
                 </h3>
                 {programDistribution.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
@@ -1559,14 +1559,14 @@ const AdminDashboard: React.FC = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-500 text-center py-12">No data available</p>
+                  <p className="text-gray-500 text-center py-12">{isFrench ? 'Aucune donnée disponible' : 'No data available'}</p>
                 )}
               </div>
 
               {/* Revenue by Program - Bar Chart */}
               <div className="bg-black border border-white/10 rounded-lg p-6">
                 <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
-                  💵 Revenue by Program
+                  💵 {isFrench ? 'Revenus par programme' : 'Revenue by Program'}
                 </h3>
                 {revenueByProgram.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
@@ -1583,18 +1583,18 @@ const AdminDashboard: React.FC = () => {
                         labelStyle={{ color: '#9BD4FF' }}
                       />
                       <Legend wrapperStyle={{ color: '#9BD4FF' }} />
-                      <Bar dataKey="estimated_monthly_revenue" fill="#22c55e" name="Est. Monthly Revenue ($)" />
+                      <Bar dataKey="estimated_monthly_revenue" fill="#22c55e" name={isFrench ? 'Revenus mensuels est. ($)' : 'Est. Monthly Revenue ($)'} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-500 text-center py-12">No data available</p>
+                  <p className="text-gray-500 text-center py-12">{isFrench ? 'Aucune donnée disponible' : 'No data available'}</p>
                 )}
               </div>
 
               {/* Age Category Distribution - Pie Chart */}
               <div className="bg-black border border-white/10 rounded-lg p-6">
                 <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
-                  👶 Age Category Distribution
+                  👶 {isFrench ? 'Répartition par catégorie d\'âge' : 'Age Category Distribution'}
                 </h3>
                 {ageDistribution.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
@@ -1619,7 +1619,7 @@ const AdminDashboard: React.FC = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-500 text-center py-12">No data available</p>
+                  <p className="text-gray-500 text-center py-12">{isFrench ? 'Aucune donnée disponible' : 'No data available'}</p>
                 )}
               </div>
             </div>
@@ -1627,7 +1627,7 @@ const AdminDashboard: React.FC = () => {
             {/* Capacity Heat Map */}
             <div className="bg-black border border-white/10 rounded-lg p-6">
               <h3 className="text-xl font-bold text-[#9BD4FF] uppercase tracking-wider mb-4">
-                🔥 Capacity Heat Map
+                🔥 {isFrench ? 'Carte thermique de capacité' : 'Capacity Heat Map'}
               </h3>
               {capacityUtilization.length > 0 ? (
                 <div className="space-y-4">
@@ -1656,7 +1656,7 @@ const AdminDashboard: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-8">No capacity data available</p>
+                <p className="text-gray-500 text-center py-8">{isFrench ? 'Aucune donnée de capacité disponible' : 'No capacity data available'}</p>
               )}
             </div>
           </div>
