@@ -28,6 +28,17 @@ interface CreditSummary {
     admin_email: string;
     parent_email: string;
   }>;
+  recentPurchases: Array<{
+    id: string;
+    firebase_uid: string;
+    package_type: string;
+    credits_purchased: number;
+    price_paid: number;
+    status: string;
+    created_at: string;
+    stripe_checkout_session_id: string | null;
+    parent_email: string;
+  }>;
   revenueChart: Array<{
     date: string;
     revenue: number;
@@ -273,6 +284,77 @@ const AdminCreditDashboard: React.FC = () => {
           color="bg-pink-500"
         />
       </div>
+
+      {/* Recent Payments */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+      >
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-green-600" />
+          Recent Payments
+        </h3>
+        {summary.recentPurchases && summary.recentPurchases.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-sm text-gray-500 border-b">
+                  <th className="pb-3 font-medium">Parent</th>
+                  <th className="pb-3 font-medium">Package</th>
+                  <th className="pb-3 font-medium">Amount</th>
+                  <th className="pb-3 font-medium">Status</th>
+                  <th className="pb-3 font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {summary.recentPurchases.map((purchase) => (
+                  <tr key={purchase.id} className="text-sm">
+                    <td className="py-3">
+                      <span className="font-medium text-gray-900">{purchase.parent_email}</span>
+                    </td>
+                    <td className="py-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {purchase.package_type === '50_pack' ? '50-Pack' :
+                         purchase.package_type === '20_pack' ? '20-Pack' :
+                         purchase.package_type === '10_pack' ? '10-Pack' : 'Single'}
+                      </span>
+                      <span className="text-gray-500 ml-2">({purchase.credits_purchased} credits)</span>
+                    </td>
+                    <td className="py-3">
+                      <span className="font-semibold text-gray-900">
+                        {formatCurrency(Number(purchase.price_paid) * 100)}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        purchase.status === 'completed' || purchase.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : purchase.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {purchase.status}
+                      </span>
+                    </td>
+                    <td className="py-3 text-gray-500">
+                      {new Date(purchase.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-4">No recent payments</p>
+        )}
+      </motion.div>
 
       {/* Recent Activity */}
       {summary.recentActivity.length > 0 && (
