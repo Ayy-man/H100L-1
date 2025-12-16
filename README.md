@@ -41,6 +41,11 @@ A comprehensive hockey training registration system with credit-based booking, S
   - Live data sync for credits, bookings, and schedules
   - Toast notifications for important events
 
+- **Bilingual Support (English/French)**
+  - Full Québécois French translations
+  - Language toggle in navigation
+  - Locale-aware date formatting
+
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite
@@ -92,6 +97,7 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 VITE_STRIPE_PRICE_CREDIT_SINGLE=price_xxx    # $45
 VITE_STRIPE_PRICE_CREDIT_10PACK=price_xxx    # $350
 VITE_STRIPE_PRICE_CREDIT_20PACK=price_xxx    # $500
+VITE_STRIPE_PRICE_CREDIT_50PACK=price_xxx    # $1,000
 
 # Session Prices
 VITE_STRIPE_PRICE_SUNDAY=price_xxx                    # $50
