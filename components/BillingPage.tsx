@@ -91,6 +91,7 @@ const BillingPage: React.FC = () => {
       single: '1 Session',
       '10_pack': '10-Session Package',
       '20_pack': '20-Session Package',
+      '50_pack': '50-Session Package',
     };
     return labels[packageType] || packageType;
   };
