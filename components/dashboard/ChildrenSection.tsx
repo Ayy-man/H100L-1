@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import BookSessionModal from './BookSessionModal';
 import AddChildModal from './AddChildModal';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type { ChildProfile } from '@/contexts/ProfileContext';
 
 interface ChildrenSectionProps {
@@ -37,6 +38,8 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
   children,
   onRefresh,
 }) => {
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
   const [bookingChild, setBookingChild] = useState<ChildProfile | null>(null);
   const [showAddChildModal, setShowAddChildModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,10 +97,12 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                Your Players
+                {isFrench ? 'Vos joueurs' : 'Your Players'}
               </CardTitle>
               <CardDescription>
-                {children.length} registered player{children.length !== 1 ? 's' : ''}
+                {isFrench
+                  ? `${children.length} joueur${children.length !== 1 ? 's' : ''} inscrit${children.length !== 1 ? 's' : ''}`
+                  : `${children.length} registered player${children.length !== 1 ? 's' : ''}`}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -116,7 +121,7 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
                 onClick={() => setShowAddChildModal(true)}
               >
                 <UserPlus className="mr-1 h-4 w-4" />
-                Add Player
+                {isFrench ? 'Ajouter' : 'Add Player'}
               </Button>
             </div>
           </div>
@@ -154,7 +159,7 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
                   className="text-primary hover:text-primary hover:bg-primary/10"
                 >
                   <Calendar className="mr-1 h-4 w-4" />
-                  Book
+                  {isFrench ? 'Réserver' : 'Book'}
                 </Button>
               </div>
             ))}
@@ -165,11 +170,11 @@ const ChildrenSection: React.FC<ChildrenSectionProps> = ({
             <div className="text-center py-8">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">
-                No players registered yet
+                {isFrench ? 'Aucun joueur inscrit' : 'No players registered yet'}
               </p>
               <Button className="mt-4" onClick={() => setShowAddChildModal(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
-                Add Your First Player
+                {isFrench ? 'Ajouter votre premier joueur' : 'Add Your First Player'}
               </Button>
             </div>
           )}

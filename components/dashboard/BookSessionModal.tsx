@@ -34,6 +34,7 @@ import type { ChildProfile } from '@/contexts/ProfileContext';
 import type { SessionType, SlotCapacity } from '@/types/credits';
 import { SESSION_PRICING, CREDITS_PER_SESSION } from '@/types/credits';
 import { formatPrice, getSessionPrice } from '@/lib/stripe';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface BookSessionModalProps {
   open: boolean;
@@ -72,6 +73,8 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
   preSelectedDate,
 }) => {
   const { user } = useProfile();
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
 
   // Selection state
   const [selectedChild, setSelectedChild] = useState<string>(child?.registrationId || '');
@@ -209,7 +212,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
           throw new Error(data.error || 'Failed to book session');
         }
 
-        toast.success('Session booked successfully!');
+        toast.success(isFrench ? 'Séance réservée avec succès!' : 'Session booked successfully!');
         onSuccess?.();
         onClose();
       } else {
@@ -238,7 +241,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
       }
     } catch (err) {
       console.error('Booking error:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to book session');
+      toast.error(err instanceof Error ? err.message : (isFrench ? 'Échec de la réservation' : 'Failed to book session'));
     } finally {
       setBooking(false);
     }
@@ -279,7 +282,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
       return {
         type: 'credit',
         amount: CREDITS_PER_SESSION.group,
-        label: `${CREDITS_PER_SESSION.group} Credit`,
+        label: isFrench ? `${CREDITS_PER_SESSION.group} crédit` : `${CREDITS_PER_SESSION.group} Credit`,
         canAfford: creditBalance >= CREDITS_PER_SESSION.group,
       };
     }
@@ -301,10 +304,10 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            Book a Session
+            {isFrench ? 'Réserver une séance' : 'Book a Session'}
           </DialogTitle>
           <DialogDescription>
-            Select a date and time for your training session
+            {isFrench ? 'Sélectionnez une date et une heure pour votre séance d\'entraînement' : 'Select a date and time for your training session'}
           </DialogDescription>
         </DialogHeader>
 
@@ -312,10 +315,10 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
           {/* Child Selection (if multiple) */}
           {childrenList.length > 1 && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Player</label>
+              <label className="text-sm font-medium">{isFrench ? 'Sélectionner le joueur' : 'Select Player'}</label>
               <Select value={selectedChild} onValueChange={setSelectedChild}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a player" />
+                  <SelectValue placeholder={isFrench ? 'Sélectionner un joueur' : 'Select a player'} />
                 </SelectTrigger>
                 <SelectContent>
                   {childrenList.map((c) => (
@@ -333,20 +336,20 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
 
           {/* Session Type Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Session Type</label>
+            <label className="text-sm font-medium">{isFrench ? 'Type de séance' : 'Session Type'}</label>
             <div className="grid grid-cols-2 gap-2">
               {(['group', 'sunday', 'semi_private', 'private'] as SessionType[]).map((type) => {
-                const labels: Record<SessionType, string> = {
-                  group: 'Group Training',
-                  sunday: 'Sunday Ice',
-                  private: 'Private',
-                  semi_private: 'Semi-Private',
+                const labels: Record<SessionType, { en: string; fr: string }> = {
+                  group: { en: 'Group Training', fr: 'Entraînement de groupe' },
+                  sunday: { en: 'Sunday Ice', fr: 'Glace dimanche' },
+                  private: { en: 'Private', fr: 'Privé' },
+                  semi_private: { en: 'Semi-Private', fr: 'Semi-privé' },
                 };
-                const costs: Record<SessionType, string> = {
-                  group: '1 Credit',
-                  sunday: '$50',
-                  private: '$89.99',
-                  semi_private: '$69',
+                const costs: Record<SessionType, { en: string; fr: string }> = {
+                  group: { en: '1 Credit', fr: '1 crédit' },
+                  sunday: { en: '$50', fr: '50$' },
+                  private: { en: '$89.99', fr: '89,99$' },
+                  semi_private: { en: '$69', fr: '69$' },
                 };
 
                 return (
@@ -362,8 +365,8 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
                         : 'border-border hover:border-primary/50'
                     }`}
                   >
-                    <p className="font-medium text-sm">{labels[type]}</p>
-                    <p className="text-xs text-muted-foreground">{costs[type]}</p>
+                    <p className="font-medium text-sm">{isFrench ? labels[type].fr : labels[type].en}</p>
+                    <p className="text-xs text-muted-foreground">{isFrench ? costs[type].fr : costs[type].en}</p>
                   </button>
                 );
               })}
@@ -372,7 +375,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
 
           {/* Calendar */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Select Date</label>
+            <label className="text-sm font-medium">{isFrench ? 'Sélectionner la date' : 'Select Date'}</label>
             <div className="border rounded-lg p-3">
               {/* Month Navigation */}
               <div className="flex items-center justify-between mb-3">
@@ -384,7 +387,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="font-medium">
-                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  {currentMonth.toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', { month: 'long', year: 'numeric' })}
                 </span>
                 <Button
                   variant="ghost"
@@ -397,7 +400,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
 
               {/* Day Headers */}
               <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground mb-1">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                {(isFrench ? ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map((day) => (
                   <div key={day} className="py-1">{day}</div>
                 ))}
               </div>
@@ -440,14 +443,14 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
           {/* Time Slots */}
           {selectedDate && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Time</label>
+              <label className="text-sm font-medium">{isFrench ? 'Sélectionner l\'heure' : 'Select Time'}</label>
               {loadingSlots ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
               ) : availableSlots.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No available slots for this date
+                  {isFrench ? 'Aucune place disponible pour cette date' : 'No available slots for this date'}
                 </p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
@@ -468,8 +471,8 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
                       {slot.time}
                       <p className="text-xs text-muted-foreground">
                         {slot.available
-                          ? `${slot.maxCapacity - slot.currentBookings} spots`
-                          : 'Full'}
+                          ? `${slot.maxCapacity - slot.currentBookings} ${isFrench ? 'places' : 'spots'}`
+                          : (isFrench ? 'Complet' : 'Full')}
                       </p>
                     </button>
                   ))}
@@ -482,7 +485,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
           {selectedDate && selectedTime && (
             <div className="p-3 rounded-lg bg-muted/50 border">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Cost</span>
+                <span className="text-sm text-muted-foreground">{isFrench ? 'Coût' : 'Cost'}</span>
                 <div className="flex items-center gap-2">
                   {costInfo.type === 'credit' ? (
                     <>
@@ -499,7 +502,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
               </div>
               {costInfo.type === 'credit' && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Your balance: {creditBalance} credit{creditBalance !== 1 ? 's' : ''}
+                  {isFrench ? `Votre solde: ${creditBalance} crédit${creditBalance !== 1 ? 's' : ''}` : `Your balance: ${creditBalance} credit${creditBalance !== 1 ? 's' : ''}`}
                 </p>
               )}
             </div>
@@ -510,7 +513,9 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Not enough credits. You need {CREDITS_PER_SESSION.group} credit but have {creditBalance}.
+                {isFrench
+                  ? `Crédits insuffisants. Vous avez besoin de ${CREDITS_PER_SESSION.group} crédit mais vous en avez ${creditBalance}.`
+                  : `Not enough credits. You need ${CREDITS_PER_SESSION.group} credit but have ${creditBalance}.`}
               </AlertDescription>
             </Alert>
           )}
@@ -519,7 +524,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
         {/* Actions */}
         <div className="flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1">
-            Cancel
+            {isFrench ? 'Annuler' : 'Cancel'}
           </Button>
           <Button
             onClick={handleBook}
@@ -529,17 +534,17 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
             {booking ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Booking...
+                {isFrench ? 'Réservation...' : 'Booking...'}
               </>
             ) : sessionType === 'group' ? (
               <>
                 <Coins className="mr-2 h-4 w-4" />
-                Book with Credit
+                {isFrench ? 'Réserver avec crédit' : 'Book with Credit'}
               </>
             ) : (
               <>
                 <CreditCard className="mr-2 h-4 w-4" />
-                Pay & Book
+                {isFrench ? 'Payer et réserver' : 'Pay & Book'}
               </>
             )}
           </Button>

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { CreditCard, TrendingUp, AlertTriangle, Users, DollarSign, Clock, Activity, Package, Search } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import CreditManagementPanel from './CreditManagementPanel';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CreditSummary {
   overview: {
@@ -79,6 +80,8 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon: Icon, color, 
 };
 
 const AdminCreditDashboard: React.FC = () => {
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
   const [summary, setSummary] = useState<CreditSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +106,7 @@ const AdminCreditDashboard: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-CA', {
+    return new Intl.NumberFormat(isFrench ? 'fr-CA' : 'en-CA', {
       style: 'currency',
       currency: 'CAD'
     }).format(amount / 100);
@@ -120,12 +123,12 @@ const AdminCreditDashboard: React.FC = () => {
   if (error) {
     return (
       <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-        <p className="text-red-400">Error: {error}</p>
+        <p className="text-red-400">{isFrench ? 'Erreur:' : 'Error:'} {error}</p>
         <button
           onClick={fetchCreditSummary}
           className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
         >
-          Retry
+          {isFrench ? 'Réessayer' : 'Retry'}
         </button>
       </div>
     );
@@ -145,7 +148,7 @@ const AdminCreditDashboard: React.FC = () => {
               : 'text-gray-400 hover:text-white'
           }`}
         >
-          Overview
+          {isFrench ? 'Aperçu' : 'Overview'}
         </button>
         <button
           onClick={() => setActiveTab('management')}
@@ -156,7 +159,7 @@ const AdminCreditDashboard: React.FC = () => {
           }`}
         >
           <Search className="w-4 h-4" />
-          User Management
+          {isFrench ? 'Gestion des utilisateurs' : 'User Management'}
         </button>
       </div>
 
@@ -166,31 +169,31 @@ const AdminCreditDashboard: React.FC = () => {
           {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
-          title="Total Parents"
+          title={isFrench ? 'Total parents' : 'Total Parents'}
           value={summary.overview.totalParents}
           icon={Users}
           color="bg-blue-500"
         />
         <StatsCard
-          title="Total Credits"
+          title={isFrench ? 'Total crédits' : 'Total Credits'}
           value={summary.overview.totalCredits}
           icon={CreditCard}
           color="bg-purple-500"
-          changeLabel="credits used today"
+          changeLabel={isFrench ? "crédits utilisés aujourd'hui" : 'credits used today'}
           change={-summary.overview.creditsUsedToday}
         />
         <StatsCard
-          title="Active Purchases"
+          title={isFrench ? 'Achats actifs' : 'Active Purchases'}
           value={summary.overview.activePurchases}
           icon={Package}
           color="bg-green-500"
         />
         <StatsCard
-          title="Total Revenue"
+          title={isFrench ? 'Revenu total' : 'Total Revenue'}
           value={formatCurrency(summary.overview.totalRevenue)}
           icon={DollarSign}
           color="bg-yellow-500"
-          changeLabel="this month"
+          changeLabel={isFrench ? 'ce mois' : 'this month'}
           change={summary.overview.monthlyRevenue / 100}
         />
       </div>
@@ -204,20 +207,20 @@ const AdminCreditDashboard: React.FC = () => {
         >
           <div className="flex items-center mb-2">
             <AlertTriangle className="w-5 h-5 text-orange-400 mr-2" />
-            <h3 className="text-lg font-semibold text-orange-300">Credits Expiring Soon</h3>
+            <h3 className="text-lg font-semibold text-orange-300">{isFrench ? 'Crédits expirant bientôt' : 'Credits Expiring Soon'}</h3>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-orange-400">{summary.expiry.expiring1Day}</p>
-              <p className="text-sm text-orange-300/70">Expiring in 1 day</p>
+              <p className="text-sm text-orange-300/70">{isFrench ? 'Expire dans 1 jour' : 'Expiring in 1 day'}</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-orange-400">{summary.expiry.expiring7Days}</p>
-              <p className="text-sm text-orange-300/70">Expiring in 7 days</p>
+              <p className="text-sm text-orange-300/70">{isFrench ? 'Expire dans 7 jours' : 'Expiring in 7 days'}</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-orange-400">{summary.expiry.expiring30Days}</p>
-              <p className="text-sm text-orange-300/70">Expiring in 30 days</p>
+              <p className="text-sm text-orange-300/70">{isFrench ? 'Expire dans 30 jours' : 'Expiring in 30 days'}</p>
             </div>
           </div>
         </motion.div>
@@ -231,7 +234,7 @@ const AdminCreditDashboard: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           className="bg-black rounded-xl p-6 border border-white/10"
         >
-          <h3 className="text-lg font-semibold text-white mb-4">Revenue (Last 30 Days)</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">{isFrench ? 'Revenus (30 derniers jours)' : 'Revenue (Last 30 Days)'}</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={summary.revenueChart}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -253,14 +256,14 @@ const AdminCreditDashboard: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           className="bg-black rounded-xl p-6 border border-white/10"
         >
-          <h3 className="text-lg font-semibold text-white mb-4">Package Distribution</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">{isFrench ? 'Distribution des forfaits' : 'Package Distribution'}</h3>
           <div className="space-y-3">
             {Object.entries(summary.packageDistribution).map(([type, count]) => (
               <div key={type} className="flex items-center justify-between">
                 <span className="capitalize text-gray-300">
-                  {type === '50_pack' ? '50-Pack' :
-                   type === '20_pack' ? '20-Pack' :
-                   type === '10_pack' ? '10-Pack' : 'Single'}
+                  {type === '50_pack' ? (isFrench ? 'Forfait 50' : '50-Pack') :
+                   type === '20_pack' ? (isFrench ? 'Forfait 20' : '20-Pack') :
+                   type === '10_pack' ? (isFrench ? 'Forfait 10' : '10-Pack') : (isFrench ? 'Individuel' : 'Single')}
                 </span>
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-white mr-2">{count}</span>
@@ -280,13 +283,13 @@ const AdminCreditDashboard: React.FC = () => {
       {/* Usage Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <StatsCard
-          title="Credits Used Today"
+          title={isFrench ? "Crédits utilisés aujourd'hui" : 'Credits Used Today'}
           value={summary.overview.creditsUsedToday}
           icon={Activity}
           color="bg-indigo-500"
         />
         <StatsCard
-          title="Credits Used This Month"
+          title={isFrench ? 'Crédits utilisés ce mois' : 'Credits Used This Month'}
           value={summary.overview.creditsUsedThisMonth}
           icon={Clock}
           color="bg-pink-500"
@@ -301,17 +304,17 @@ const AdminCreditDashboard: React.FC = () => {
       >
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-green-400" />
-          Recent Payments
+          {isFrench ? 'Paiements récents' : 'Recent Payments'}
         </h3>
         {summary.recentPurchases && summary.recentPurchases.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="text-left text-sm text-gray-400 border-b border-white/10">
-                  <th className="pb-3 font-medium">Parent</th>
-                  <th className="pb-3 font-medium">Package</th>
-                  <th className="pb-3 font-medium">Amount</th>
-                  <th className="pb-3 font-medium">Status</th>
+                  <th className="pb-3 font-medium">{isFrench ? 'Parent' : 'Parent'}</th>
+                  <th className="pb-3 font-medium">{isFrench ? 'Forfait' : 'Package'}</th>
+                  <th className="pb-3 font-medium">{isFrench ? 'Montant' : 'Amount'}</th>
+                  <th className="pb-3 font-medium">{isFrench ? 'Statut' : 'Status'}</th>
                   <th className="pb-3 font-medium">Date</th>
                 </tr>
               </thead>
@@ -323,11 +326,11 @@ const AdminCreditDashboard: React.FC = () => {
                     </td>
                     <td className="py-3">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#9BD4FF]/20 text-[#9BD4FF]">
-                        {purchase.package_type === '50_pack' ? '50-Pack' :
-                         purchase.package_type === '20_pack' ? '20-Pack' :
-                         purchase.package_type === '10_pack' ? '10-Pack' : 'Single'}
+                        {purchase.package_type === '50_pack' ? (isFrench ? 'Forfait 50' : '50-Pack') :
+                         purchase.package_type === '20_pack' ? (isFrench ? 'Forfait 20' : '20-Pack') :
+                         purchase.package_type === '10_pack' ? (isFrench ? 'Forfait 10' : '10-Pack') : (isFrench ? 'Individuel' : 'Single')}
                       </span>
-                      <span className="text-gray-400 ml-2">({purchase.credits_purchased} credits)</span>
+                      <span className="text-gray-400 ml-2">({purchase.credits_purchased} {isFrench ? 'crédits' : 'credits'})</span>
                     </td>
                     <td className="py-3">
                       <span className="font-semibold text-white">
@@ -342,11 +345,13 @@ const AdminCreditDashboard: React.FC = () => {
                           ? 'bg-yellow-500/20 text-yellow-400'
                           : 'bg-gray-500/20 text-gray-400'
                       }`}>
-                        {purchase.status}
+                        {isFrench
+                          ? (purchase.status === 'completed' ? 'Complété' : purchase.status === 'active' ? 'Actif' : purchase.status === 'pending' ? 'En attente' : purchase.status)
+                          : purchase.status}
                       </span>
                     </td>
                     <td className="py-3 text-gray-400">
-                      {new Date(purchase.created_at).toLocaleDateString('en-US', {
+                      {new Date(purchase.created_at).toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
@@ -360,7 +365,7 @@ const AdminCreditDashboard: React.FC = () => {
             </table>
           </div>
         ) : (
-          <p className="text-gray-400 text-center py-4">No recent payments</p>
+          <p className="text-gray-400 text-center py-4">{isFrench ? 'Aucun paiement récent' : 'No recent payments'}</p>
         )}
       </motion.div>
 
@@ -371,7 +376,7 @@ const AdminCreditDashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-black rounded-xl p-6 border border-white/10"
         >
-          <h3 className="text-lg font-semibold text-white mb-4">Recent Credit Adjustments</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">{isFrench ? 'Ajustements de crédits récents' : 'Recent Credit Adjustments'}</h3>
           <div className="space-y-3">
             {summary.recentActivity.map((activity) => (
               <div key={activity.id} className="flex items-center justify-between py-2 border-b border-white/5">
@@ -381,10 +386,10 @@ const AdminCreditDashboard: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className={`font-semibold ${activity.adjustment_amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {activity.adjustment_amount >= 0 ? '+' : ''}{activity.adjustment_amount} credits
+                    {activity.adjustment_amount >= 0 ? '+' : ''}{activity.adjustment_amount} {isFrench ? 'crédits' : 'credits'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {new Date(activity.created_at).toLocaleString()}
+                    {new Date(activity.created_at).toLocaleString(isFrench ? 'fr-CA' : 'en-US')}
                   </p>
                 </div>
               </div>

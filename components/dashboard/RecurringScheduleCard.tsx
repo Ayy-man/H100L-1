@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import type { RecurringSchedule, DayOfWeek } from '@/types/credits';
 import type { ChildProfile } from '@/contexts/ProfileContext';
@@ -60,17 +61,31 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
   onRefresh,
 }) => {
   const { user } = useProfile();
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
 
   // Get child name by registration ID
   const getChildName = (registrationId: string) => {
-    return children.find(c => c.registrationId === registrationId)?.playerName || 'Unknown';
+    return children.find(c => c.registrationId === registrationId)?.playerName || (isFrench ? 'Inconnu' : 'Unknown');
   };
 
   // Format day of week
   const formatDayOfWeek = (day: DayOfWeek) => {
+    const daysFr: Record<string, string> = {
+      sunday: 'dimanche',
+      monday: 'lundi',
+      tuesday: 'mardi',
+      wednesday: 'mercredi',
+      thursday: 'jeudi',
+      friday: 'vendredi',
+      saturday: 'samedi',
+    };
+    if (isFrench) {
+      return daysFr[day] || day;
+    }
     return day.charAt(0).toUpperCase() + day.slice(1);
   };
 
@@ -81,21 +96,21 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
         return (
           <Badge variant="destructive" className="text-xs">
             <AlertTriangle className="mr-1 h-3 w-3" />
-            No Credits
+            {isFrench ? 'Aucun crédit' : 'No Credits'}
           </Badge>
         );
       }
       return (
         <Badge variant="secondary" className="text-xs">
           <Pause className="mr-1 h-3 w-3" />
-          Paused
+          {isFrench ? 'Suspendu' : 'Paused'}
         </Badge>
       );
     }
     return (
       <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-xs">
         <Play className="mr-1 h-3 w-3" />
-        Active
+        {isFrench ? 'Actif' : 'Active'}
       </Badge>
     );
   };
@@ -123,10 +138,12 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
         throw new Error(data.error || 'Failed to update schedule');
       }
 
-      toast.success(schedule.is_active ? 'Schedule paused' : 'Schedule resumed');
+      toast.success(schedule.is_active
+        ? (isFrench ? 'Horaire suspendu' : 'Schedule paused')
+        : (isFrench ? 'Horaire repris' : 'Schedule resumed'));
       onRefresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update schedule');
+      toast.error(err instanceof Error ? err.message : (isFrench ? 'Échec de la mise à jour' : 'Failed to update schedule'));
     } finally {
       setTogglingId(null);
     }
@@ -149,13 +166,13 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete schedule');
+        throw new Error(data.error || (isFrench ? 'Échec de la suppression' : 'Failed to delete schedule'));
       }
 
-      toast.success('Recurring schedule deleted');
+      toast.success(isFrench ? 'Horaire récurrent supprimé' : 'Recurring schedule deleted');
       onRefresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete schedule');
+      toast.error(err instanceof Error ? err.message : (isFrench ? 'Échec de la suppression' : 'Failed to delete schedule'));
     } finally {
       setDeletingId(null);
     }
@@ -187,10 +204,10 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Repeat className="h-5 w-5 text-primary" />
-                Recurring Schedules
+                {isFrench ? 'Horaires récurrents' : 'Recurring Schedules'}
               </CardTitle>
               <CardDescription>
-                Automatic weekly bookings (uses 1 credit per session)
+                {isFrench ? 'Réservations automatiques hebdomadaires (1 crédit par séance)' : 'Automatic weekly bookings (uses 1 credit per session)'}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -209,7 +226,7 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
                   onClick={() => setShowSetupModal(true)}
                 >
                   <Plus className="mr-1 h-4 w-4" />
-                  Add
+                  {isFrench ? 'Ajouter' : 'Add'}
                 </Button>
               )}
             </div>
@@ -221,14 +238,14 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
             <div className="text-center py-8">
               <Repeat className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground mb-2">
-                No recurring schedules set up
+                {isFrench ? 'Aucun horaire récurrent configuré' : 'No recurring schedules set up'}
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                Set up automatic weekly bookings for consistent training
+                {isFrench ? 'Configurez des réservations automatiques hebdomadaires pour un entraînement régulier' : 'Set up automatic weekly bookings for consistent training'}
               </p>
               <Button variant="outline" onClick={() => setShowSetupModal(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Set Up Recurring
+                {isFrench ? 'Configurer un horaire récurrent' : 'Set Up Recurring'}
               </Button>
             </div>
           ) : (
@@ -246,7 +263,7 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
-                          Every {formatDayOfWeek(schedule.day_of_week)}
+                          {isFrench ? `Chaque ${formatDayOfWeek(schedule.day_of_week)}` : `Every ${formatDayOfWeek(schedule.day_of_week)}`}
                         </span>
                         {getStatusBadge(schedule)}
                       </div>
@@ -262,13 +279,13 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {schedule.session_type === 'group' ? 'Group Training' : schedule.session_type}
+                          {schedule.session_type === 'group' ? (isFrench ? 'Entraînement de groupe' : 'Group Training') : schedule.session_type}
                         </span>
                       </div>
 
                       {schedule.next_booking_date && schedule.is_active && (
                         <p className="text-xs text-muted-foreground">
-                          Next booking: {new Date(schedule.next_booking_date + 'T00:00:00').toLocaleDateString('en-US', {
+                          {isFrench ? 'Prochaine réservation:' : 'Next booking:'} {new Date(schedule.next_booking_date + 'T00:00:00').toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric',
@@ -279,7 +296,7 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
                       {schedule.paused_reason === 'insufficient_credits' && (
                         <p className="text-xs text-red-500 flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3" />
-                          Buy credits to resume automatic bookings
+                          {isFrench ? 'Achetez des crédits pour reprendre les réservations automatiques' : 'Buy credits to resume automatic bookings'}
                         </p>
                       )}
                     </div>
@@ -291,7 +308,7 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
                         onClick={() => handleToggle(schedule)}
                         disabled={togglingId === schedule.id || schedule.paused_reason === 'insufficient_credits'}
                         className="h-8 w-8"
-                        title={schedule.is_active ? 'Pause' : 'Resume'}
+                        title={schedule.is_active ? (isFrench ? 'Suspendre' : 'Pause') : (isFrench ? 'Reprendre' : 'Resume')}
                       >
                         {togglingId === schedule.id ? (
                           <RefreshCw className="h-4 w-4 animate-spin" />
@@ -306,7 +323,7 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
                         size="icon"
                         onClick={() => setDeletingId(schedule.id)}
                         className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                        title="Delete"
+                        title={isFrench ? 'Supprimer' : 'Delete'}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -320,7 +337,7 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
           {/* Info note */}
           {schedules.length > 0 && (
             <p className="text-xs text-muted-foreground mt-4 text-center">
-              Recurring bookings are processed weekly. 1 credit is deducted per session.
+              {isFrench ? 'Les réservations récurrentes sont traitées chaque semaine. 1 crédit est déduit par séance.' : 'Recurring bookings are processed weekly. 1 credit is deducted per session.'}
             </p>
           )}
         </CardContent>
@@ -330,19 +347,20 @@ const RecurringScheduleCard: React.FC<RecurringScheduleCardProps> = ({
       <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Recurring Schedule?</AlertDialogTitle>
+            <AlertDialogTitle>{isFrench ? 'Supprimer l\'horaire récurrent?' : 'Delete Recurring Schedule?'}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will stop all future automatic bookings for this schedule.
-              Existing bookings will not be affected.
+              {isFrench
+                ? 'Cela arrêtera toutes les réservations automatiques futures pour cet horaire. Les réservations existantes ne seront pas affectées.'
+                : 'This will stop all future automatic bookings for this schedule. Existing bookings will not be affected.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep Schedule</AlertDialogCancel>
+            <AlertDialogCancel>{isFrench ? 'Conserver l\'horaire' : 'Keep Schedule'}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingId && handleDelete(deletingId)}
               className="bg-red-500 hover:bg-red-600"
             >
-              Delete Schedule
+              {isFrench ? 'Supprimer l\'horaire' : 'Delete Schedule'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

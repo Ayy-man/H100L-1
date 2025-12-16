@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { SessionBookingWithDetails } from '@/types/credits';
 import { CANCELLATION_WINDOW_HOURS } from '@/types/credits';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CancelBookingModalProps {
   open: boolean;
@@ -41,6 +42,8 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
   booking,
   onConfirm,
 }) => {
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
   const [cancelling, setCancelling] = useState(false);
 
   // Calculate hours until session
@@ -59,7 +62,7 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
 
   // Format session date
   const formatDate = (dateString: string) => {
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', {
+    return new Date(dateString + 'T00:00:00').toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -69,13 +72,14 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
 
   // Get session type label
   const getSessionTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      group: 'Group Training',
-      sunday: 'Sunday Ice Practice',
-      private: 'Private Training',
-      semi_private: 'Semi-Private Training',
+    const labels: Record<string, { en: string; fr: string }> = {
+      group: { en: 'Group Training', fr: 'Entraînement de groupe' },
+      sunday: { en: 'Sunday Ice Practice', fr: 'Glace du dimanche' },
+      private: { en: 'Private Training', fr: 'Entraînement privé' },
+      semi_private: { en: 'Semi-Private Training', fr: 'Entraînement semi-privé' },
     };
-    return labels[type] || type;
+    const label = labels[type];
+    return label ? (isFrench ? label.fr : label.en) : type;
   };
 
   const handleConfirm = async () => {
@@ -93,10 +97,10 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <X className="h-5 w-5" />
-            Cancel Booking
+            {isFrench ? 'Annuler la réservation' : 'Cancel Booking'}
           </DialogTitle>
           <DialogDescription>
-            Are you sure you want to cancel this session?
+            {isFrench ? 'Êtes-vous sûr de vouloir annuler cette séance?' : 'Are you sure you want to cancel this session?'}
           </DialogDescription>
         </DialogHeader>
 
@@ -117,7 +121,7 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
             </div>
             <div className="text-sm text-muted-foreground">
               {getSessionTypeLabel(booking.session_type)}
-              {booking.is_recurring && ' (Recurring)'}
+              {booking.is_recurring && (isFrench ? ' (Récurrent)' : ' (Recurring)')}
             </div>
           </div>
 
@@ -128,11 +132,11 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
               <AlertDescription className={willRefundCredit ? 'text-green-700' : 'text-yellow-700'}>
                 {willRefundCredit ? (
                   <>
-                    <strong>Credit will be refunded.</strong> You're cancelling more than 24 hours before the session.
+                    <strong>{isFrench ? 'Crédit remboursé.' : 'Credit will be refunded.'}</strong> {isFrench ? 'Vous annulez plus de 24 heures avant la séance.' : "You're cancelling more than 24 hours before the session."}
                   </>
                 ) : (
                   <>
-                    <strong>No credit refund.</strong> You're cancelling less than 24 hours before the session.
+                    <strong>{isFrench ? 'Aucun remboursement.' : 'No credit refund.'}</strong> {isFrench ? 'Vous annulez moins de 24 heures avant la séance.' : "You're cancelling less than 24 hours before the session."}
                   </>
                 )}
               </AlertDescription>
@@ -144,7 +148,7 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
             <Alert className="border-yellow-500/50 bg-yellow-500/10">
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-700">
-                <strong>Payment not refundable.</strong> Contact support for refund requests on paid sessions.
+                <strong>{isFrench ? 'Paiement non remboursable.' : 'Payment not refundable.'}</strong> {isFrench ? 'Contactez le support pour les demandes de remboursement sur les séances payées.' : 'Contact support for refund requests on paid sessions.'}
               </AlertDescription>
             </Alert>
           )}
@@ -153,26 +157,26 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
           <div className="text-sm text-center text-muted-foreground">
             {hoursUntilSession < 1 ? (
               <span className="text-red-500 font-medium">
-                Session starts in less than 1 hour
+                {isFrench ? 'La séance commence dans moins d\'une heure' : 'Session starts in less than 1 hour'}
               </span>
             ) : hoursUntilSession < 24 ? (
               <span className="text-yellow-600">
-                Session starts in {Math.round(hoursUntilSession)} hours
+                {isFrench ? `La séance commence dans ${Math.round(hoursUntilSession)} heures` : `Session starts in ${Math.round(hoursUntilSession)} hours`}
               </span>
             ) : (
               <span>
-                Session is in {Math.round(hoursUntilSession)} hours
+                {isFrench ? `La séance est dans ${Math.round(hoursUntilSession)} heures` : `Session is in ${Math.round(hoursUntilSession)} hours`}
               </span>
             )}
           </div>
 
           {/* Cancellation Policy */}
           <div className="text-xs text-muted-foreground border-t pt-3">
-            <p className="font-medium mb-1">Cancellation Policy:</p>
+            <p className="font-medium mb-1">{isFrench ? 'Politique d\'annulation:' : 'Cancellation Policy:'}</p>
             <ul className="space-y-1 list-disc list-inside">
-              <li>Cancel 24+ hours before: Full credit refund</li>
-              <li>Cancel within 24 hours: No refund</li>
-              <li>Paid sessions: Contact support for refunds</li>
+              <li>{isFrench ? 'Annuler 24h+ avant: Remboursement complet du crédit' : 'Cancel 24+ hours before: Full credit refund'}</li>
+              <li>{isFrench ? 'Annuler dans les 24h: Aucun remboursement' : 'Cancel within 24 hours: No refund'}</li>
+              <li>{isFrench ? 'Séances payées: Contactez le support pour les remboursements' : 'Paid sessions: Contact support for refunds'}</li>
             </ul>
           </div>
         </div>
@@ -180,7 +184,7 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
         {/* Actions */}
         <div className="flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1">
-            Keep Booking
+            {isFrench ? 'Garder la réservation' : 'Keep Booking'}
           </Button>
           <Button
             variant="destructive"
@@ -191,12 +195,12 @@ const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
             {cancelling ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cancelling...
+                {isFrench ? 'Annulation...' : 'Cancelling...'}
               </>
             ) : (
               <>
                 <X className="mr-2 h-4 w-4" />
-                Cancel Booking
+                {isFrench ? 'Annuler la réservation' : 'Cancel Booking'}
               </>
             )}
           </Button>

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import BuyCreditsModal from './BuyCreditsModal';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type { CreditBalanceResponse, CreditPurchaseInfo } from '@/types/credits';
 import { LOW_CREDIT_THRESHOLD, CREDIT_EXPIRY_WARNING_DAYS } from '@/types/credits';
 
@@ -43,6 +44,8 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
   loading,
   onRefresh,
 }) => {
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -96,7 +99,7 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Coins className="h-5 w-5 text-primary" />
-              Credit Balance
+              {isFrench ? 'Solde de crédits' : 'Credit Balance'}
             </CardTitle>
             <Button
               variant="ghost"
@@ -108,7 +111,7 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
             </Button>
           </div>
           <CardDescription>
-            Shared across all your children
+            {isFrench ? 'Partagé entre tous vos enfants' : 'Shared across all your children'}
           </CardDescription>
         </CardHeader>
 
@@ -119,7 +122,9 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
               {totalCredits}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              credit{totalCredits !== 1 ? 's' : ''} available
+              {isFrench
+                ? `crédit${totalCredits !== 1 ? 's' : ''} disponible${totalCredits !== 1 ? 's' : ''}`
+                : `credit${totalCredits !== 1 ? 's' : ''} available`}
             </p>
           </div>
 
@@ -128,7 +133,7 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
             <div className="flex items-center gap-2 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-600">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">
-                No credits available. Buy credits to book sessions.
+                {isFrench ? 'Aucun crédit disponible. Achetez des crédits pour réserver des séances.' : 'No credits available. Buy credits to book sessions.'}
               </span>
             </div>
           )}
@@ -137,7 +142,9 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
             <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-600">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">
-                Low balance! Only {totalCredits} credit{totalCredits !== 1 ? 's' : ''} remaining.
+                {isFrench
+                  ? `Solde faible! Seulement ${totalCredits} crédit${totalCredits !== 1 ? 's' : ''} restant${totalCredits !== 1 ? 's' : ''}.`
+                  : `Low balance! Only ${totalCredits} credit${totalCredits !== 1 ? 's' : ''} remaining.`}
               </span>
             </div>
           )}
@@ -146,7 +153,9 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
             <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600">
               <Clock className="h-4 w-4 flex-shrink-0" />
               <span className="text-sm">
-                {expiringCredits} credit{expiringCredits !== 1 ? 's' : ''} expiring soon
+                {isFrench
+                  ? `${expiringCredits} crédit${expiringCredits !== 1 ? 's' : ''} expire${expiringCredits !== 1 ? 'nt' : ''} bientôt`
+                  : `${expiringCredits} credit${expiringCredits !== 1 ? 's' : ''} expiring soon`}
               </span>
             </div>
           )}
@@ -158,7 +167,7 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
                 onClick={() => setShowDetails(!showDetails)}
                 className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                <span>Purchase Details ({purchases.filter(p => p.status === 'active').length} active)</span>
+                <span>{isFrench ? `Détails des achats (${purchases.filter(p => p.status === 'active').length} actifs)` : `Purchase Details (${purchases.filter(p => p.status === 'active').length} active)`}</span>
                 {showDetails ? (
                   <ChevronUp className="h-4 w-4" />
                 ) : (
@@ -185,16 +194,16 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
                         >
                           <div className="flex items-center gap-2">
                             <span className="font-medium">
-                              {purchase.credits_remaining} credit{purchase.credits_remaining !== 1 ? 's' : ''}
+                              {purchase.credits_remaining} {isFrench ? `crédit${purchase.credits_remaining !== 1 ? 's' : ''}` : `credit${purchase.credits_remaining !== 1 ? 's' : ''}`}
                             </span>
                             <Badge variant="outline" className="text-xs">
-                              {purchase.package_type === '50_pack' ? '50-Pack' :
-                               purchase.package_type === '20_pack' ? '20-Pack' :
-                               purchase.package_type === '10_pack' ? '10-Pack' : 'Single'}
+                              {purchase.package_type === '50_pack' ? (isFrench ? 'Forfait 50' : '50-Pack') :
+                               purchase.package_type === '20_pack' ? (isFrench ? 'Forfait 20' : '20-Pack') :
+                               purchase.package_type === '10_pack' ? (isFrench ? 'Forfait 10' : '10-Pack') : (isFrench ? 'Individuel' : 'Single')}
                             </Badge>
                           </div>
                           <span className={`text-xs ${isExpiringSoon ? 'text-orange-500 font-medium' : 'text-muted-foreground'}`}>
-                            Expires {expiresAt.toLocaleDateString('en-US', {
+                            {isFrench ? 'Expire le' : 'Expires'} {expiresAt.toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric',
@@ -215,12 +224,12 @@ const CreditBalanceCard: React.FC<CreditBalanceCardProps> = ({
             size="lg"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Buy Credits
+            {isFrench ? 'Acheter des crédits' : 'Buy Credits'}
           </Button>
 
           {/* Pricing hint */}
           <p className="text-xs text-center text-muted-foreground">
-            1 credit = $45 | 50 credits = $1,000 (save $1,250)
+            {isFrench ? '1 crédit = 45$ | 50 crédits = 1 000$ (économisez 1 250$)' : '1 credit = $45 | 50 credits = $1,000 (save $1,250)'}
           </p>
         </CardContent>
       </Card>

@@ -20,6 +20,7 @@ import {
   UserCheck,
   UserX,
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Types
 interface Booking {
@@ -94,23 +95,23 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 // Utility functions
-const formatDate = (dateStr: string): string => {
+const formatDate = (dateStr: string, isFrench: boolean = false): string => {
   const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
 };
 
-const formatSessionType = (type: string): string => {
-  const labels: Record<string, string> = {
-    group: 'Group',
-    sunday: 'Sunday Ice',
-    private: 'Private',
-    semi_private: 'Semi-Private',
+const formatSessionType = (type: string, isFrench: boolean = false): string => {
+  const labels: Record<string, { en: string; fr: string }> = {
+    group: { en: 'Group', fr: 'Groupe' },
+    sunday: { en: 'Sunday Ice', fr: 'Glace dimanche' },
+    private: { en: 'Private', fr: 'Privé' },
+    semi_private: { en: 'Semi-Private', fr: 'Semi-privé' },
   };
-  return labels[type] || type;
+  return labels[type] ? (isFrench ? labels[type].fr : labels[type].en) : type;
 };
 
 const getToday = (): string => {
@@ -240,6 +241,9 @@ const CapacityBar: React.FC<{ slot: SlotCapacity }> = ({ slot }) => {
 
 // Main Component
 const AdminBookingsPanel: React.FC = () => {
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'daily' | 'manage' | 'capacity' | 'revenue'>('daily');
 
@@ -482,10 +486,10 @@ const AdminBookingsPanel: React.FC = () => {
 
   // Tab content
   const tabs = [
-    { id: 'daily', label: 'Daily Operations', icon: <Calendar className="w-4 h-4" /> },
-    { id: 'manage', label: 'Booking Management', icon: <Search className="w-4 h-4" /> },
-    { id: 'capacity', label: 'Capacity Planning', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'revenue', label: 'Revenue & Reports', icon: <DollarSign className="w-4 h-4" /> },
+    { id: 'daily', label: isFrench ? 'Opérations quotidiennes' : 'Daily Operations', icon: <Calendar className="w-4 h-4" /> },
+    { id: 'manage', label: isFrench ? 'Gestion des réservations' : 'Booking Management', icon: <Search className="w-4 h-4" /> },
+    { id: 'capacity', label: isFrench ? 'Planification capacité' : 'Capacity Planning', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'revenue', label: isFrench ? 'Revenus & rapports' : 'Revenue & Reports', icon: <DollarSign className="w-4 h-4" /> },
   ];
 
   if (loading && bookings.length === 0) {
@@ -500,18 +504,18 @@ const AdminBookingsPanel: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 className="text-2xl font-bold text-white">Bookings Management</h2>
+        <h2 className="text-2xl font-bold text-white">{isFrench ? 'Gestion des réservations' : 'Bookings Management'}</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={goToThisWeek}
             className="px-3 py-2 bg-[#9BD4FF]/20 text-[#9BD4FF] rounded-lg hover:bg-[#9BD4FF]/30 transition-colors text-sm"
           >
-            This Week
+            {isFrench ? 'Cette semaine' : 'This Week'}
           </button>
           <button
             onClick={fetchBookings}
             className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-            title="Refresh"
+            title={isFrench ? 'Actualiser' : 'Refresh'}
           >
             <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -590,7 +594,7 @@ const AdminBookingsPanel: React.FC = () => {
                     {new Date(day.date + 'T00:00:00').getDate()}
                   </p>
                   <p className={`text-sm ${day.totalBookings > 0 ? 'text-[#9BD4FF]' : 'text-gray-600'}`}>
-                    {day.totalBookings} bookings
+                    {day.totalBookings} {isFrench ? 'réservations' : 'bookings'}
                   </p>
                 </button>
               );
@@ -600,25 +604,25 @@ const AdminBookingsPanel: React.FC = () => {
           {/* Selected Day Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard
-              title="Total Sessions"
+              title={isFrench ? 'Total séances' : 'Total Sessions'}
               value={todayBookings.filter((b) => b.status !== 'cancelled').length}
               icon={<Calendar className="w-5 h-5" />}
               color="text-[#9BD4FF]"
             />
             <StatCard
-              title="Attended"
+              title={isFrench ? 'Présent' : 'Attended'}
               value={todayBookings.filter((b) => b.status === 'attended').length}
               icon={<CheckCircle className="w-5 h-5" />}
               color="text-green-400"
             />
             <StatCard
-              title="Pending"
+              title={isFrench ? 'En attente' : 'Pending'}
               value={todayBookings.filter((b) => b.status === 'confirmed').length}
               icon={<Clock className="w-5 h-5" />}
               color="text-yellow-400"
             />
             <StatCard
-              title="No-Shows"
+              title={isFrench ? 'Absences' : 'No-Shows'}
               value={todayBookings.filter((b) => b.status === 'no_show').length}
               icon={<XCircle className="w-5 h-5" />}
               color="text-red-400"
@@ -628,24 +632,24 @@ const AdminBookingsPanel: React.FC = () => {
           {/* Today's Sessions List */}
           <div className="bg-black/50 border border-white/10 rounded-lg overflow-hidden">
             <div className="p-4 border-b border-white/10">
-              <h3 className="font-bold text-white">Sessions for {formatDate(selectedDate)}</h3>
+              <h3 className="font-bold text-white">{isFrench ? `Séances du ${formatDate(selectedDate, true)}` : `Sessions for ${formatDate(selectedDate)}`}</h3>
             </div>
             {todayBookings.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                No sessions scheduled for this day
+                {isFrench ? 'Aucune séance prévue ce jour' : 'No sessions scheduled for this day'}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-white/5">
                     <tr>
-                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Player</th>
+                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Joueur' : 'Player'}</th>
                       <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Type</th>
                       <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Date</th>
-                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Time</th>
-                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Status</th>
-                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Parent</th>
-                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Actions</th>
+                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Heure' : 'Time'}</th>
+                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Statut' : 'Status'}</th>
+                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Parent' : 'Parent'}</th>
+                      <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Actions' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -675,7 +679,7 @@ const AdminBookingsPanel: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Search player, email, category..."
+                  placeholder={isFrench ? 'Rechercher joueur, courriel, catégorie...' : 'Search player, email, category...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:border-[#9BD4FF] focus:outline-none"
@@ -687,10 +691,10 @@ const AdminBookingsPanel: React.FC = () => {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-[#9BD4FF] focus:outline-none"
             >
-              <option value="all">All Types</option>
+              <option value="all">{isFrench ? 'Tous les types' : 'All Types'}</option>
               {SESSION_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {formatSessionType(type)}
+                  {formatSessionType(type, isFrench)}
                 </option>
               ))}
             </select>
@@ -699,12 +703,20 @@ const AdminBookingsPanel: React.FC = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-[#9BD4FF] focus:outline-none"
             >
-              <option value="all">All Statuses</option>
-              {BOOKING_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </option>
-              ))}
+              <option value="all">{isFrench ? 'Tous les statuts' : 'All Statuses'}</option>
+              {BOOKING_STATUSES.map((status) => {
+                const statusLabels: Record<string, { en: string; fr: string }> = {
+                  confirmed: { en: 'Confirmed', fr: 'Confirmé' },
+                  attended: { en: 'Attended', fr: 'Présent' },
+                  cancelled: { en: 'Cancelled', fr: 'Annulé' },
+                  no_show: { en: 'No-Show', fr: 'Absent' },
+                };
+                return (
+                  <option key={status} value={status}>
+                    {isFrench ? statusLabels[status]?.fr : statusLabels[status]?.en || status}
+                  </option>
+                );
+              })}
             </select>
             <div className="flex items-center gap-2">
               <input
@@ -725,7 +737,9 @@ const AdminBookingsPanel: React.FC = () => {
 
           {/* Results Count */}
           <p className="text-gray-400 text-sm">
-            Showing {filteredBookings.length} of {bookings.length} bookings
+            {isFrench
+              ? `Affichage de ${filteredBookings.length} sur ${bookings.length} réservations`
+              : `Showing ${filteredBookings.length} of ${bookings.length} bookings`}
           </p>
 
           {/* Bookings Table */}
@@ -734,20 +748,20 @@ const AdminBookingsPanel: React.FC = () => {
               <table className="w-full">
                 <thead className="bg-white/5">
                   <tr>
-                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Player</th>
+                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Joueur' : 'Player'}</th>
                     <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Type</th>
                     <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Date</th>
-                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Time</th>
-                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Status</th>
-                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Parent</th>
-                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Actions</th>
+                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Heure' : 'Time'}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Statut' : 'Status'}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Parent' : 'Parent'}</th>
+                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">{isFrench ? 'Actions' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBookings.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-500">
-                        No bookings match your filters
+                        {isFrench ? 'Aucune réservation ne correspond à vos filtres' : 'No bookings match your filters'}
                       </td>
                     </tr>
                   ) : (
@@ -792,16 +806,16 @@ const AdminBookingsPanel: React.FC = () => {
           {/* Capacity Legend */}
           <div className="flex gap-4 text-sm">
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-green-500" /> Available
+              <span className="w-3 h-3 rounded bg-green-500" /> {isFrench ? 'Disponible' : 'Available'}
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-blue-500" /> Half Full
+              <span className="w-3 h-3 rounded bg-blue-500" /> {isFrench ? 'À moitié' : 'Half Full'}
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-yellow-500" /> Almost Full
+              <span className="w-3 h-3 rounded bg-yellow-500" /> {isFrench ? 'Presque plein' : 'Almost Full'}
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-red-500" /> Full
+              <span className="w-3 h-3 rounded bg-red-500" /> {isFrench ? 'Complet' : 'Full'}
             </span>
           </div>
 
@@ -819,10 +833,10 @@ const AdminBookingsPanel: React.FC = () => {
                   }`}
                 >
                   <h4 className={`font-bold mb-3 ${isToday ? 'text-[#9BD4FF]' : 'text-white'}`}>
-                    {formatDate(date)}
+                    {formatDate(date, isFrench)}
                   </h4>
                   {slots.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No bookings</p>
+                    <p className="text-gray-500 text-sm">{isFrench ? 'Aucune réservation' : 'No bookings'}</p>
                   ) : (
                     <div className="space-y-2">
                       {slots.map((slot, i) => (
@@ -843,50 +857,50 @@ const AdminBookingsPanel: React.FC = () => {
           {/* Summary Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard
-              title="Total Bookings"
+              title={isFrench ? 'Total réservations' : 'Total Bookings'}
               value={revenueStats.totalBookings}
               icon={<Users className="w-5 h-5" />}
               color="text-[#9BD4FF]"
               subtitle={`${dateRangeStart} - ${dateRangeEnd}`}
             />
             <StatCard
-              title="Credits Used"
+              title={isFrench ? 'Crédits utilisés' : 'Credits Used'}
               value={revenueStats.totalCreditsUsed}
               icon={<TrendingUp className="w-5 h-5" />}
               color="text-purple-400"
-              subtitle="Group sessions"
+              subtitle={isFrench ? 'Séances de groupe' : 'Group sessions'}
             />
             <StatCard
-              title="Direct Revenue"
+              title={isFrench ? 'Revenus directs' : 'Direct Revenue'}
               value={`$${(revenueStats.totalRevenue / 100).toFixed(2)}`}
               icon={<DollarSign className="w-5 h-5" />}
               color="text-green-400"
-              subtitle="Paid sessions"
+              subtitle={isFrench ? 'Séances payées' : 'Paid sessions'}
             />
             <StatCard
-              title="Avg Per Day"
+              title={isFrench ? 'Moy. par jour' : 'Avg Per Day'}
               value={(revenueStats.totalBookings / 7).toFixed(1)}
               icon={<BarChart3 className="w-5 h-5" />}
               color="text-orange-400"
-              subtitle="Bookings/day"
+              subtitle={isFrench ? 'Réservations/jour' : 'Bookings/day'}
             />
           </div>
 
           {/* Breakdown by Type */}
           <div className="bg-black/50 border border-white/10 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Breakdown by Session Type</h3>
+            <h3 className="text-lg font-bold text-white mb-4">{isFrench ? 'Répartition par type de séance' : 'Breakdown by Session Type'}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {SESSION_TYPES.map((type) => {
                 const stats = revenueStats.byType[type] || { count: 0, revenue: 0, credits: 0 };
                 return (
                   <div key={type} className="bg-white/5 rounded-lg p-4">
                     <h4 className={`font-medium mb-2 ${TYPE_COLORS[type].split(' ')[1]}`}>
-                      {formatSessionType(type)}
+                      {formatSessionType(type, isFrench)}
                     </h4>
                     <p className="text-2xl font-bold text-white">{stats.count}</p>
                     <p className="text-sm text-gray-400">
-                      {stats.credits > 0 && `${stats.credits} credits`}
-                      {stats.revenue > 0 && `$${(stats.revenue / 100).toFixed(2)} revenue`}
+                      {stats.credits > 0 && `${stats.credits} ${isFrench ? 'crédits' : 'credits'}`}
+                      {stats.revenue > 0 && `$${(stats.revenue / 100).toFixed(2)} ${isFrench ? 'revenus' : 'revenue'}`}
                     </p>
                   </div>
                 );
@@ -896,10 +910,10 @@ const AdminBookingsPanel: React.FC = () => {
 
           {/* Date Range Selector */}
           <div className="bg-black/50 border border-white/10 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Custom Report Range</h3>
+            <h3 className="text-lg font-bold text-white mb-4">{isFrench ? 'Période personnalisée' : 'Custom Report Range'}</h3>
             <div className="flex flex-wrap gap-4 items-end">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">From</label>
+                <label className="block text-sm text-gray-400 mb-1">{isFrench ? 'Du' : 'From'}</label>
                 <input
                   type="date"
                   value={dateRangeStart}
@@ -908,7 +922,7 @@ const AdminBookingsPanel: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">To</label>
+                <label className="block text-sm text-gray-400 mb-1">{isFrench ? 'Au' : 'To'}</label>
                 <input
                   type="date"
                   value={dateRangeEnd}
@@ -920,7 +934,7 @@ const AdminBookingsPanel: React.FC = () => {
                 onClick={fetchBookings}
                 className="px-4 py-2 bg-[#9BD4FF] text-black rounded-lg font-medium hover:bg-[#9BD4FF]/80 transition-colors"
               >
-                Generate Report
+                {isFrench ? 'Générer le rapport' : 'Generate Report'}
               </button>
             </div>
           </div>
@@ -936,7 +950,7 @@ const AdminBookingsPanel: React.FC = () => {
             className="bg-gray-900 border border-white/10 rounded-lg max-w-lg w-full p-6"
           >
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-white">Booking Details</h3>
+              <h3 className="text-xl font-bold text-white">{isFrench ? 'Détails de la réservation' : 'Booking Details'}</h3>
               <button
                 onClick={() => setSelectedBooking(null)}
                 className="text-gray-400 hover:text-white"
@@ -948,59 +962,61 @@ const AdminBookingsPanel: React.FC = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-400 text-sm">Player</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Joueur' : 'Player'}</p>
                   <p className="text-white font-medium">{selectedBooking.player_name}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Category</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Catégorie' : 'Category'}</p>
                   <p className="text-white">{selectedBooking.player_category}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Session Type</p>
-                  <p className="text-white">{formatSessionType(selectedBooking.session_type)}</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Type de séance' : 'Session Type'}</p>
+                  <p className="text-white">{formatSessionType(selectedBooking.session_type, isFrench)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Status</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Statut' : 'Status'}</p>
                   <span className={`px-2 py-1 rounded text-xs ${STATUS_COLORS[selectedBooking.status]}`}>
-                    {selectedBooking.status}
+                    {isFrench
+                      ? (selectedBooking.status === 'confirmed' ? 'Confirmé' : selectedBooking.status === 'attended' ? 'Présent' : selectedBooking.status === 'cancelled' ? 'Annulé' : 'Absent')
+                      : selectedBooking.status}
                   </span>
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Date</p>
-                  <p className="text-white">{formatDate(selectedBooking.session_date)}</p>
+                  <p className="text-white">{formatDate(selectedBooking.session_date, isFrench)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Time</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Heure' : 'Time'}</p>
                   <p className="text-white">{selectedBooking.time_slot}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Parent Email</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Courriel du parent' : 'Parent Email'}</p>
                   <p className="text-white text-sm">{selectedBooking.parent_email}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Payment</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Paiement' : 'Payment'}</p>
                   <p className="text-white">
                     {selectedBooking.credits_used > 0
-                      ? `${selectedBooking.credits_used} credit(s)`
+                      ? `${selectedBooking.credits_used} ${isFrench ? 'crédit(s)' : 'credit(s)'}`
                       : selectedBooking.amount_paid
                       ? `$${(selectedBooking.amount_paid / 100).toFixed(2)}`
                       : 'N/A'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Cancellation</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Annulation' : 'Cancellation'}</p>
                   <p className="text-white">{selectedBooking.cancellation_reason || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Booked On</p>
+                  <p className="text-gray-400 text-sm">{isFrench ? 'Réservé le' : 'Booked On'}</p>
                   <p className="text-white text-sm">
-                    {new Date(selectedBooking.created_at).toLocaleString()}
+                    {new Date(selectedBooking.created_at).toLocaleString(isFrench ? 'fr-CA' : 'en-US')}
                   </p>
                 </div>
               </div>
 
               <div className="border-t border-white/10 pt-4">
-                <p className="text-gray-400 text-sm mb-2">Quick Actions</p>
+                <p className="text-gray-400 text-sm mb-2">{isFrench ? 'Actions rapides' : 'Quick Actions'}</p>
                 <div className="flex gap-2">
                   {selectedBooking.status === 'confirmed' && (
                     <>
@@ -1011,7 +1027,7 @@ const AdminBookingsPanel: React.FC = () => {
                         }}
                         className="px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
                       >
-                        Mark Attended
+                        {isFrench ? 'Marquer présent' : 'Mark Attended'}
                       </button>
                       <button
                         onClick={() => {
@@ -1020,7 +1036,7 @@ const AdminBookingsPanel: React.FC = () => {
                         }}
                         className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
                       >
-                        Mark No-Show
+                        {isFrench ? 'Marquer absent' : 'Mark No-Show'}
                       </button>
                       <button
                         onClick={() => {
@@ -1029,7 +1045,7 @@ const AdminBookingsPanel: React.FC = () => {
                         }}
                         className="px-4 py-2 bg-gray-500/20 text-gray-400 rounded-lg hover:bg-gray-500/30 transition-colors"
                       >
-                        Cancel
+                        {isFrench ? 'Annuler' : 'Cancel'}
                       </button>
                     </>
                   )}

@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from './ui/select';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import type { SessionBookingWithDetails } from '@/types/credits';
 import type { ChildProfile } from '@/contexts/ProfileContext';
@@ -49,6 +50,8 @@ import type { ChildProfile } from '@/contexts/ProfileContext';
 
 const SchedulePage: React.FC = () => {
   const { user, children, loading: profileLoading } = useProfile();
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookings, setBookings] = useState<SessionBookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +84,7 @@ const SchedulePage: React.FC = () => {
       setBookings(data.bookings || []);
     } catch (err) {
       console.error('Error fetching bookings:', err);
-      toast.error('Failed to load schedule');
+      toast.error(isFrench ? 'Échec du chargement de l\'horaire' : 'Failed to load schedule');
     } finally {
       setLoading(false);
     }
@@ -151,13 +154,13 @@ const SchedulePage: React.FC = () => {
   const getSessionTypeInfo = (type: string) => {
     switch (type) {
       case 'group':
-        return { label: 'Group', color: 'bg-blue-500/20 text-blue-700 dark:text-blue-400' };
+        return { label: isFrench ? 'Groupe' : 'Group', color: 'bg-blue-500/20 text-blue-700 dark:text-blue-400' };
       case 'sunday':
-        return { label: 'Ice', color: 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-400' };
+        return { label: isFrench ? 'Glace' : 'Ice', color: 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-400' };
       case 'private':
-        return { label: 'Private', color: 'bg-purple-500/20 text-purple-700 dark:text-purple-400' };
+        return { label: isFrench ? 'Privé' : 'Private', color: 'bg-purple-500/20 text-purple-700 dark:text-purple-400' };
       case 'semi_private':
-        return { label: 'Semi', color: 'bg-teal-500/20 text-teal-700 dark:text-teal-400' };
+        return { label: isFrench ? 'Semi' : 'Semi', color: 'bg-teal-500/20 text-teal-700 dark:text-teal-400' };
       default:
         return { label: type, color: 'bg-gray-500/20 text-gray-700 dark:text-gray-400' };
     }
@@ -165,7 +168,7 @@ const SchedulePage: React.FC = () => {
 
   // Get child name by registration ID
   const getChildName = (registrationId: string) => {
-    return children.find(c => c.registrationId === registrationId)?.playerName || 'Unknown';
+    return children.find(c => c.registrationId === registrationId)?.playerName || (isFrench ? 'Inconnu' : 'Unknown');
   };
 
   // Handle day click to open booking modal
@@ -197,9 +200,9 @@ const SchedulePage: React.FC = () => {
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Training Schedule</h1>
+              <h1 className="text-3xl font-bold text-foreground">{isFrench ? 'Horaire d\'entraînement' : 'Training Schedule'}</h1>
               <p className="text-muted-foreground mt-1">
-                View your booked sessions and schedule new training
+                {isFrench ? 'Consultez vos séances réservées et planifiez de nouveaux entraînements' : 'View your booked sessions and schedule new training'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -207,10 +210,10 @@ const SchedulePage: React.FC = () => {
               <Select value={selectedChildId} onValueChange={setSelectedChildId}>
                 <SelectTrigger className="w-[180px]">
                   <User className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="All Players" />
+                  <SelectValue placeholder={isFrench ? 'Tous les joueurs' : 'All Players'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Players</SelectItem>
+                  <SelectItem value="all">{isFrench ? 'Tous les joueurs' : 'All Players'}</SelectItem>
                   {children.map((child) => (
                     <SelectItem key={child.registrationId} value={child.registrationId}>
                       {child.playerName}
@@ -220,7 +223,7 @@ const SchedulePage: React.FC = () => {
               </Select>
               <Button onClick={() => setShowBookModal(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Book Session
+                {isFrench ? 'Réserver' : 'Book Session'}
               </Button>
             </div>
           </div>
@@ -229,15 +232,15 @@ const SchedulePage: React.FC = () => {
           {children.length === 0 && (
             <Alert>
               <Info className="h-4 w-4" />
-              <AlertTitle>No Players Registered</AlertTitle>
+              <AlertTitle>{isFrench ? 'Aucun joueur inscrit' : 'No Players Registered'}</AlertTitle>
               <AlertDescription>
-                Add a player to your account to start booking training sessions.
+                {isFrench ? 'Ajoutez un joueur à votre compte pour commencer à réserver des séances d\'entraînement.' : 'Add a player to your account to start booking training sessions.'}
                 <Button
                   variant="link"
                   className="px-1"
                   onClick={() => window.location.href = '/register?mode=add-child'}
                 >
-                  Add a player now
+                  {isFrench ? 'Ajouter un joueur maintenant' : 'Add a player now'}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -247,35 +250,35 @@ const SchedulePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardDescription>This Month</CardDescription>
+                <CardDescription>{isFrench ? 'Ce mois' : 'This Month'}</CardDescription>
                 <CardTitle className="text-3xl">
                   {filteredBookings.filter(b => b.status === 'booked').length}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Booked Sessions</p>
+                <p className="text-sm text-muted-foreground">{isFrench ? 'Séances réservées' : 'Booked Sessions'}</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardDescription>Group Sessions</CardDescription>
+                <CardDescription>{isFrench ? 'Séances de groupe' : 'Group Sessions'}</CardDescription>
                 <CardTitle className="text-3xl">
                   {filteredBookings.filter(b => b.session_type === 'group').length}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Synthetic ice training</p>
+                <p className="text-sm text-muted-foreground">{isFrench ? 'Entraînement sur glace synthétique' : 'Synthetic ice training'}</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardDescription>Special Sessions</CardDescription>
+                <CardDescription>{isFrench ? 'Séances spéciales' : 'Special Sessions'}</CardDescription>
                 <CardTitle className="text-3xl">
                   {filteredBookings.filter(b => b.session_type !== 'group').length}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Sunday, Private, Semi-Private</p>
+                <p className="text-sm text-muted-foreground">{isFrench ? 'Dimanche, Privé, Semi-privé' : 'Sunday, Private, Semi-Private'}</p>
               </CardContent>
             </Card>
           </div>
@@ -287,14 +290,15 @@ const SchedulePage: React.FC = () => {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <CalendarIcon className="h-5 w-5 text-primary" />
-                    {currentMonth.toLocaleDateString('en-US', {
+                    {currentMonth.toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', {
                       month: 'long',
                       year: 'numeric',
                     })}
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    {filteredBookings.length} sessions this month
-                    {selectedChildId !== 'all' && ` for ${getChildName(selectedChildId)}`}
+                    {isFrench
+                      ? `${filteredBookings.length} séance${filteredBookings.length !== 1 ? 's' : ''} ce mois${selectedChildId !== 'all' ? ` pour ${getChildName(selectedChildId)}` : ''}`
+                      : `${filteredBookings.length} sessions this month${selectedChildId !== 'all' ? ` for ${getChildName(selectedChildId)}` : ''}`}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -322,7 +326,7 @@ const SchedulePage: React.FC = () => {
                     size="sm"
                     onClick={() => setCurrentMonth(new Date())}
                   >
-                    Today
+                    {isFrench ? 'Aujourd\'hui' : 'Today'}
                   </Button>
                   <Button
                     variant="outline"
@@ -348,7 +352,7 @@ const SchedulePage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-7 gap-2">
                   {/* Day Headers */}
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  {(isFrench ? ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map((day) => (
                     <div
                       key={day}
                       className="text-center text-sm font-semibold text-muted-foreground py-2"
@@ -414,7 +418,7 @@ const SchedulePage: React.FC = () => {
                           })}
                           {day.bookings.length > 2 && (
                             <div className="text-xs text-muted-foreground">
-                              +{day.bookings.length - 2} more
+                              +{day.bookings.length - 2} {isFrench ? 'autres' : 'more'}
                             </div>
                           )}
                         </div>
@@ -434,19 +438,19 @@ const SchedulePage: React.FC = () => {
               <div className="flex items-center gap-4 text-sm flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-blue-500/20"></div>
-                  <span className="text-muted-foreground">Group</span>
+                  <span className="text-muted-foreground">{isFrench ? 'Groupe' : 'Group'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-cyan-500/20"></div>
-                  <span className="text-muted-foreground">Sunday Ice</span>
+                  <span className="text-muted-foreground">{isFrench ? 'Glace dimanche' : 'Sunday Ice'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-purple-500/20"></div>
-                  <span className="text-muted-foreground">Private</span>
+                  <span className="text-muted-foreground">{isFrench ? 'Privé' : 'Private'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-teal-500/20"></div>
-                  <span className="text-muted-foreground">Semi-Private</span>
+                  <span className="text-muted-foreground">{isFrench ? 'Semi-privé' : 'Semi-Private'}</span>
                 </div>
               </div>
             </CardFooter>
@@ -457,7 +461,7 @@ const SchedulePage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
-                Training Location
+                {isFrench ? 'Lieu d\'entraînement' : 'Training Location'}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -465,26 +469,26 @@ const SchedulePage: React.FC = () => {
                 <div>
                   <p className="font-semibold text-lg">SniperZone Hockey Training</p>
                   <p className="text-muted-foreground">7515 Boulevard Henri-Bourassa E</p>
-                  <p className="text-muted-foreground">Montreal, Quebec H1E 1N9</p>
+                  <p className="text-muted-foreground">Montréal, Québec H1E 1N9</p>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="font-semibold text-sm mb-2 flex items-center gap-2">
                       <Clock className="h-4 w-4 text-primary" />
-                      Training Hours
+                      {isFrench ? 'Heures d\'entraînement' : 'Training Hours'}
                     </p>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>Monday - Saturday: 4:30 PM - 9:30 PM</li>
-                      <li>Sunday: Ice Practice Sessions</li>
+                      <li>{isFrench ? 'Lundi - Samedi: 16h30 - 21h30' : 'Monday - Saturday: 4:30 PM - 9:30 PM'}</li>
+                      <li>{isFrench ? 'Dimanche: Séances de pratique sur glace' : 'Sunday: Ice Practice Sessions'}</li>
                     </ul>
                   </div>
                   <div>
-                    <p className="font-semibold text-sm mb-2">Important Notes</p>
+                    <p className="font-semibold text-sm mb-2">{isFrench ? 'Notes importantes' : 'Important Notes'}</p>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>• Arrive 10 minutes early</li>
-                      <li>• Full equipment required</li>
-                      <li>• Bring water and towel</li>
+                      <li>• {isFrench ? 'Arriver 10 minutes à l\'avance' : 'Arrive 10 minutes early'}</li>
+                      <li>• {isFrench ? 'Équipement complet requis' : 'Full equipment required'}</li>
+                      <li>• {isFrench ? 'Apporter eau et serviette' : 'Bring water and towel'}</li>
                     </ul>
                   </div>
                 </div>
