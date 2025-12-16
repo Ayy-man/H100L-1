@@ -13,7 +13,7 @@
 // =============================================================================
 
 /** Credit package types available for purchase */
-export type CreditPackageType = 'single' | '10_pack' | '20_pack';
+export type CreditPackageType = 'single' | '10_pack' | '20_pack' | '50_pack';
 
 /** Session types that can be booked */
 export type SessionType = 'group' | 'sunday' | 'private' | 'semi_private';
@@ -57,6 +57,14 @@ export const CREDIT_PRICING = {
     priceFormatted: '$500.00',
     perCreditPrice: 2500, // $25.00 per credit
     description: '20-Session Package',
+    validityMonths: 12,
+  },
+  '50_pack': {
+    credits: 50,
+    price: 100000, // $1,000.00 CAD in cents
+    priceFormatted: '$1,000.00',
+    perCreditPrice: 2000, // $20.00 per credit
+    description: '50-Session Package',
     validityMonths: 12,
   },
 } as const;
@@ -426,7 +434,7 @@ export const CREDIT_EXPIRY_WARNING_DAYS = 30;
 export const LOW_CREDIT_THRESHOLD = 3;
 
 /** Maximum credits per package purchase */
-export const MAX_CREDITS_PER_PURCHASE = 20;
+export const MAX_CREDITS_PER_PURCHASE = 50;
 
 /** Maximum time slots per day */
 export const MAX_GROUP_CAPACITY = 6;
@@ -445,7 +453,7 @@ export function isSessionType(value: string): value is SessionType {
 
 /** Type guard for CreditPackageType */
 export function isCreditPackageType(value: string): value is CreditPackageType {
-  return ['single', '10_pack', '20_pack'].includes(value);
+  return ['single', '10_pack', '20_pack', '50_pack'].includes(value);
 }
 
 /** Type guard for BookingStatus */

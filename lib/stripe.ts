@@ -22,6 +22,7 @@ export const CREDIT_PRICE_IDS = {
   CREDIT_SINGLE: import.meta.env.VITE_STRIPE_PRICE_CREDIT_SINGLE,
   CREDIT_10_PACK: import.meta.env.VITE_STRIPE_PRICE_CREDIT_10PACK,
   CREDIT_20_PACK: import.meta.env.VITE_STRIPE_PRICE_CREDIT_20PACK,
+  CREDIT_50_PACK: import.meta.env.VITE_STRIPE_PRICE_CREDIT_50PACK,
   // Direct session purchases (Sunday NOT included in bundles)
   SUNDAY_ICE: import.meta.env.VITE_STRIPE_PRICE_SUNDAY,
   SEMI_PRIVATE_SESSION: import.meta.env.VITE_STRIPE_PRICE_SEMI_PRIVATE_SESSION,
@@ -61,6 +62,16 @@ export const CREDIT_PRICING = {
     perCreditAmount: 2500, // $25.00 per credit
     validityMonths: 12,
     savings: '$400 savings vs single sessions',
+  },
+  '50_pack': {
+    credits: 50,
+    amount: 100000, // $1,000.00 CAD in cents
+    currency: 'cad',
+    description: '50-Session Package - Group Training',
+    priceId: CREDIT_PRICE_IDS.CREDIT_50_PACK,
+    perCreditAmount: 2000, // $20.00 per credit
+    validityMonths: 12,
+    savings: '$1,250 savings vs single sessions',
   },
 } as const;
 
@@ -157,7 +168,7 @@ export const getSessionPrice = (sessionType: 'sunday' | 'semi_private' | 'privat
  */
 export const formatCreditPackage = (packageType: CreditPackageType): string => {
   const pricing = CREDIT_PRICING[packageType];
-  if (packageType === '20_pack') {
+  if (packageType === '20_pack' || packageType === '50_pack' || packageType === '10_pack') {
     return `${pricing.credits} Credits - ${formatPrice(pricing.amount)} (${formatPrice(pricing.perCreditAmount)} each)`;
   }
   return `${pricing.credits} Credit - ${formatPrice(pricing.amount)}`;
@@ -202,7 +213,7 @@ export const getCreditPackageOptions = () => [
     type: '10_pack' as CreditPackageType,
     ...CREDIT_PRICING['10_pack'],
     formattedPrice: formatPrice(CREDIT_PRICING['10_pack'].amount),
-    badge: 'Popular',
+    badge: null,
     formattedPerCredit: formatPrice(CREDIT_PRICING['10_pack'].perCreditAmount),
     formattedSavings: formatPrice(calculateCreditSavings('10_pack')),
   },
@@ -210,9 +221,17 @@ export const getCreditPackageOptions = () => [
     type: '20_pack' as CreditPackageType,
     ...CREDIT_PRICING['20_pack'],
     formattedPrice: formatPrice(CREDIT_PRICING['20_pack'].amount),
-    badge: 'Best Value',
+    badge: 'Popular',
     formattedPerCredit: formatPrice(CREDIT_PRICING['20_pack'].perCreditAmount),
     formattedSavings: formatPrice(calculateCreditSavings('20_pack')),
+  },
+  {
+    type: '50_pack' as CreditPackageType,
+    ...CREDIT_PRICING['50_pack'],
+    formattedPrice: formatPrice(CREDIT_PRICING['50_pack'].amount),
+    badge: 'Best Value',
+    formattedPerCredit: formatPrice(CREDIT_PRICING['50_pack'].perCreditAmount),
+    formattedSavings: formatPrice(calculateCreditSavings('50_pack')),
   },
 ];
 

@@ -34,6 +34,7 @@ interface BuyCreditsModalProps {
  * - Single session ($45)
  * - 10-pack ($350, $35 each)
  * - 20-pack ($500, $25 each)
+ * - 50-pack ($1,000, $20 each)
  * - Stripe checkout integration
  *
  * Note: Sunday ice sessions are NOT included in bundles
@@ -150,7 +151,7 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
                       <p className="text-sm text-muted-foreground mt-1">
                         {pkg.description}
                       </p>
-                      {(pkg.type === '10_pack' || pkg.type === '20_pack') && (
+                      {(pkg.type === '10_pack' || pkg.type === '20_pack' || pkg.type === '50_pack') && (
                         <p className="text-xs text-green-600 mt-1">
                           {pkg.formattedPerCredit}/session • Save {pkg.formattedSavings}
                         </p>

@@ -5,7 +5,7 @@ import { Readable } from 'stream';
 // n8nWebhook imported dynamically to prevent function crash if module fails to load
 
 // Inline types (Vercel bundling doesn't resolve ../types/credits)
-type CreditPackageType = 'single' | '10_pack' | '20_pack';
+type CreditPackageType = 'single' | '10_pack' | '20_pack' | '50_pack';
 type SessionType = 'group' | 'sunday' | 'private' | 'semi_private';
 
 interface CreditPurchaseMetadata {
@@ -46,6 +46,14 @@ const CREDIT_PRICING = {
     priceFormatted: '$500.00',
     perCreditPrice: 2500, // $25.00 per credit
     description: '20-Session Package',
+    validityMonths: 12,
+  },
+  '50_pack': {
+    credits: 50,
+    price: 100000, // $1,000.00 CAD in cents
+    priceFormatted: '$1,000.00',
+    perCreditPrice: 2000, // $20.00 per credit
+    description: '50-Session Package',
     validityMonths: 12,
   },
 } as const;

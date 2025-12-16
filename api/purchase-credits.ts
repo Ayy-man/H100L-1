@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
 // Inline types and constants (Vercel bundling doesn't resolve ../types/credits)
-type CreditPackageType = 'single' | '10_pack' | '20_pack';
+type CreditPackageType = 'single' | '10_pack' | '20_pack' | '50_pack';
 
 interface PurchaseCreditsRequest {
   firebase_uid: string;
@@ -48,10 +48,18 @@ const CREDIT_PRICING = {
     description: '20-Session Package',
     validityMonths: 12,
   },
+  '50_pack': {
+    credits: 50,
+    price: 100000,
+    priceFormatted: '$1,000.00',
+    perCreditPrice: 2000,
+    description: '50-Session Package',
+    validityMonths: 12,
+  },
 } as const;
 
 function isCreditPackageType(value: string): value is CreditPackageType {
-  return ['single', '10_pack', '20_pack'].includes(value);
+  return ['single', '10_pack', '20_pack', '50_pack'].includes(value);
 }
 
 // Inline Stripe client
@@ -80,6 +88,7 @@ const CREDIT_PRICE_IDS: Record<CreditPackageType, string> = {
   single: process.env.VITE_STRIPE_PRICE_CREDIT_SINGLE || '',
   '10_pack': process.env.VITE_STRIPE_PRICE_CREDIT_10PACK || '',
   '20_pack': process.env.VITE_STRIPE_PRICE_CREDIT_20PACK || '',
+  '50_pack': process.env.VITE_STRIPE_PRICE_CREDIT_50PACK || '',
 };
 
 export default async function handler(
