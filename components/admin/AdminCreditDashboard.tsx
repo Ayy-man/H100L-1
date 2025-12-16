@@ -58,14 +58,14 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon: Icon, color, 
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
-      className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+      className="bg-black rounded-xl p-6 border border-white/10 hover:border-[#9BD4FF]/50 transition-all"
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-sm font-medium text-gray-400">{title}</p>
+          <p className="text-2xl font-bold text-white mt-1">{value}</p>
           {change !== undefined && (
-            <p className={`text-sm mt-1 ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p className={`text-sm mt-1 ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {change >= 0 ? '+' : ''}{change} {changeLabel}
             </p>
           )}
@@ -112,15 +112,15 @@ const AdminCreditDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9BD4FF]"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">Error: {error}</p>
+      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+        <p className="text-red-400">Error: {error}</p>
         <button
           onClick={fetchCreditSummary}
           className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
@@ -136,13 +136,13 @@ const AdminCreditDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="flex gap-4 border-b border-gray-200">
+      <div className="flex gap-4 border-b border-white/10">
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2 font-medium transition-colors ${
             activeTab === 'overview'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+              : 'text-gray-400 hover:text-white'
           }`}
         >
           Overview
@@ -151,8 +151,8 @@ const AdminCreditDashboard: React.FC = () => {
           onClick={() => setActiveTab('management')}
           className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
             activeTab === 'management'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'text-[#9BD4FF] border-b-2 border-[#9BD4FF]'
+              : 'text-gray-400 hover:text-white'
           }`}
         >
           <Search className="w-4 h-4" />
@@ -200,24 +200,24 @@ const AdminCreditDashboard: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-orange-50 border border-orange-200 rounded-xl p-4"
+          className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4"
         >
           <div className="flex items-center mb-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600 mr-2" />
-            <h3 className="text-lg font-semibold text-orange-900">Credits Expiring Soon</h3>
+            <AlertTriangle className="w-5 h-5 text-orange-400 mr-2" />
+            <h3 className="text-lg font-semibold text-orange-300">Credits Expiring Soon</h3>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-orange-600">{summary.expiry.expiring1Day}</p>
-              <p className="text-sm text-orange-700">Expiring in 1 day</p>
+              <p className="text-2xl font-bold text-orange-400">{summary.expiry.expiring1Day}</p>
+              <p className="text-sm text-orange-300/70">Expiring in 1 day</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-orange-500">{summary.expiry.expiring7Days}</p>
-              <p className="text-sm text-orange-700">Expiring in 7 days</p>
+              <p className="text-2xl font-bold text-orange-400">{summary.expiry.expiring7Days}</p>
+              <p className="text-sm text-orange-300/70">Expiring in 7 days</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-orange-400">{summary.expiry.expiring30Days}</p>
-              <p className="text-sm text-orange-700">Expiring in 30 days</p>
+              <p className="text-sm text-orange-300/70">Expiring in 30 days</p>
             </div>
           </div>
         </motion.div>
@@ -229,16 +229,20 @@ const AdminCreditDashboard: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+          className="bg-black rounded-xl p-6 border border-white/10"
         >
-          <h3 className="text-lg font-semibold mb-4">Revenue (Last 30 Days)</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Revenue (Last 30 Days)</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={summary.revenueChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis tickFormatter={(value) => `$${value}`} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <XAxis dataKey="date" stroke="#666" tick={{ fill: '#999' }} />
+              <YAxis tickFormatter={(value) => `$${value}`} stroke="#666" tick={{ fill: '#999' }} />
+              <Tooltip
+                formatter={(value: number) => formatCurrency(value)}
+                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '8px' }}
+                labelStyle={{ color: '#999' }}
+              />
+              <Line type="monotone" dataKey="revenue" stroke="#9BD4FF" strokeWidth={2} dot={{ fill: '#9BD4FF' }} />
             </LineChart>
           </ResponsiveContainer>
         </motion.div>
@@ -247,18 +251,22 @@ const AdminCreditDashboard: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+          className="bg-black rounded-xl p-6 border border-white/10"
         >
-          <h3 className="text-lg font-semibold mb-4">Package Distribution</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Package Distribution</h3>
           <div className="space-y-3">
             {Object.entries(summary.packageDistribution).map(([type, count]) => (
               <div key={type} className="flex items-center justify-between">
-                <span className="capitalize text-gray-700">{type}</span>
+                <span className="capitalize text-gray-300">
+                  {type === '50_pack' ? '50-Pack' :
+                   type === '20_pack' ? '20-Pack' :
+                   type === '10_pack' ? '10-Pack' : 'Single'}
+                </span>
                 <div className="flex items-center">
-                  <span className="text-sm font-medium mr-2">{count}</span>
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <span className="text-sm font-medium text-white mr-2">{count}</span>
+                  <div className="w-24 bg-white/10 rounded-full h-2">
                     <div
-                      className="bg-blue-500 h-2 rounded-full"
+                      className="bg-[#9BD4FF] h-2 rounded-full"
                       style={{ width: `${summary.overview.activePurchases > 0 ? (count / summary.overview.activePurchases) * 100 : 0}%` }}
                     />
                   </div>
@@ -289,17 +297,17 @@ const AdminCreditDashboard: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+        className="bg-black rounded-xl p-6 border border-white/10"
       >
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <DollarSign className="w-5 h-5 text-green-600" />
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-green-400" />
           Recent Payments
         </h3>
         {summary.recentPurchases && summary.recentPurchases.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-left text-sm text-gray-500 border-b">
+                <tr className="text-left text-sm text-gray-400 border-b border-white/10">
                   <th className="pb-3 font-medium">Parent</th>
                   <th className="pb-3 font-medium">Package</th>
                   <th className="pb-3 font-medium">Amount</th>
@@ -307,37 +315,37 @@ const AdminCreditDashboard: React.FC = () => {
                   <th className="pb-3 font-medium">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-white/5">
                 {summary.recentPurchases.map((purchase) => (
                   <tr key={purchase.id} className="text-sm">
                     <td className="py-3">
-                      <span className="font-medium text-gray-900">{purchase.parent_email}</span>
+                      <span className="font-medium text-white">{purchase.parent_email}</span>
                     </td>
                     <td className="py-3">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#9BD4FF]/20 text-[#9BD4FF]">
                         {purchase.package_type === '50_pack' ? '50-Pack' :
                          purchase.package_type === '20_pack' ? '20-Pack' :
                          purchase.package_type === '10_pack' ? '10-Pack' : 'Single'}
                       </span>
-                      <span className="text-gray-500 ml-2">({purchase.credits_purchased} credits)</span>
+                      <span className="text-gray-400 ml-2">({purchase.credits_purchased} credits)</span>
                     </td>
                     <td className="py-3">
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-white">
                         {formatCurrency(Number(purchase.price_paid) * 100)}
                       </span>
                     </td>
                     <td className="py-3">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         purchase.status === 'completed' || purchase.status === 'active'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-green-500/20 text-green-400'
                           : purchase.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : 'bg-gray-500/20 text-gray-400'
                       }`}>
                         {purchase.status}
                       </span>
                     </td>
-                    <td className="py-3 text-gray-500">
+                    <td className="py-3 text-gray-400">
                       {new Date(purchase.created_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -352,7 +360,7 @@ const AdminCreditDashboard: React.FC = () => {
             </table>
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-4">No recent payments</p>
+          <p className="text-gray-400 text-center py-4">No recent payments</p>
         )}
       </motion.div>
 
@@ -361,18 +369,18 @@ const AdminCreditDashboard: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+          className="bg-black rounded-xl p-6 border border-white/10"
         >
-          <h3 className="text-lg font-semibold mb-4">Recent Credit Adjustments</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Recent Credit Adjustments</h3>
           <div className="space-y-3">
             {summary.recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div key={activity.id} className="flex items-center justify-between py-2 border-b border-white/5">
                 <div>
-                  <p className="font-medium text-gray-900">{activity.parent_email}</p>
-                  <p className="text-sm text-gray-500">{activity.reason}</p>
+                  <p className="font-medium text-white">{activity.parent_email}</p>
+                  <p className="text-sm text-gray-400">{activity.reason}</p>
                 </div>
                 <div className="text-right">
-                  <p className={`font-semibold ${activity.adjustment_amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`font-semibold ${activity.adjustment_amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {activity.adjustment_amount >= 0 ? '+' : ''}{activity.adjustment_amount} credits
                   </p>
                   <p className="text-xs text-gray-500">
