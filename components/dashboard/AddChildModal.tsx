@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 
 interface AddChildModalProps {
@@ -139,6 +140,8 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
   onSuccess,
 }) => {
   const { user, refreshProfiles } = useProfile();
+  const { language, t } = useLanguage();
+  const isFrench = language === 'fr';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1);
@@ -372,12 +375,12 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
-            Add a Child - Step {step} of 2
+            {isFrench ? `Ajouter un enfant - Étape ${step} de 2` : `Add a Child - Step ${step} of 2`}
           </DialogTitle>
           <DialogDescription>
             {step === 1
-              ? 'Enter basic information and emergency contact details.'
-              : 'Complete hockey information and consents.'
+              ? (isFrench ? 'Entrez les informations de base et les coordonnées d\'urgence.' : 'Enter basic information and emergency contact details.')
+              : (isFrench ? 'Complétez les informations hockey et les consentements.' : 'Complete hockey information and consents.')
             }
           </DialogDescription>
         </DialogHeader>
@@ -395,18 +398,18 @@ const AddChildModal: React.FC<AddChildModalProps> = ({
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Player Information
+                  {isFrench ? 'Informations du joueur' : 'Player Information'}
                 </h4>
 
                 {/* Player Name */}
                 <div className="space-y-2">
                   <Label htmlFor="playerName">
-                    Player's Full Name <span className="text-destructive">*</span>
+                    {isFrench ? 'Nom complet du joueur' : "Player's Full Name"} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="playerName"
                     type="text"
-                    placeholder="Enter child's full name"
+                    placeholder={isFrench ? 'Entrez le nom complet de l\'enfant' : "Enter child's full name"}
                     value={formData.playerName}
                     onChange={(e) => handleInputChange('playerName', e.target.value)}
                     disabled={loading}

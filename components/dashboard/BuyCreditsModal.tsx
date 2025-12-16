@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getCreditPackageOptions, areCreditPricesConfigured, formatPrice } from '@/lib/stripe';
 import type { CreditPackageType } from '@/types/credits';
 import { toast } from 'sonner';
@@ -45,6 +46,8 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
   currentBalance,
 }) => {
   const { user } = useProfile();
+  const { language, t } = useLanguage();
+  const isFrench = language === 'fr';
   const [selectedPackage, setSelectedPackage] = useState<CreditPackageType>('20_pack');
   const [loading, setLoading] = useState(false);
 
@@ -53,12 +56,12 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
 
   const handlePurchase = async () => {
     if (!user) {
-      toast.error('Please log in to purchase credits');
+      toast.error(isFrench ? 'Veuillez vous connecter pour acheter des crédits' : 'Please log in to purchase credits');
       return;
     }
 
     if (!isPriceConfigured) {
-      toast.error('Credit pricing is not configured. Please contact support.');
+      toast.error(isFrench ? 'La tarification des crédits n\'est pas configurée. Veuillez contacter le support.' : 'Credit pricing is not configured. Please contact support.');
       return;
     }
 
@@ -97,19 +100,21 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Coins className="h-5 w-5 text-primary" />
-            Buy Credits
+            {t('credits.buyCredits')}
           </DialogTitle>
           <DialogDescription>
-            Credits are shared across all your children. 1 credit = 1 group training session.
+            {isFrench
+              ? 'Les crédits sont partagés entre tous vos enfants. 1 crédit = 1 séance d\'entraînement de groupe.'
+              : 'Credits are shared across all your children. 1 credit = 1 group training session.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Current Balance */}
           <div className="p-3 rounded-lg bg-muted/50 text-center">
-            <p className="text-sm text-muted-foreground">Current Balance</p>
+            <p className="text-sm text-muted-foreground">{t('credits.currentBalance')}</p>
             <p className="text-2xl font-bold text-primary">
-              {currentBalance} credit{currentBalance !== 1 ? 's' : ''}
+              {currentBalance} {currentBalance !== 1 ? (isFrench ? 'crédits' : 'credits') : (isFrench ? 'crédit' : 'credit')}
             </p>
           </div>
 
@@ -171,9 +176,9 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
 
           {/* Info */}
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>• Credits expire 12 months after purchase</p>
-            <p>• No refunds on credit purchases</p>
-            <p>• Secure payment via Stripe</p>
+            <p>• {isFrench ? 'Les crédits expirent 12 mois après l\'achat' : 'Credits expire 12 months after purchase'}</p>
+            <p>• {isFrench ? 'Aucun remboursement sur les achats de crédits' : 'No refunds on credit purchases'}</p>
+            <p>• {isFrench ? 'Paiement sécurisé via Stripe' : 'Secure payment via Stripe'}</p>
           </div>
 
           {/* Configuration Warning */}
@@ -181,7 +186,7 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Payment system not fully configured. Please contact support.
+                {isFrench ? 'Le système de paiement n\'est pas entièrement configuré. Veuillez contacter le support.' : 'Payment system not fully configured. Please contact support.'}
               </AlertDescription>
             </Alert>
           )}
@@ -190,7 +195,7 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
         {/* Actions */}
         <div className="flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1">
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handlePurchase}
@@ -200,12 +205,12 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
+                {isFrench ? 'Traitement...' : 'Processing...'}
               </>
             ) : (
               <>
                 <Coins className="mr-2 h-4 w-4" />
-                Buy {packages.find(p => p.type === selectedPackage)?.credits} Credits
+                {isFrench ? `Acheter ${packages.find(p => p.type === selectedPackage)?.credits} crédits` : `Buy ${packages.find(p => p.type === selectedPackage)?.credits} Credits`}
               </>
             )}
           </Button>

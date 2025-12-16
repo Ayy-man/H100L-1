@@ -27,6 +27,7 @@ import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import type {
   CreditPurchase,
@@ -46,9 +47,11 @@ import { formatPrice, CREDIT_PRICING, SESSION_PRICING } from '@/lib/stripe';
  */
 const BillingPage: React.FC = () => {
   const { user, creditBalance, creditLoading, refreshCredits } = useProfile();
+  const { language, t } = useLanguage();
   const [history, setHistory] = useState<CreditHistoryResponse | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [showBuyModal, setShowBuyModal] = useState(false);
+  const isFrench = language === 'fr';
 
   // Fetch credit history
   useEffect(() => {
@@ -78,7 +81,7 @@ const BillingPage: React.FC = () => {
 
   // Format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString(isFrench ? 'fr-CA' : 'en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -87,24 +90,24 @@ const BillingPage: React.FC = () => {
 
   // Get package label
   const getPackageLabel = (packageType: string) => {
-    const labels: Record<string, string> = {
-      single: '1 Session',
-      '10_pack': '10-Session Package',
-      '20_pack': '20-Session Package',
-      '50_pack': '50-Session Package',
+    const labels: Record<string, { en: string; fr: string }> = {
+      single: { en: '1 Session', fr: '1 séance' },
+      '10_pack': { en: '10-Session Package', fr: 'Forfait 10 séances' },
+      '20_pack': { en: '20-Session Package', fr: 'Forfait 20 séances' },
+      '50_pack': { en: '50-Session Package', fr: 'Forfait 50 séances' },
     };
-    return labels[packageType] || packageType;
+    return labels[packageType]?.[isFrench ? 'fr' : 'en'] || packageType;
   };
 
   // Get session type label
   const getSessionTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      group: 'Group Training',
-      sunday: 'Sunday Ice',
-      private: 'Private',
-      semi_private: 'Semi-Private',
+    const labels: Record<string, { en: string; fr: string }> = {
+      group: { en: 'Group Training', fr: 'Entraînement de groupe' },
+      sunday: { en: 'Sunday Ice', fr: 'Glace du dimanche' },
+      private: { en: 'Private', fr: 'Privé' },
+      semi_private: { en: 'Semi-Private', fr: 'Semi-privé' },
     };
-    return labels[type] || type;
+    return labels[type]?.[isFrench ? 'fr' : 'en'] || type;
   };
 
   // Check if purchase is expiring soon (within 30 days)
@@ -138,14 +141,14 @@ const BillingPage: React.FC = () => {
             {/* Page Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Billing & Credits</h1>
+                <h1 className="text-3xl font-bold text-foreground">{t('billing.title')}</h1>
                 <p className="text-muted-foreground mt-1">
-                  Manage your credits and view purchase history
+                  {t('billing.subtitle')}
                 </p>
               </div>
               <Button onClick={() => setShowBuyModal(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Buy Credits
+                {t('credits.buyCredits')}
               </Button>
             </div>
 
@@ -156,13 +159,13 @@ const BillingPage: React.FC = () => {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Coins className="h-4 w-4" />
-                    Credit Balance
+                    {t('credits.creditBalance')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-primary">{creditBalance}</div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    credit{creditBalance !== 1 ? 's' : ''} available
+                    {creditBalance !== 1 ? t('dashboard.creditsAvailable') : t('dashboard.creditAvailable')}
                   </p>
                 </CardContent>
               </Card>
@@ -172,13 +175,13 @@ const BillingPage: React.FC = () => {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
-                    Total Spent
+                    {t('billing.totalSpent')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{formatPrice(totalSpent * 100)}</div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    across {history?.purchases.length || 0} purchase{history?.purchases.length !== 1 ? 's' : ''}
+                    {t('billing.across')} {history?.purchases.length || 0} {(history?.purchases.length || 0) !== 1 ? t('billing.purchases') : t('billing.purchase')}
                   </p>
                 </CardContent>
               </Card>
@@ -188,13 +191,13 @@ const BillingPage: React.FC = () => {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <TrendingUp className="h-4 w-4" />
-                    Credits Used
+                    {t('billing.creditsUsed')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{history?.usage.length || 0}</div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    training sessions booked
+                    {t('billing.trainingSessionsBooked')}
                   </p>
                 </CardContent>
               </Card>
@@ -205,10 +208,10 @@ const BillingPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Info className="h-5 w-5 text-primary" />
-                  Session Pricing
+                  {t('billing.sessionPricing')}
                 </CardTitle>
                 <CardDescription>
-                  Buy session packages for group training (Sunday ice not included)
+                  {t('billing.sessionPricingDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -216,28 +219,28 @@ const BillingPage: React.FC = () => {
                   {/* Single Session */}
                   <div className="p-4 rounded-lg border bg-card">
                     <div className="flex flex-col">
-                      <p className="font-medium">1 Session</p>
-                      <p className="text-sm text-muted-foreground">Single group training</p>
+                      <p className="font-medium">{isFrench ? '1 séance' : '1 Session'}</p>
+                      <p className="text-sm text-muted-foreground">{isFrench ? 'Entraînement de groupe' : 'Single group training'}</p>
                       <p className="text-xl font-bold text-primary mt-2">$45</p>
                     </div>
                   </div>
 
                   {/* 10-Pack */}
                   <div className="p-4 rounded-lg border bg-blue-500/5 border-blue-500/30 relative">
-                    <Badge className="absolute -top-2 right-3 bg-blue-500">Popular</Badge>
+                    <Badge className="absolute -top-2 right-3 bg-blue-500">{t('credits.popular')}</Badge>
                     <div className="flex flex-col">
-                      <p className="font-medium">10 Sessions</p>
-                      <p className="text-sm text-muted-foreground">$35/session • Save $100</p>
+                      <p className="font-medium">{isFrench ? '10 séances' : '10 Sessions'}</p>
+                      <p className="text-sm text-muted-foreground">{isFrench ? '35$/séance • Économisez 100$' : '$35/session • Save $100'}</p>
                       <p className="text-xl font-bold text-primary mt-2">$350</p>
                     </div>
                   </div>
 
                   {/* 20-Pack */}
                   <div className="p-4 rounded-lg border bg-primary/5 border-primary/30 relative">
-                    <Badge className="absolute -top-2 right-3 bg-primary">Best Value</Badge>
+                    <Badge className="absolute -top-2 right-3 bg-primary">{t('credits.bestValue')}</Badge>
                     <div className="flex flex-col">
-                      <p className="font-medium">20 Sessions</p>
-                      <p className="text-sm text-muted-foreground">$25/session • Save $400</p>
+                      <p className="font-medium">{isFrench ? '20 séances' : '20 Sessions'}</p>
+                      <p className="text-sm text-muted-foreground">{isFrench ? '25$/séance • Économisez 400$' : '$25/session • Save $400'}</p>
                       <p className="text-xl font-bold text-primary mt-2">$500</p>
                     </div>
                   </div>
@@ -246,12 +249,12 @@ const BillingPage: React.FC = () => {
                 <Separator className="my-4" />
 
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <p><strong>Other Sessions (Pay Per Session):</strong></p>
-                  <p>• Semi-Private Training: <span className="font-medium text-foreground">$69/session</span> (up to 3 players)</p>
-                  <p>• Private Training: <span className="font-medium text-foreground">$89.99/session</span> (1-on-1 coaching)</p>
-                  <p>• Sunday Ice Practice: <span className="font-medium text-foreground">$50/session</span></p>
-                  <p>• Team Session: <span className="font-medium text-foreground">$15/player</span> (minimum 10 players)</p>
-                  <p className="text-xs mt-2 italic">Book these through "Book a Session" on your dashboard</p>
+                  <p><strong>{t('billing.otherSessions')}:</strong></p>
+                  <p>• {isFrench ? 'Entraînement semi-privé' : 'Semi-Private Training'}: <span className="font-medium text-foreground">$69/{isFrench ? 'séance' : 'session'}</span> ({t('billing.semiPrivateDesc')})</p>
+                  <p>• {isFrench ? 'Entraînement privé' : 'Private Training'}: <span className="font-medium text-foreground">$89.99/{isFrench ? 'séance' : 'session'}</span> ({t('billing.privateDesc')})</p>
+                  <p>• {isFrench ? 'Glace du dimanche' : 'Sunday Ice Practice'}: <span className="font-medium text-foreground">$50/{isFrench ? 'séance' : 'session'}</span></p>
+                  <p>• {t('billing.teamSession')}: <span className="font-medium text-foreground">$15/{t('billing.perPlayer')}</span> ({t('billing.minimumPlayers')})</p>
+                  <p className="text-xs mt-2 italic">{t('billing.bookThroughDashboard')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -261,10 +264,10 @@ const BillingPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
-                  Purchase History
+                  {t('billing.purchaseHistory')}
                 </CardTitle>
                 <CardDescription>
-                  {history?.purchases.length || 0} credit purchase{(history?.purchases.length || 0) !== 1 ? 's' : ''}
+                  {history?.purchases.length || 0} {(history?.purchases.length || 0) !== 1 ? t('billing.purchases') : t('billing.purchase')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -272,13 +275,13 @@ const BillingPage: React.FC = () => {
                   <div className="text-center py-8">
                     <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                     <p className="text-muted-foreground">
-                      No purchases yet
+                      {t('billing.noPurchasesYet')}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Buy credits to start booking training sessions
+                      {t('billing.buyFirstCredits')}
                     </p>
                     <Button className="mt-4" onClick={() => setShowBuyModal(true)}>
-                      Buy Your First Credits
+                      {t('billing.buyYourFirstCredits')}
                     </Button>
                   </div>
                 ) : (
@@ -307,23 +310,23 @@ const BillingPage: React.FC = () => {
                                     {getPackageLabel(purchase.package_type)}
                                   </p>
                                   {isExpired && (
-                                    <Badge variant="secondary" className="text-xs">Expired</Badge>
+                                    <Badge variant="secondary" className="text-xs">{t('billing.expired')}</Badge>
                                   )}
                                   {isExhausted && (
-                                    <Badge variant="secondary" className="text-xs">Used Up</Badge>
+                                    <Badge variant="secondary" className="text-xs">{t('billing.usedUp')}</Badge>
                                   )}
                                   {expiringSoon && !isExpired && !isExhausted && (
                                     <Badge variant="outline" className="text-xs text-orange-500 border-orange-500/30">
-                                      Expiring Soon
+                                      {t('billing.expiringSoon')}
                                     </Badge>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                                  <span>Purchased {formatDate(purchase.purchased_at)}</span>
+                                  <span>{t('billing.purchased')} {formatDate(purchase.purchased_at)}</span>
                                   <span>•</span>
                                   <span className="flex items-center gap-1">
                                     <Clock className="h-3 w-3" />
-                                    Expires {formatDate(purchase.expires_at)}
+                                    {t('credits.expires')} {formatDate(purchase.expires_at)}
                                   </span>
                                 </div>
                               </div>
@@ -333,7 +336,7 @@ const BillingPage: React.FC = () => {
                                 {formatPrice(Number(purchase.price_paid) * 100)}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {purchase.credits_remaining}/{purchase.credits_purchased} remaining
+                                {purchase.credits_remaining}/{purchase.credits_purchased} {t('billing.remaining')}
                               </p>
                             </div>
                           </div>
@@ -350,10 +353,10 @@ const BillingPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-primary" />
-                    Credit Usage
+                    {t('billing.creditUsage')}
                   </CardTitle>
                   <CardDescription>
-                    Sessions booked using credits
+                    {t('billing.sessionsBookedUsingCredits')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -390,10 +393,9 @@ const BillingPage: React.FC = () => {
             {/* Support */}
             <Alert>
               <Info className="h-4 w-4" />
-              <AlertTitle>Need Help?</AlertTitle>
+              <AlertTitle>{t('common.needHelp')}</AlertTitle>
               <AlertDescription>
-                For billing questions or refund requests, please contact our
-                support team at{' '}
+                {t('billing.billingQuestions')}{' '}
                 <a
                   href="mailto:support@sniperzone.com"
                   className="font-medium underline hover:no-underline"

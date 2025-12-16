@@ -15,6 +15,7 @@ import { NotificationBell } from './notifications';
 import AdminCreditDashboard from './admin/AdminCreditDashboard';
 import AdminBookingsPanel from './admin/AdminBookingsPanel';
 import { MedicalFiles, WeekDay, Language } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Registration {
   id: string;
@@ -193,7 +194,7 @@ const AdminDashboard: React.FC = () => {
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [activeTab, setActiveTab] = useState<string>('player');
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
-  const [language, setLanguage] = useState<Language>(Language.FR);
+  const { language, setLanguage } = useLanguage();
 
   // Translations
   const isFrench = language === Language.FR;

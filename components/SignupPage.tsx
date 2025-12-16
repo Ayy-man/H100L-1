@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Alert, AlertDescription } from './ui/alert';
 import { createFirebaseUser, isValidEmail, validatePassword } from '@/lib/authService';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Language } from '@/types';
 
 /**
  * Signup Page Component
@@ -22,6 +24,7 @@ import { toast } from 'sonner';
  * 4. Can buy credits and book sessions for any child
  */
 const SignupPage: React.FC = () => {
+  const { language, setLanguage, t } = useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,13 +40,13 @@ const SignupPage: React.FC = () => {
 
     // Validate name
     if (!name.trim()) {
-      setError('Please enter your name.');
+      setError(t('validation.enterName'));
       return;
     }
 
     // Validate email
     if (!email || !isValidEmail(email)) {
-      setError('Please enter a valid email address.');
+      setError(t('validation.enterValidEmail'));
       return;
     }
 
@@ -56,7 +59,7 @@ const SignupPage: React.FC = () => {
 
     // Validate password confirmation
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('validation.passwordsNoMatch'));
       return;
     }
 
@@ -66,7 +69,7 @@ const SignupPage: React.FC = () => {
       // Create Firebase user
       await createFirebaseUser(email, password, name);
 
-      toast.success('Account created successfully!');
+      toast.success(t('auth.accountCreated'));
 
       // Wait a bit for Firebase auth state to propagate
       setTimeout(() => {
@@ -77,13 +80,13 @@ const SignupPage: React.FC = () => {
 
       // User-friendly error messages
       if (err.code === 'auth/email-already-in-use' || err.message.includes('email-already-in-use')) {
-        setError('This email is already registered. Please log in instead.');
+        setError(t('validation.emailAlreadyUsed'));
       } else if (err.code === 'auth/invalid-email') {
-        setError('Invalid email address format.');
+        setError(t('validation.invalidEmail'));
       } else if (err.code === 'auth/weak-password') {
-        setError('Password is too weak. Please use a stronger password.');
+        setError(t('validation.weakPassword'));
       } else {
-        setError(err.message || 'Failed to create account. Please try again.');
+        setError(err.message || t('validation.accountCreationFailed'));
       }
 
       setLoading(false);
@@ -93,6 +96,32 @@ const SignupPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Language Toggle */}
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center bg-muted rounded-lg p-0.5">
+            <button
+              onClick={() => setLanguage(Language.FR)}
+              className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                language === Language.FR
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              FR
+            </button>
+            <button
+              onClick={() => setLanguage(Language.EN)}
+              className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                language === Language.EN
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              EN
+            </button>
+          </div>
+        </div>
+
         {/* Logo and Branding */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
@@ -102,17 +131,17 @@ const SignupPage: React.FC = () => {
               className="h-20 w-auto"
             />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Create Your Account</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('auth.createYourAccount')}</h1>
           <p className="text-muted-foreground mt-1">
-            Sign up to book training sessions for your children
+            {t('auth.signUpDescription')}
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign Up</CardTitle>
+            <CardTitle>{t('auth.signUp')}</CardTitle>
             <CardDescription>
-              Create an account to get started with SniperZone
+              {t('auth.getStarted')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -125,7 +154,7 @@ const SignupPage: React.FC = () => {
             <form onSubmit={handleSignup} className="space-y-4">
               {/* Name Input */}
               <div className="space-y-2">
-                <Label htmlFor="name">Your Name</Label>
+                <Label htmlFor="name">{t('auth.yourName')}</Label>
                 <Input
                   id="name"
                   type="text"
@@ -140,7 +169,7 @@ const SignupPage: React.FC = () => {
 
               {/* Email Input */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('auth.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -155,7 +184,7 @@ const SignupPage: React.FC = () => {
 
               {/* Password Input */}
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -182,13 +211,13 @@ const SignupPage: React.FC = () => {
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  At least 8 characters with uppercase, lowercase, and number
+                  {t('auth.passwordRequirements')}
                 </p>
               </div>
 
               {/* Confirm Password Input */}
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
@@ -226,12 +255,12 @@ const SignupPage: React.FC = () => {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Account...
+                    {t('auth.creatingAccount')}
                   </>
                 ) : (
                   <>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Create Account
+                    {t('auth.createAccount')}
                   </>
                 )}
               </Button>
@@ -239,12 +268,12 @@ const SignupPage: React.FC = () => {
 
             {/* Login Link */}
             <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">Already have an account? </span>
+              <span className="text-muted-foreground">{t('auth.alreadyHaveAccount')} </span>
               <a
                 href="/login"
                 className="text-primary hover:underline font-medium"
               >
-                Sign in
+                {t('auth.signIn')}
               </a>
             </div>
           </CardContent>
@@ -252,23 +281,23 @@ const SignupPage: React.FC = () => {
 
         {/* Info Box */}
         <div className="mt-6 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          <p className="font-medium text-foreground mb-2">What happens next?</p>
+          <p className="font-medium text-foreground mb-2">{t('auth.whatHappensNext')}</p>
           <ul className="space-y-1 text-xs">
-            <li>1. Create your account</li>
-            <li>2. Add your child's information</li>
-            <li>3. Buy session credits or book directly</li>
-            <li>4. Start training!</li>
+            <li>{t('auth.step1CreateAccount')}</li>
+            <li>{t('auth.step2AddChild')}</li>
+            <li>{t('auth.step3BuyCredits')}</li>
+            <li>{t('auth.step4StartTraining')}</li>
           </ul>
         </div>
 
         {/* Support Link */}
         <div className="mt-6 text-center text-sm text-muted-foreground">
-          Need help?{' '}
+          {t('common.needHelp')}{' '}
           <a
             href="mailto:support@sniperzone.com"
             className="text-primary hover:underline"
           >
-            Contact Support
+            {t('common.contactSupport')}
           </a>
         </div>
       </div>

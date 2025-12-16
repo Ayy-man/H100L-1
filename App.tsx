@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Language } from './types';
 import { content } from './constants';
 import { Toaster } from './components/ui/sonner';
 import { ProfileProvider } from './contexts/ProfileContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { ToastProvider } from './hooks/useToast';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -19,21 +20,26 @@ import BillingPage from './components/BillingPage';
 import ProfilePage from './components/ProfilePage';
 
 function App() {
-  const [language, setLanguage] = useState<Language>(Language.FR);
-  const selectedContent = content[language];
-
   // Simple routing for different pages
   const currentPath = window.location.pathname;
 
-  // Wrap all routes with ProfileProvider for authentication and profile management
+  // Wrap all routes with providers
   return (
     <ToastProvider>
-      <ProfileProvider>
-        {renderRoute(currentPath)}
-        <Toaster />
-      </ProfileProvider>
+      <LanguageProvider>
+        <ProfileProvider>
+          <AppContent currentPath={currentPath} />
+          <Toaster />
+        </ProfileProvider>
+      </LanguageProvider>
     </ToastProvider>
   );
+}
+
+// Separate component to use hooks inside LanguageProvider
+function AppContent({ currentPath }: { currentPath: string }) {
+  const { language, setLanguage } = useLanguage();
+  const selectedContent = content[language];
 
   function renderRoute(path: string) {
     if (path === '/admin') {
@@ -88,6 +94,8 @@ function App() {
       </div>
     );
   }
+
+  return renderRoute(currentPath);
 }
 
 export default App;

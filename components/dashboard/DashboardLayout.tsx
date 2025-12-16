@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { logoutUser } from '@/lib/authService';
 import { toast } from 'sonner';
 import { NotificationBell } from '@/components/notifications';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Language } from '@/types';
 
 interface DashboardLayoutProps {
   user: User;
@@ -31,14 +33,16 @@ interface DashboardLayoutProps {
  * - Main content area
  */
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => {
+  const { language, setLanguage, t } = useLanguage();
+
   const handleLogout = async () => {
     try {
       await logoutUser();
-      toast.success('Logged out successfully');
+      toast.success(t('auth.loggedOut'));
       window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
-      toast.error('Failed to logout. Please try again.');
+      toast.error(t('validation.logoutFailed'));
     }
   };
 
@@ -76,26 +80,49 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
                 <Button variant="ghost" size="sm" asChild>
                   <a href="/dashboard">
                     <Home className="mr-2 h-4 w-4" />
-                    Dashboard
+                    {t('nav.dashboard')}
                   </a>
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
                   <a href="/schedule">
                     <Calendar className="mr-2 h-4 w-4" />
-                    Schedule
+                    {t('nav.schedule')}
                   </a>
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
                   <a href="/billing">
                     <CreditCard className="mr-2 h-4 w-4" />
-                    Billing
+                    {t('nav.billing')}
                   </a>
                 </Button>
               </nav>
             </div>
 
-            {/* Notifications & User Menu */}
+            {/* Language Toggle & Notifications & User Menu */}
             <div className="flex items-center space-x-4">
+              {/* Language Toggle */}
+              <div className="flex items-center bg-muted rounded-lg p-0.5">
+                <button
+                  onClick={() => setLanguage(Language.FR)}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                    language === Language.FR
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  FR
+                </button>
+                <button
+                  onClick={() => setLanguage(Language.EN)}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                    language === Language.EN
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  EN
+                </button>
+              </div>
               {/* Notification Bell */}
               <NotificationBell
                 userId={user.uid}
@@ -137,25 +164,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
                   <DropdownMenuItem asChild>
                     <a href="/profile" className="cursor-pointer">
                       <UserIcon className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
+                      <span>{t('nav.profile')}</span>
                     </a>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <a href="/schedule" className="cursor-pointer">
                       <Calendar className="mr-2 h-4 w-4" />
-                      <span>My Schedule</span>
+                      <span>{t('nav.mySchedule')}</span>
                     </a>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <a href="/billing" className="cursor-pointer">
                       <CreditCard className="mr-2 h-4 w-4" />
-                      <span>Billing</span>
+                      <span>{t('nav.billing')}</span>
                     </a>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>{t('nav.logOut')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -171,19 +198,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
             <Button variant="ghost" size="sm" asChild>
               <a href="/dashboard">
                 <Home className="mr-2 h-4 w-4" />
-                Dashboard
+                {t('nav.dashboard')}
               </a>
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <a href="/schedule">
                 <Calendar className="mr-2 h-4 w-4" />
-                Schedule
+                {t('nav.schedule')}
               </a>
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <a href="/billing">
                 <CreditCard className="mr-2 h-4 w-4" />
-                Billing
+                {t('nav.billing')}
               </a>
             </Button>
           </nav>
@@ -200,21 +227,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user, children }) => 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
             <p className="text-sm text-muted-foreground">
-              © 2025 SniperZone Hockey Training. All rights reserved.
+              {t('footer.copyright')}
             </p>
             <div className="flex items-center space-x-4">
               <a
                 href="/terms"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Terms & Conditions
+                {t('nav.termsConditions')}
               </a>
               <span className="text-muted-foreground">•</span>
               <a
                 href="mailto:support@sniperzone.com"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Contact Support
+                {t('common.contactSupport')}
               </a>
             </div>
           </div>

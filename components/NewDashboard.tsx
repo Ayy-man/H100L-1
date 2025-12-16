@@ -12,6 +12,7 @@ import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import type {
   CreditBalanceResponse,
@@ -35,6 +36,8 @@ import type {
  */
 const NewDashboard: React.FC = () => {
   const { user, children, loading: profileLoading, refreshProfiles } = useProfile();
+  const { language, t } = useLanguage();
+  const isFrench = language === 'fr';
 
   // Credit balance state
   const [creditBalance, setCreditBalance] = useState<CreditBalanceResponse | null>(null);
@@ -65,12 +68,12 @@ const NewDashboard: React.FC = () => {
 
     if (paymentStatus === 'success') {
       if (purchaseType === 'credits') {
-        toast.success('Credits purchased successfully! Your balance has been updated.', {
+        toast.success(isFrench ? 'Crédits achetés avec succès! Votre solde a été mis à jour.' : 'Credits purchased successfully! Your balance has been updated.', {
           duration: 5000,
           icon: <PartyPopper className="h-5 w-5" />,
         });
       } else if (purchaseType === 'session') {
-        toast.success('Session booked successfully!', {
+        toast.success(isFrench ? 'Séance réservée avec succès!' : 'Session booked successfully!', {
           duration: 5000,
           icon: <PartyPopper className="h-5 w-5" />,
         });
@@ -81,7 +84,7 @@ const NewDashboard: React.FC = () => {
       fetchCreditBalance();
       fetchUpcomingBookings();
     } else if (paymentStatus === 'cancelled') {
-      toast.error('Payment was cancelled. You can try again when ready.');
+      toast.error(isFrench ? 'Le paiement a été annulé. Vous pouvez réessayer quand vous êtes prêt.' : 'Payment was cancelled. You can try again when ready.');
       window.history.replaceState({}, '', '/dashboard');
     }
   }, []);
@@ -354,10 +357,10 @@ const NewDashboard: React.FC = () => {
             {/* Welcome Message */}
             <div className="text-center">
               <h1 className="text-3xl font-bold text-foreground">
-                Welcome to SniperZone!
+                {isFrench ? 'Bienvenue chez SniperZone!' : 'Welcome to SniperZone!'}
               </h1>
               <p className="text-muted-foreground mt-2">
-                Let's get started by adding your first child.
+                {isFrench ? 'Commençons par ajouter votre premier enfant.' : "Let's get started by adding your first child."}
               </p>
             </div>
 
@@ -366,25 +369,26 @@ const NewDashboard: React.FC = () => {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
                 <UserPlus className="h-8 w-8 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold mb-2">Add Your First Child</h2>
+              <h2 className="text-xl font-semibold mb-2">{t('dashboard.addFirstChild')}</h2>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Add your child's information to start booking training sessions.
-                You can buy credits and book sessions for all your children from one account.
+                {isFrench
+                  ? 'Ajoutez les informations de votre enfant pour commencer à réserver des séances d\'entraînement. Vous pouvez acheter des crédits et réserver des séances pour tous vos enfants depuis un seul compte.'
+                  : "Add your child's information to start booking training sessions. You can buy credits and book sessions for all your children from one account."}
               </p>
               <Button size="lg" onClick={() => setShowAddChildModal(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
-                Add Child
+                {t('dashboard.addChild')}
               </Button>
             </div>
 
             {/* Info Box */}
             <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-2">What you can do after adding a child:</p>
+              <p className="font-medium text-foreground mb-2">{isFrench ? 'Ce que vous pouvez faire après avoir ajouté un enfant:' : 'What you can do after adding a child:'}</p>
               <ul className="space-y-1 text-xs">
-                <li>Buy session credits ($45 single, $350 for 10, $500 for 20)</li>
-                <li>Book group training sessions using credits</li>
-                <li>Book Sunday ice practice ($50/session)</li>
-                <li>Book private ($89.99) or semi-private ($69) training</li>
+                <li>{isFrench ? 'Acheter des crédits de séance (45$ unique, 350$ pour 10, 500$ pour 20)' : 'Buy session credits ($45 single, $350 for 10, $500 for 20)'}</li>
+                <li>{isFrench ? 'Réserver des séances d\'entraînement de groupe avec des crédits' : 'Book group training sessions using credits'}</li>
+                <li>{isFrench ? 'Réserver la glace du dimanche (50$/séance)' : 'Book Sunday ice practice ($50/session)'}</li>
+                <li>{isFrench ? 'Réserver des entraînements privé (89.99$) ou semi-privé (69$)' : 'Book private ($89.99) or semi-private ($69) training'}</li>
               </ul>
             </div>
           </div>
@@ -409,10 +413,12 @@ const NewDashboard: React.FC = () => {
           {/* Welcome Message */}
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              Welcome back!
+              {isFrench ? 'Bon retour!' : 'Welcome back!'}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Manage training sessions for {children.length} registered player{children.length > 1 ? 's' : ''}
+              {isFrench
+                ? `Gérez les séances d'entraînement pour ${children.length} joueur${children.length > 1 ? 's' : ''} inscrit${children.length > 1 ? 's' : ''}`
+                : `Manage training sessions for ${children.length} registered player${children.length > 1 ? 's' : ''}`}
             </p>
           </div>
 

@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Registration } from '@/types';
 import { toast } from 'sonner';
 
@@ -32,6 +33,8 @@ import { toast } from 'sonner';
  */
 const ProfilePage: React.FC = () => {
   const { user, selectedProfile, selectedProfileId } = useProfile();
+  const { language, t } = useLanguage();
+  const isFrench = language === 'fr';
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,10 +105,10 @@ const ProfilePage: React.FC = () => {
         form_data: editedData,
       });
       setIsEditing(false);
-      toast.success('Profile updated successfully!');
+      toast.success(t('profile.profileUpdated'));
     } catch (err) {
       console.error('Error updating profile:', err);
-      toast.error('Failed to update profile');
+      toast.error(isFrench ? 'Échec de la mise à jour du profil' : 'Failed to update profile');
     } finally {
       setIsSaving(false);
     }
@@ -131,12 +134,12 @@ const ProfilePage: React.FC = () => {
         <DashboardLayout user={user!}>
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error Loading Profile</AlertTitle>
+            <AlertTitle>{isFrench ? 'Erreur de chargement du profil' : 'Error Loading Profile'}</AlertTitle>
             <AlertDescription>
               {error}
               <div className="mt-4">
                 <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-                  Refresh Page
+                  {isFrench ? 'Rafraîchir la page' : 'Refresh Page'}
                 </Button>
               </div>
             </AlertDescription>
@@ -146,11 +149,11 @@ const ProfilePage: React.FC = () => {
         <DashboardLayout user={user!}>
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertTitle>No Profile Found</AlertTitle>
+            <AlertTitle>{isFrench ? 'Aucun profil trouvé' : 'No Profile Found'}</AlertTitle>
             <AlertDescription>
               {!selectedProfile
-                ? 'Please select a child profile to view their profile information.'
-                : 'Complete your registration to view your profile.'}
+                ? (isFrench ? 'Veuillez sélectionner un profil enfant pour voir ses informations.' : 'Please select a child profile to view their profile information.')
+                : (isFrench ? 'Complétez votre inscription pour voir votre profil.' : 'Complete your registration to view your profile.')}
             </AlertDescription>
           </Alert>
         </DashboardLayout>
@@ -160,25 +163,25 @@ const ProfilePage: React.FC = () => {
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Profile</h1>
+                <h1 className="text-3xl font-bold text-foreground">{t('nav.profile')}</h1>
                 <p className="text-muted-foreground mt-1">
-                  View and manage your registration information
+                  {isFrench ? 'Consulter et gérer les informations d\'inscription' : 'View and manage your registration information'}
                 </p>
               </div>
               {!isEditing ? (
                 <Button onClick={() => setIsEditing(true)}>
                   <Edit className="mr-2 h-4 w-4" />
-                  Edit Profile
+                  {t('profile.updateProfile')}
                 </Button>
               ) : (
                 <div className="flex items-center gap-2">
                   <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                     <X className="mr-2 h-4 w-4" />
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button onClick={handleSave} disabled={isSaving}>
                     <Save className="mr-2 h-4 w-4" />
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    {isSaving ? (isFrench ? 'Enregistrement...' : 'Saving...') : t('common.save')}
                   </Button>
                 </div>
               )}
@@ -189,16 +192,16 @@ const ProfilePage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <UserIcon className="h-5 w-5 text-primary" />
-                  Player Information
+                  {isFrench ? 'Informations du joueur' : 'Player Information'}
                 </CardTitle>
                 <CardDescription>
-                  Details about the registered player
+                  {isFrench ? 'Détails du joueur inscrit' : 'Details about the registered player'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="playerFullName">Full Name</Label>
+                    <Label htmlFor="playerFullName">{isFrench ? 'Nom complet' : 'Full Name'}</Label>
                     {isEditing ? (
                       <Input
                         id="playerFullName"
@@ -214,7 +217,7 @@ const ProfilePage: React.FC = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Label htmlFor="dateOfBirth">{t('child.dateOfBirth')}</Label>
                     {isEditing ? (
                       <Input
                         id="dateOfBirth"
@@ -231,13 +234,13 @@ const ProfilePage: React.FC = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="playerCategory">Category</Label>
+                    <Label htmlFor="playerCategory">{t('child.playerCategory')}</Label>
                     <p className="text-foreground font-medium">
                       {registration.form_data.playerCategory}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="position">Position</Label>
+                    <Label htmlFor="position">{t('child.position')}</Label>
                     {isEditing ? (
                       <Input
                         id="position"
@@ -271,9 +274,9 @@ const ProfilePage: React.FC = () => {
             {/* Parent/Guardian Information */}
             <Card>
               <CardHeader>
-                <CardTitle>Parent/Guardian Information</CardTitle>
+                <CardTitle>{isFrench ? 'Informations du parent/tuteur' : 'Parent/Guardian Information'}</CardTitle>
                 <CardDescription>
-                  Primary contact and account holder details
+                  {isFrench ? 'Coordonnées du contact principal et du titulaire du compte' : 'Primary contact and account holder details'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -295,12 +298,12 @@ const ProfilePage: React.FC = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="parentEmail">Email</Label>
+                    <Label htmlFor="parentEmail">{t('auth.email')}</Label>
                     <p className="text-foreground font-medium">
                       {registration.form_data.parentEmail}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Email cannot be changed (used for login)
+                      {isFrench ? 'Le courriel ne peut pas être modifié (utilisé pour la connexion)' : 'Email cannot be changed (used for login)'}
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -364,9 +367,9 @@ const ProfilePage: React.FC = () => {
             {/* Emergency Contact */}
             <Card>
               <CardHeader>
-                <CardTitle>Emergency Contact</CardTitle>
+                <CardTitle>{t('child.emergencyContact')}</CardTitle>
                 <CardDescription>
-                  Contact person in case of emergency
+                  {isFrench ? 'Personne à contacter en cas d\'urgence' : 'Contact person in case of emergency'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -435,9 +438,9 @@ const ProfilePage: React.FC = () => {
             {/* Program Details */}
             <Card>
               <CardHeader>
-                <CardTitle>Program Details</CardTitle>
+                <CardTitle>{isFrench ? 'Détails du programme' : 'Program Details'}</CardTitle>
                 <CardDescription>
-                  Your selected training program
+                  {isFrench ? 'Votre programme d\'entraînement sélectionné' : 'Your selected training program'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -482,8 +485,9 @@ const ProfilePage: React.FC = () => {
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    To change your program type or training schedule, please use the "Reschedule"
-                    button on the Schedule page.
+                    {isFrench
+                      ? 'Pour modifier votre type de programme ou votre horaire d\'entraînement, veuillez utiliser le bouton « Reporter » sur la page Horaire.'
+                      : 'To change your program type or training schedule, please use the "Reschedule" button on the Schedule page.'}
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -492,50 +496,51 @@ const ProfilePage: React.FC = () => {
             {/* Health Information */}
             <Card>
               <CardHeader>
-                <CardTitle>Health & Medical Information</CardTitle>
+                <CardTitle>{isFrench ? 'Informations santé et médicales' : 'Health & Medical Information'}</CardTitle>
                 <CardDescription>
-                  Important medical details for training safety
+                  {isFrench ? 'Détails médicaux importants pour la sécurité à l\'entraînement' : 'Important medical details for training safety'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Allergies</Label>
+                    <Label>{t('child.allergies')}</Label>
                     {registration.form_data.hasAllergies ? (
                       <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
                         <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                          ⚠️ Has Allergies
+                          ⚠️ {isFrench ? 'A des allergies' : 'Has Allergies'}
                         </p>
                         <p className="text-sm text-foreground mt-1">
                           {registration.form_data.allergiesDetails}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-muted-foreground text-sm">No known allergies</p>
+                      <p className="text-muted-foreground text-sm">{isFrench ? 'Aucune allergie connue' : 'No known allergies'}</p>
                     )}
                   </div>
                   <Separator />
                   <div className="space-y-2">
-                    <Label>Medical Conditions</Label>
+                    <Label>{t('child.medicalConditions')}</Label>
                     {registration.form_data.hasMedicalConditions ? (
                       <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
                         <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                          ⚠️ Has Medical Conditions
+                          ⚠️ {isFrench ? 'A des conditions médicales' : 'Has Medical Conditions'}
                         </p>
                         <p className="text-sm text-foreground mt-1">
                           {registration.form_data.medicalConditionsDetails}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-muted-foreground text-sm">No known medical conditions</p>
+                      <p className="text-muted-foreground text-sm">{isFrench ? 'Aucune condition médicale connue' : 'No known medical conditions'}</p>
                     )}
                   </div>
                 </div>
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    If you need to update health information, please contact support at
-                    support@sniperzone.com
+                    {isFrench
+                      ? 'Si vous devez mettre à jour les informations de santé, veuillez contacter le support à support@sniperzone.com'
+                      : 'If you need to update health information, please contact support at support@sniperzone.com'}
                   </AlertDescription>
                 </Alert>
               </CardContent>
