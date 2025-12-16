@@ -61,39 +61,37 @@ export default async function handler(
   try {
     const supabase = getSupabase();
 
-    // Fetch all registrations
-    const { data: registrations, error: regError } = await supabase
-      .from('registrations')
-      .select('id, created_at, form_data, payment_status')
-      .order('created_at', { ascending: false });
+    // Run all queries in parallel for faster response
+    const [registrationsResult, creditPurchasesResult, bookingsResult] = await Promise.all([
+      supabase
+        .from('registrations')
+        .select('id, created_at, form_data, payment_status')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('credit_purchases')
+        .select('id, amount, credits, created_at, status')
+        .eq('status', 'completed'),
+      supabase
+        .from('session_bookings')
+        .select('id, session_type, session_date, credits_used, amount_paid, status, created_at'),
+    ]);
 
-    if (regError) {
-      console.error('Error fetching registrations:', regError);
+    if (registrationsResult.error) {
+      console.error('Error fetching registrations:', registrationsResult.error);
       return res.status(500).json({ error: 'Failed to fetch registrations' });
     }
 
-    // Fetch credit purchases for revenue data
-    const { data: creditPurchases, error: creditError } = await supabase
-      .from('credit_purchases')
-      .select('id, amount, credits, created_at, status')
-      .eq('status', 'completed');
-
-    if (creditError) {
-      console.error('Error fetching credit purchases:', creditError);
+    if (creditPurchasesResult.error) {
+      console.error('Error fetching credit purchases:', creditPurchasesResult.error);
     }
 
-    // Fetch session bookings
-    const { data: bookings, error: bookingError } = await supabase
-      .from('session_bookings')
-      .select('id, session_type, session_date, credits_used, amount_paid, status, created_at');
-
-    if (bookingError) {
-      console.error('Error fetching bookings:', bookingError);
+    if (bookingsResult.error) {
+      console.error('Error fetching bookings:', bookingsResult.error);
     }
 
-    const regs = registrations || [];
-    const purchases = creditPurchases || [];
-    const sessions = bookings || [];
+    const regs = registrationsResult.data || [];
+    const purchases = creditPurchasesResult.data || [];
+    const sessions = bookingsResult.data || [];
 
     // Calculate daily registrations (last 30 days)
     const dailyRegistrations = calculateDailyRegistrations(regs);
