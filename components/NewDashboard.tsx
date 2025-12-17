@@ -282,16 +282,25 @@ const NewDashboard: React.FC = () => {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to cancel booking');
+        throw new Error(data.error || (isFrench ? 'Échec de l\'annulation' : 'Failed to cancel booking'));
       }
 
-      toast.success(data.message);
+      // Show localized success message based on credits_refunded
+      if (data.credits_refunded > 0) {
+        toast.success(
+          isFrench
+            ? `Réservation annulée. ${data.credits_refunded} crédit${data.credits_refunded > 1 ? 's' : ''} remboursé${data.credits_refunded > 1 ? 's' : ''}.`
+            : `Booking cancelled. ${data.credits_refunded} credit${data.credits_refunded > 1 ? 's' : ''} refunded.`
+        );
+      } else {
+        toast.success(isFrench ? 'Réservation annulée.' : 'Booking cancelled.');
+      }
 
       // Refresh data
       fetchUpcomingBookings();
       fetchCreditBalance();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to cancel booking');
+      toast.error(err instanceof Error ? err.message : (isFrench ? 'Échec de l\'annulation' : 'Failed to cancel booking'));
     }
   };
 

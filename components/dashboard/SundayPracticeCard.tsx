@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Registration } from '@/types';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   SUNDAY_PRACTICE_CONFIG,
   formatTimeSlot,
@@ -69,6 +70,8 @@ interface WeekSlots {
  * - Booking status display
  */
 const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration }) => {
+  const { language } = useLanguage();
+  const isFrench = language === 'fr';
   const [loading, setLoading] = useState(true);
   const [eligible, setEligible] = useState(false);
   const [upcomingWeeks, setUpcomingWeeks] = useState<WeekSlots[]>([]);
@@ -143,17 +146,17 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
       const data = await response.json();
 
       if (!data.success) {
-        toast.error(data.error || SUNDAY_PRACTICE_CONFIG.messages.bookingError);
+        toast.error(data.error || (isFrench ? 'Échec de la réservation. Veuillez réessayer.' : 'Failed to book slot. Please try again.'));
         return;
       }
 
-      toast.success(SUNDAY_PRACTICE_CONFIG.messages.bookingSuccess);
+      toast.success(isFrench ? 'Votre place pour la glace du dimanche a été réservée avec succès!' : 'Your Sunday practice slot has been booked successfully!');
 
       // Refresh data
       await fetchNextSlot();
     } catch (error) {
       console.error('Booking error:', error);
-      toast.error(SUNDAY_PRACTICE_CONFIG.messages.bookingError);
+      toast.error(isFrench ? 'Échec de la réservation. Veuillez réessayer.' : 'Failed to book slot. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -186,17 +189,17 @@ const SundayPracticeCard: React.FC<SundayPracticeCardProps> = ({ registration })
       }
 
       if (!data.success) {
-        toast.error(data.error || 'Failed to cancel booking');
+        toast.error(data.error || (isFrench ? 'Échec de l\'annulation' : 'Failed to cancel booking'));
         return;
       }
 
-      toast.success(SUNDAY_PRACTICE_CONFIG.messages.cancellationSuccess);
+      toast.success(isFrench ? 'Votre réservation a été annulée avec succès.' : 'Your booking has been cancelled successfully.');
 
       // Refresh data
       await fetchNextSlot();
     } catch (error) {
       console.error('Cancellation error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel booking');
+      toast.error(error instanceof Error ? error.message : (isFrench ? 'Échec de l\'annulation' : 'Failed to cancel booking'));
     } finally {
       setActionLoading(false);
     }
