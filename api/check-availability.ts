@@ -50,9 +50,9 @@ const PRIVATE_TRAINING_TIMES = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '1
 // Legacy times (for registration form compatibility)
 const LEGACY_GROUP_TIMES = ['4:30 PM', '5:45 PM', '7:00 PM', '8:15 PM'];
 
-// Capacity limits
+// Capacity limits (must match purchase-session.ts and types/credits.ts)
 const MAX_GROUP_CAPACITY = 6;
-const MAX_SUNDAY_CAPACITY = 15;
+const MAX_SUNDAY_CAPACITY = 20; // Sunday Ice Practice
 const MAX_PRIVATE_CAPACITY = 1;
 const MAX_SEMI_PRIVATE_CAPACITY = 3;
 

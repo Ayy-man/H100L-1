@@ -75,7 +75,7 @@ const SESSION_TYPES = ['group', 'sunday', 'private', 'semi_private'];
 const BOOKING_STATUSES = ['confirmed', 'attended', 'cancelled', 'no_show'];
 const MAX_CAPACITIES: Record<string, number> = {
   group: 6,
-  sunday: 15,
+  sunday: 20, // Sunday Ice Practice capacity
   private: 1,
   semi_private: 3,
 };

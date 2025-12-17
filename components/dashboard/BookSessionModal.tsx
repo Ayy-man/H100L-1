@@ -269,11 +269,28 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
     return days;
   };
 
-  // Check if date is selectable
+  // Check if date is selectable based on session type
   const isDateSelectable = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return date >= today;
+
+    // Must be today or future
+    if (date < today) return false;
+
+    const dayOfWeek = date.getDay(); // 0 = Sunday
+
+    // Sunday Ice: only Sundays allowed
+    if (sessionType === 'sunday') {
+      return dayOfWeek === 0;
+    }
+
+    // Group training: not available on Sundays (use Sunday Ice instead)
+    if (sessionType === 'group') {
+      return dayOfWeek !== 0;
+    }
+
+    // Private/Semi-private: all days allowed
+    return true;
   };
 
   // Get cost info
@@ -358,6 +375,16 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
                     onClick={() => {
                       setSessionType(type);
                       setSelectedTime('');
+                      // Clear date if it's no longer valid for new session type
+                      if (selectedDate) {
+                        const date = new Date(selectedDate + 'T00:00:00');
+                        const dayOfWeek = date.getDay();
+                        // Sunday Ice requires Sunday, Group requires non-Sunday
+                        if ((type === 'sunday' && dayOfWeek !== 0) ||
+                            (type === 'group' && dayOfWeek === 0)) {
+                          setSelectedDate('');
+                        }
+                      }
                     }}
                     className={`p-3 rounded-lg border text-left transition-all ${
                       sessionType === type
@@ -376,6 +403,17 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
           {/* Calendar */}
           <div className="space-y-2">
             <label className="text-sm font-medium">{isFrench ? 'Sélectionner la date' : 'Select Date'}</label>
+            {/* Day restriction info */}
+            {sessionType === 'sunday' && (
+              <p className="text-xs text-cyan-600 dark:text-cyan-400">
+                {isFrench ? '⛸️ Glace dimanche — disponible uniquement les dimanches' : '⛸️ Sunday Ice — only available on Sundays'}
+              </p>
+            )}
+            {sessionType === 'group' && (
+              <p className="text-xs text-muted-foreground">
+                {isFrench ? '🏒 Entraînement de groupe — lundi à samedi' : '🏒 Group Training — Monday to Saturday'}
+              </p>
+            )}
             <div className="border rounded-lg p-3">
               {/* Month Navigation */}
               <div className="flex items-center justify-between mb-3">
@@ -415,6 +453,7 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
                   const dateStr = date.toISOString().split('T')[0];
                   const isSelected = selectedDate === dateStr;
                   const isSelectable = isDateSelectable(date);
+                  const isSunday = date.getDay() === 0;
 
                   return (
                     <button
@@ -428,7 +467,9 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
                         isSelected
                           ? 'bg-primary text-primary-foreground'
                           : isSelectable
-                          ? 'hover:bg-accent'
+                          ? sessionType === 'sunday' && isSunday
+                            ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/30 font-medium'
+                            : 'hover:bg-accent'
                           : 'text-muted-foreground/50 cursor-not-allowed'
                       }`}
                     >
