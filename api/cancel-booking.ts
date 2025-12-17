@@ -112,19 +112,23 @@ export default async function handler(
     let creditsRefunded = 0;
 
     // Refund credit if within window and credits were used
+    console.log(`[cancel-booking] Refund check: canRefund=${canRefund}, credits_used=${booking.credits_used}, credit_purchase_id=${booking.credit_purchase_id}`);
+
     if (canRefund && booking.credits_used > 0) {
       if (booking.credit_purchase_id) {
         // Refund to original purchase AND parent_credits via RPC
-        const { error: refundError } = await supabase.rpc('refund_credit', {
+        console.log(`[cancel-booking] Calling refund_credit RPC for purchase_id=${booking.credit_purchase_id}`);
+        const { data: rpcResult, error: refundError } = await supabase.rpc('refund_credit', {
           p_firebase_uid: firebase_uid,
           p_purchase_id: booking.credit_purchase_id,
           p_credits_to_refund: booking.credits_used,
         });
 
         if (refundError) {
-          console.error('Error refunding credit via RPC:', refundError);
+          console.error('[cancel-booking] RPC refund_credit error:', refundError);
           // Don't fail the cancellation, but note the refund failed
         } else {
+          console.log(`[cancel-booking] RPC refund_credit returned: ${rpcResult}`);
           creditsRefunded = booking.credits_used;
         }
       } else {
