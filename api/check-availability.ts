@@ -110,6 +110,7 @@ function normalizeCategory(category: string | null): string | null {
     'm15 elite': 'M15 Elite',
     'm18': 'M18',
     'junior': 'Junior',
+    'unknown': 'Unknown',
   };
 
   const normalized = categoryMap[trimmed.toLowerCase()];
@@ -131,10 +132,10 @@ function getAllowedSlotsForCategory(
   // Normalize the category
   const normalizedCategory = normalizeCategory(category);
 
-  // If no category after normalization, return ALL slots as fallback
+  // If no category or 'Unknown' after normalization, return ALL slots as fallback
   // This prevents blocking users with data issues
-  if (!normalizedCategory) {
-    console.warn('[check-availability] No category found, returning all slots as fallback');
+  if (!normalizedCategory || normalizedCategory === 'Unknown') {
+    console.warn('[check-availability] No valid category found, returning all slots as fallback');
     return sessionType === 'sunday' ? ALL_SUNDAY_TIMES : ALL_GROUP_TIMES;
   }
 
@@ -144,8 +145,12 @@ function getAllowedSlotsForCategory(
       .filter(([_, categories]) => categories.includes(normalizedCategory))
       .map(([time]) => time);
 
-    // If category doesn't match any Sunday slot (e.g., M18/Junior), return empty
-    // This is intentional - M18/Junior are not eligible for Sunday ice
+    // If category doesn't match any Sunday slot (e.g., M18/Junior)
+    // Return all Sunday slots as fallback to allow booking (business can validate later)
+    if (slots.length === 0) {
+      console.warn(`[check-availability] No Sunday slots for category "${normalizedCategory}", returning all as fallback`);
+      return ALL_SUNDAY_TIMES;
+    }
     return slots;
   }
 

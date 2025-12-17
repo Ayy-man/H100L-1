@@ -112,18 +112,51 @@ export default async function handler(
     let creditsRefunded = 0;
 
     // Refund credit if within window and credits were used
-    if (canRefund && booking.credits_used > 0 && booking.credit_purchase_id) {
-      const { error: refundError } = await supabase.rpc('refund_credit', {
-        p_firebase_uid: firebase_uid,
-        p_purchase_id: booking.credit_purchase_id,
-        p_credits_to_refund: booking.credits_used,
-      });
+    if (canRefund && booking.credits_used > 0) {
+      if (booking.credit_purchase_id) {
+        // Refund to original purchase AND parent_credits via RPC
+        const { error: refundError } = await supabase.rpc('refund_credit', {
+          p_firebase_uid: firebase_uid,
+          p_purchase_id: booking.credit_purchase_id,
+          p_credits_to_refund: booking.credits_used,
+        });
 
-      if (refundError) {
-        console.error('Error refunding credit:', refundError);
-        // Don't fail the cancellation, but note the refund failed
+        if (refundError) {
+          console.error('Error refunding credit via RPC:', refundError);
+          // Don't fail the cancellation, but note the refund failed
+        } else {
+          creditsRefunded = booking.credits_used;
+        }
       } else {
-        creditsRefunded = booking.credits_used;
+        // No purchase_id (admin-added credits) - directly update parent_credits
+        // First get current balance (use maybeSingle to handle missing row)
+        const { data: currentCredits, error: fetchError } = await supabase
+          .from('parent_credits')
+          .select('total_credits')
+          .eq('firebase_uid', firebase_uid)
+          .maybeSingle();
+
+        if (fetchError) {
+          console.error('Error fetching current credits:', fetchError);
+        } else {
+          const currentBalance = currentCredits?.total_credits || 0;
+          const newBalance = currentBalance + booking.credits_used;
+
+          // Use upsert to handle both existing and missing rows
+          const { error: upsertError } = await supabase
+            .from('parent_credits')
+            .upsert(
+              { firebase_uid, total_credits: newBalance },
+              { onConflict: 'firebase_uid' }
+            );
+
+          if (upsertError) {
+            console.error('Error refunding credit directly:', upsertError);
+          } else {
+            creditsRefunded = booking.credits_used;
+            console.log(`[cancel-booking] Refunded ${creditsRefunded} credit(s) directly to parent_credits (no purchase_id)`);
+          }
+        }
       }
     }
 
