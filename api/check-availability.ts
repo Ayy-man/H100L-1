@@ -265,12 +265,27 @@ async function checkDateAvailability(
     console.log('[check-availability] Querying Sunday slots for date:', date, 'Type:', typeof date);
 
     // Query sunday_practice_slots table for actual slot data
-    // Use .gte and .lte for date range to handle any potential date format issues
+    // First, try to get all active Sunday slots to see what exists
+    const { data: allActiveSundaySlots, error: allSlotsError } = await supabase
+      .from('sunday_practice_slots')
+      .select('id, practice_date, start_time, is_active')
+      .eq('is_active', true)
+      .order('practice_date', { ascending: true })
+      .limit(20);
+
+    console.log('[check-availability] All active Sunday slots in DB:', {
+      count: allActiveSundaySlots?.length ?? 0,
+      slots: allActiveSundaySlots?.map(s => s.practice_date),
+      error: allSlotsError?.message
+    });
+
+    // Now query for the specific date - try both string format and casting
     const { data: sundaySlots, error: sundayError } = await supabase
       .from('sunday_practice_slots')
       .select('id, practice_date, start_time, end_time, available_spots, max_capacity, min_category, max_category, is_active')
-      .eq('practice_date', date)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .gte('practice_date', date)
+      .lte('practice_date', date);
 
     console.log('[check-availability] Sunday query result:', {
       slotsCount: sundaySlots?.length ?? 0,
@@ -311,6 +326,69 @@ async function checkDateAvailability(
         slots: allSlots?.map(s => ({ date: s.practice_date, time: s.start_time, active: s.is_active })),
         error: debugError?.message
       });
+
+      // Self-healing: If no slots exist at all, try to generate them
+      if (!allSlots || allSlots.length === 0) {
+        console.log('[check-availability] No slots in table - attempting to generate...');
+
+        // Try to generate slots using the database function
+        const { data: genResult, error: genError } = await supabase.rpc(
+          'generate_sunday_slots',
+          { p_weeks_ahead: 4 }
+        );
+
+        console.log('[check-availability] Slot generation result:', {
+          result: genResult,
+          error: genError?.message
+        });
+
+        if (!genError && genResult?.success) {
+          // Re-query for the newly generated slots
+          const { data: newSlots, error: newError } = await supabase
+            .from('sunday_practice_slots')
+            .select('id, practice_date, start_time, end_time, available_spots, max_capacity, min_category, max_category, is_active')
+            .eq('practice_date', date)
+            .eq('is_active', true);
+
+          console.log('[check-availability] Re-query after generation:', {
+            count: newSlots?.length ?? 0,
+            error: newError?.message
+          });
+
+          if (newSlots && newSlots.length > 0) {
+            // Process these slots like normal
+            const normalizedCat = normalizeCategory(playerCategory);
+            const playerCatNum = normalizedCat ? extractCategoryNumber(normalizedCat) : null;
+
+            for (const slot of newSlots) {
+              const timeStr = String(slot.start_time);
+              const timeParts = timeStr.split(':');
+              const h = parseInt(timeParts[0], 10);
+              const m = timeParts[1];
+              const amPm = h >= 12 ? 'PM' : 'AM';
+              const dh = h > 12 ? h - 12 : h === 0 ? 12 : h;
+              const slotTime = `${dh}:${m} ${amPm}`;
+
+              if (playerCatNum !== null) {
+                const minNum = extractCategoryNumber(slot.min_category);
+                const maxNum = extractCategoryNumber(slot.max_category);
+                if (playerCatNum < minNum || playerCatNum > maxNum) continue;
+              }
+
+              const bookings = slot.max_capacity - slot.available_spots;
+              slots.push({
+                time: slotTime,
+                available: slot.available_spots > 0,
+                currentBookings: bookings,
+                maxCapacity: slot.max_capacity,
+              });
+            }
+
+            console.log('[check-availability] Final slots after generation:', slots);
+            return slots;
+          }
+        }
+      }
 
       return [];
     }
