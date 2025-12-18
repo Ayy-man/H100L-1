@@ -12,6 +12,7 @@ export interface SundayPracticeTimeSlot {
   maxCategory: string;
   displayName: string;
   ageRange: string;
+  capacity: number; // Max players for this specific slot
 }
 
 export interface SundayPracticeConfig {
@@ -105,6 +106,7 @@ export const SUNDAY_PRACTICE_CONFIG: SundayPracticeConfig = {
       maxCategory: 'M11',
       displayName: 'Early Slot (M7-M9-M11)',
       ageRange: 'M7 to M11',
+      capacity: 12, // M7, M9, M11 slot - 12 players max
     },
     {
       startTime: '08:30',
@@ -113,6 +115,7 @@ export const SUNDAY_PRACTICE_CONFIG: SundayPracticeConfig = {
       maxCategory: 'M15',
       displayName: 'Late Slot (M13-M15)',
       ageRange: 'M13 to M15',
+      capacity: 10, // M13, M15 slot - 10 players max
     },
   ],
 

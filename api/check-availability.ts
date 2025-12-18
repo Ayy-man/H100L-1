@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { SUNDAY_PRACTICE_CONFIG } from '../lib/sunday-practice-config';
 
 // Inline Supabase client for Vercel bundling (no caching to avoid stale connections)
 function getSupabase() {
@@ -52,9 +53,25 @@ const LEGACY_GROUP_TIMES = ['4:30 PM', '5:45 PM', '7:00 PM', '8:15 PM'];
 
 // Capacity limits (must match purchase-session.ts and types/credits.ts)
 const MAX_GROUP_CAPACITY = 6;
-const MAX_SUNDAY_CAPACITY = 20; // Sunday Ice Practice
 const MAX_PRIVATE_CAPACITY = 1;
 const MAX_SEMI_PRIVATE_CAPACITY = 3;
+
+// Sunday slot capacity mapping from config (slot-specific)
+const SUNDAY_SLOT_CAPACITY: Record<string, number> = {};
+SUNDAY_PRACTICE_CONFIG.timeSlots.forEach(slot => {
+  // Map display time format to capacity
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+  SUNDAY_SLOT_CAPACITY[formatTime(slot.startTime)] = slot.capacity;
+});
+
+// Default Sunday capacity fallback (early slot capacity)
+const DEFAULT_SUNDAY_CAPACITY = SUNDAY_PRACTICE_CONFIG.timeSlots[0]?.capacity || 12;
 
 interface TimeSlotOption {
   time: string;
@@ -188,9 +205,11 @@ async function checkDateAvailability(
     playerCategory = await getPlayerCategory(registrationId);
   }
 
-  // Determine time slots and capacity based on session type
+  // Determine time slots based on session type
+  // Note: Sunday uses slot-specific capacity, others use fixed capacity
   let timeSlots: string[];
   let maxCapacity: number;
+  const isSundaySession = sessionType === 'sunday';
 
   switch (sessionType) {
     case 'group':
@@ -205,7 +224,8 @@ async function checkDateAvailability(
       timeSlots = registrationId
         ? getAllowedSlotsForCategory(playerCategory, 'sunday')
         : ALL_SUNDAY_TIMES;
-      maxCapacity = MAX_SUNDAY_CAPACITY;
+      // maxCapacity is determined per-slot below for Sunday
+      maxCapacity = DEFAULT_SUNDAY_CAPACITY; // fallback
       break;
     case 'private':
       timeSlots = PRIVATE_TRAINING_TIMES;
@@ -270,13 +290,19 @@ async function checkDateAvailability(
   // Build slot availability list
   for (const time of timeSlots) {
     const currentBookings = bookingCounts[time] || 0;
-    const available = currentBookings < maxCapacity;
+
+    // Use slot-specific capacity for Sunday, fixed capacity for others
+    const slotCapacity = isSundaySession
+      ? (SUNDAY_SLOT_CAPACITY[time] || DEFAULT_SUNDAY_CAPACITY)
+      : maxCapacity;
+
+    const available = currentBookings < slotCapacity;
 
     slots.push({
       time,
       available,
       currentBookings,
-      maxCapacity,
+      maxCapacity: slotCapacity,
     });
   }
 

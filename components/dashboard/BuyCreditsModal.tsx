@@ -96,8 +96,8 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[90dvh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Coins className="h-5 w-5 text-primary" />
             {t('credits.buyCredits')}
@@ -109,7 +109,12 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        {/* Scrollable content area - iOS Safari compatible */}
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-4"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          <div className="space-y-4">
           {/* Current Balance */}
           <div className="p-3 rounded-lg bg-muted/50 text-center">
             <p className="text-sm text-muted-foreground">{t('credits.currentBalance')}</p>
@@ -190,10 +195,11 @@ const BuyCreditsModal: React.FC<BuyCreditsModalProps> = ({
               </AlertDescription>
             </Alert>
           )}
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3">
+        {/* Actions - fixed at bottom */}
+        <div className="flex gap-3 flex-shrink-0 pt-2">
           <Button variant="outline" onClick={onClose} className="flex-1">
             {t('common.cancel')}
           </Button>
