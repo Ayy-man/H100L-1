@@ -450,7 +450,9 @@ const BookSessionModal: React.FC<BookSessionModalProps> = ({
                     return <div key={`empty-${i}`} className="h-8" />;
                   }
 
-                  const dateStr = date.toISOString().split('T')[0];
+                  // Use local date formatting to avoid UTC timezone shift
+                  // toISOString() converts to UTC which can change the date!
+                  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                   const isSelected = selectedDate === dateStr;
                   const isSelectable = isDateSelectable(date);
                   const isSunday = date.getDay() === 0;
