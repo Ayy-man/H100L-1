@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { SUNDAY_PRACTICE_CONFIG } from '../lib/sunday-practice-config';
 
 // Inline Supabase client for Vercel bundling (no caching to avoid stale connections)
 function getSupabase() {
@@ -56,22 +55,14 @@ const MAX_GROUP_CAPACITY = 6;
 const MAX_PRIVATE_CAPACITY = 1;
 const MAX_SEMI_PRIVATE_CAPACITY = 3;
 
-// Sunday slot capacity mapping from config (slot-specific)
-const SUNDAY_SLOT_CAPACITY: Record<string, number> = {};
-SUNDAY_PRACTICE_CONFIG.timeSlots.forEach(slot => {
-  // Map display time format to capacity
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours, 10);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    return `${displayHour}:${minutes} ${ampm}`;
-  };
-  SUNDAY_SLOT_CAPACITY[formatTime(slot.startTime)] = slot.capacity;
-});
-
-// Default Sunday capacity fallback (early slot capacity)
-const DEFAULT_SUNDAY_CAPACITY = SUNDAY_PRACTICE_CONFIG.timeSlots[0]?.capacity || 12;
+// Sunday slot capacity - inlined to avoid Vercel bundling issues with lib/ imports
+// 7:30 AM slot (M7, M9, M11): 12 players
+// 8:30 AM slot (M13, M15): 10 players
+const SUNDAY_SLOT_CAPACITY: Record<string, number> = {
+  '7:30 AM': 12,
+  '8:30 AM': 10,
+};
+const DEFAULT_SUNDAY_CAPACITY = 12;
 
 interface TimeSlotOption {
   time: string;
