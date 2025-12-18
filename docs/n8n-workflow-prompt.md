@@ -345,3 +345,39 @@ Please help me build this complete workflow step by step.
 In your n8n instance, you'll need:
 1. **GHL API credentials** (API key or OAuth)
 2. **Webhook URL** - copy this to your Vercel env as `N8N_WEBHOOK_URL`
+
+---
+
+## Session Types
+
+The `booking.session_type` field can be one of:
+
+| Session Type | Description | Booking Method |
+|--------------|-------------|----------------|
+| `group` | Group training sessions (Mon-Sat) | Credit-based (1 credit/session) |
+| `sunday` | Sunday real ice practice | Subscription-based (Group Training only) |
+| `private` | Private 1-on-1 training | Stripe checkout |
+| `semi_private` | Semi-private (2-3 players) | Stripe checkout |
+
+### Sunday Ice Practice Details
+
+Sunday practice is a special session type:
+- **Eligibility**: Only Group Training subscription holders
+- **Time Slots**:
+  - 7:30-8:30 AM: M7, M9, M11 categories (capacity: 12 players)
+  - 8:30-9:30 AM: M13, M15 categories (capacity: 10 players)
+- **Location**: SniperZone Training Center, 7515 Boulevard Henri-Bourassa E, Montreal
+- **Database**: Uses separate `sunday_practice_slots` and `sunday_bookings` tables
+- **Cancellation**: No deadline - can cancel anytime before the session
+
+---
+
+## Technical Notes
+
+### Known Issues & Fixes (December 2025)
+
+1. **Calendar Timezone Bug**: The calendar date picker uses local date formatting instead of `toISOString()` to avoid UTC timezone shifts that could send the wrong date to the API.
+
+2. **Sunday Slots Query**: The check-availability API fetches all active Sunday slots and filters by date in JavaScript, bypassing PostgREST date comparison issues with PostgreSQL DATE columns.
+
+3. **Safari/iOS Scroll**: BuyCreditsModal uses `max-h-[90dvh]`, `overflow-y-auto`, and `-webkit-overflow-scrolling: touch` for proper mobile Safari scrolling.
