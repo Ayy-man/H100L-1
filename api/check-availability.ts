@@ -64,6 +64,14 @@ const SUNDAY_SLOT_CAPACITY: Record<string, number> = {
 };
 const DEFAULT_SUNDAY_CAPACITY = 12;
 
+// Helper to extract category number from string like "M13", "M15 Elite", etc.
+function extractCategoryNumber(category: string): number {
+  if (!category) return 0;
+  if (category === 'Junior') return 18;
+  const match = category.match(/M(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
 interface TimeSlotOption {
   time: string;
   available: boolean;
@@ -252,7 +260,60 @@ async function checkDateAvailability(
     return [];
   }
 
-  // Get current bookings for this date and session type from session_bookings table
+  // Sunday sessions use different tables (sunday_practice_slots / sunday_bookings)
+  if (isSundaySession) {
+    // Query sunday_practice_slots table for actual slot data
+    const { data: sundaySlots, error: sundayError } = await supabase
+      .from('sunday_practice_slots')
+      .select('start_time, available_spots, max_capacity, min_category, max_category')
+      .eq('practice_date', date)
+      .eq('is_active', true);
+
+    if (sundayError) {
+      console.error('Error checking Sunday slots:', sundayError);
+      return [];
+    }
+
+    if (!sundaySlots || sundaySlots.length === 0) {
+      console.log('[check-availability] No Sunday slots found for date:', date);
+      return [];
+    }
+
+    // Convert database slots to TimeSlotOption format
+    // Filter by player category if provided
+    const normalizedCategory = normalizeCategory(playerCategory);
+    const playerCategoryNum = normalizedCategory ? extractCategoryNumber(normalizedCategory) : null;
+
+    for (const slot of sundaySlots) {
+      // Format time from "07:30:00" to "7:30 AM"
+      const [hours, minutes] = slot.start_time.split(':');
+      const hour = parseInt(hours, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+      const time = `${displayHour}:${minutes} ${ampm}`;
+
+      // Check if player category matches this slot
+      if (playerCategoryNum !== null) {
+        const minCatNum = extractCategoryNumber(slot.min_category);
+        const maxCatNum = extractCategoryNumber(slot.max_category);
+        if (playerCategoryNum < minCatNum || playerCategoryNum > maxCatNum) {
+          continue; // Skip slots that don't match player's category
+        }
+      }
+
+      const currentBookings = slot.max_capacity - slot.available_spots;
+      slots.push({
+        time,
+        available: slot.available_spots > 0,
+        currentBookings,
+        maxCapacity: slot.max_capacity,
+      });
+    }
+
+    return slots;
+  }
+
+  // Non-Sunday sessions: query session_bookings table
   const { data: bookings, error } = await supabase
     .from('session_bookings')
     .select('time_slot')
@@ -281,19 +342,13 @@ async function checkDateAvailability(
   // Build slot availability list
   for (const time of timeSlots) {
     const currentBookings = bookingCounts[time] || 0;
-
-    // Use slot-specific capacity for Sunday, fixed capacity for others
-    const slotCapacity = isSundaySession
-      ? (SUNDAY_SLOT_CAPACITY[time] || DEFAULT_SUNDAY_CAPACITY)
-      : maxCapacity;
-
-    const available = currentBookings < slotCapacity;
+    const available = currentBookings < maxCapacity;
 
     slots.push({
       time,
       available,
       currentBookings,
-      maxCapacity: slotCapacity,
+      maxCapacity,
     });
   }
 
