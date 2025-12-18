@@ -262,33 +262,20 @@ async function checkDateAvailability(
 
   // Sunday sessions use different tables (sunday_practice_slots / sunday_bookings)
   if (isSundaySession) {
-    console.log('[check-availability] Querying Sunday slots for date:', date, 'Type:', typeof date);
-
     // Query ALL active sunday_practice_slots and filter by date in JavaScript
-    // This bypasses any PostgREST date casting issues
+    // This bypasses PostgREST date casting issues with PostgreSQL DATE columns
     const { data: allSundaySlots, error: sundayError } = await supabase
       .from('sunday_practice_slots')
       .select('id, practice_date, start_time, end_time, available_spots, max_capacity, min_category, max_category, is_active')
       .eq('is_active', true)
       .order('practice_date', { ascending: true });
 
-    console.log('[check-availability] All active Sunday slots from DB:', {
-      count: allSundaySlots?.length ?? 0,
-      dates: allSundaySlots?.map(s => s.practice_date),
-      error: sundayError?.message
-    });
-
     // Filter slots by matching date in JavaScript
     const sundaySlots = allSundaySlots?.filter(slot => {
-      // Handle different possible date formats from Supabase
-      const slotDate = String(slot.practice_date).split('T')[0]; // Get YYYY-MM-DD part
+      const slotDate = String(slot.practice_date).split('T')[0];
       const requestedDate = String(date).split('T')[0];
-      const matches = slotDate === requestedDate;
-      console.log('[check-availability] Date comparison:', { slotDate, requestedDate, matches });
-      return matches;
+      return slotDate === requestedDate;
     }) || [];
-
-    console.log('[check-availability] Filtered slots for', date, ':', sundaySlots.length);
 
     if (sundayError) {
       console.error('[check-availability] Error querying Sunday slots:', sundayError);
@@ -305,16 +292,8 @@ async function checkDateAvailability(
     const normalizedCategory = normalizeCategory(playerCategory);
     const playerCategoryNum = normalizedCategory ? extractCategoryNumber(normalizedCategory) : null;
 
-    console.log('[check-availability] Processing Sunday slots:', {
-      playerCategory,
-      normalizedCategory,
-      playerCategoryNum,
-      slotsToProcess: sundaySlots.length
-    });
-
     for (const slot of sundaySlots) {
       // Format time from "07:30:00" to "7:30 AM"
-      // Handle both "HH:MM:SS" and potential "HH:MM:SS.microseconds" formats
       const timeStr = String(slot.start_time);
       const timeParts = timeStr.split(':');
       const hours = timeParts[0];
@@ -324,26 +303,11 @@ async function checkDateAvailability(
       const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
       const time = `${displayHour}:${minutes} ${ampm}`;
 
-      console.log('[check-availability] Processing slot:', {
-        rawTime: slot.start_time,
-        parsedTime: time,
-        minCategory: slot.min_category,
-        maxCategory: slot.max_category,
-        availableSpots: slot.available_spots
-      });
-
       // Check if player category matches this slot
       if (playerCategoryNum !== null) {
         const minCatNum = extractCategoryNumber(slot.min_category);
         const maxCatNum = extractCategoryNumber(slot.max_category);
-        console.log('[check-availability] Category check:', {
-          playerCategoryNum,
-          minCatNum,
-          maxCatNum,
-          passes: playerCategoryNum >= minCatNum && playerCategoryNum <= maxCatNum
-        });
         if (playerCategoryNum < minCatNum || playerCategoryNum > maxCatNum) {
-          console.log('[check-availability] Skipping slot - category mismatch');
           continue; // Skip slots that don't match player's category
         }
       }
@@ -357,7 +321,6 @@ async function checkDateAvailability(
       });
     }
 
-    console.log('[check-availability] Final Sunday slots:', slots);
     return slots;
   }
 
