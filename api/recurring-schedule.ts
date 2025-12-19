@@ -7,6 +7,7 @@ type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 's
 
 const SESSION_TYPES = ['group', 'sunday', 'private', 'semi_private'] as const;
 const DAYS_OF_WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+const MAX_GROUP_CAPACITY = 6;
 
 function isSessionType(value: string): value is SessionType {
   return SESSION_TYPES.includes(value as SessionType);
@@ -240,6 +241,130 @@ async function handlePost(
       });
     }
 
+    // === IMMEDIATE FIRST BOOKING ===
+    // Create the first booking right away if conditions are met
+    let firstBookingResult: { success: boolean; message: string; booking_date?: string } = {
+      success: false,
+      message: 'No immediate booking created',
+    };
+
+    try {
+      // Only create immediate booking for group sessions
+      if (session_type === 'group') {
+        // Check if next_booking_date is within 14 days
+        const nextDate = new Date(nextBookingDate);
+        const today = new Date();
+        const daysDiff = Math.ceil((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysDiff <= 14 && daysDiff >= 0) {
+          // Check parent credit balance
+          const { data: parentCredits } = await supabase
+            .from('parent_credits')
+            .select('total_credits')
+            .eq('firebase_uid', firebase_uid)
+            .single();
+
+          const creditsAvailable = parentCredits?.total_credits || 0;
+
+          if (creditsAvailable >= 1) {
+            // Check slot availability
+            const { data: slotCapacity } = await supabase
+              .rpc('get_slot_capacity', {
+                p_session_date: nextBookingDate,
+                p_time_slot: time_slot,
+                p_session_type: 'group',
+                p_max_capacity: MAX_GROUP_CAPACITY,
+              });
+
+            const hasCapacity = slotCapacity && slotCapacity.length > 0 && slotCapacity[0].is_available;
+
+            if (hasCapacity) {
+              // Check for existing booking to prevent duplicates
+              const { data: existingBooking } = await supabase
+                .from('session_bookings')
+                .select('id')
+                .eq('registration_id', registration_id)
+                .eq('session_date', nextBookingDate)
+                .eq('time_slot', time_slot)
+                .eq('session_type', 'group')
+                .neq('status', 'cancelled')
+                .maybeSingle();
+
+              if (!existingBooking) {
+                // Deduct credit
+                const { data: purchaseId, error: deductError } = await supabase
+                  .rpc('deduct_credit', {
+                    p_firebase_uid: firebase_uid,
+                    p_credits_to_deduct: 1,
+                  });
+
+                if (!deductError && purchaseId) {
+                  // Create booking
+                  const { error: bookingError } = await supabase
+                    .from('session_bookings')
+                    .insert({
+                      firebase_uid,
+                      registration_id,
+                      session_type: 'group',
+                      session_date: nextBookingDate,
+                      time_slot,
+                      credits_used: 1,
+                      credit_purchase_id: purchaseId,
+                      is_recurring: true,
+                      recurring_schedule_id: schedule.id,
+                      status: 'booked',
+                    });
+
+                  if (!bookingError) {
+                    // Update schedule with next booking date (1 week later)
+                    const oneWeekLater = new Date(nextBookingDate);
+                    oneWeekLater.setDate(oneWeekLater.getDate() + 7);
+                    const nextWeekDate = oneWeekLater.toISOString().split('T')[0];
+
+                    await supabase
+                      .from('recurring_schedules')
+                      .update({
+                        last_booked_date: nextBookingDate,
+                        next_booking_date: nextWeekDate,
+                      })
+                      .eq('id', schedule.id);
+
+                    firstBookingResult = {
+                      success: true,
+                      message: `First session booked for ${nextBookingDate}`,
+                      booking_date: nextBookingDate,
+                    };
+                  } else {
+                    // Refund the credit if booking failed
+                    await supabase.rpc('refund_credit', {
+                      p_firebase_uid: firebase_uid,
+                      p_purchase_id: purchaseId,
+                      p_credits_to_refund: 1,
+                    });
+                    firstBookingResult.message = 'Booking creation failed, credit refunded';
+                  }
+                } else {
+                  firstBookingResult.message = 'Credit deduction failed';
+                }
+              } else {
+                firstBookingResult.message = 'Booking already exists for this date';
+              }
+            } else {
+              firstBookingResult.message = 'No slot capacity available';
+            }
+          } else {
+            firstBookingResult.message = 'Insufficient credits for immediate booking';
+          }
+        } else {
+          firstBookingResult.message = `Next booking date (${nextBookingDate}) is more than 14 days away`;
+        }
+      }
+    } catch (bookingErr) {
+      console.warn('Immediate booking failed (non-fatal):', bookingErr);
+      firstBookingResult.message = 'Immediate booking error';
+    }
+    // === END IMMEDIATE FIRST BOOKING ===
+
     // Get player name for notification
     const { data: regData } = await supabase
       .from('registrations')
@@ -275,9 +400,18 @@ async function handlePost(
       console.warn('Failed to create admin notification:', notifyErr);
     }
 
+    // Build response message based on whether immediate booking was created
+    let message = `Recurring ${day_of_week} ${time_slot} schedule created.`;
+    if (firstBookingResult.success) {
+      message += ` First session booked for ${firstBookingResult.booking_date}. Next auto-booking scheduled for following week.`;
+    } else {
+      message += ` Auto-booking will start from ${nextBookingDate}. (${firstBookingResult.message})`;
+    }
+
     return res.status(201).json({
       schedule,
-      message: `Recurring ${day_of_week} ${time_slot} schedule created. Auto-booking will start from ${nextBookingDate}.`,
+      message,
+      first_booking: firstBookingResult,
     });
   } catch (error: any) {
     console.error('Create recurring schedule error:', error);

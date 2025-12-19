@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
 import { supabase } from '@/lib/supabase';
+import { getLocalDateString } from '@/lib/dateUtils';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
@@ -60,33 +61,98 @@ const NewDashboard: React.FC = () => {
   // Ref to track credit balance for realtime handler (avoids dependency loop)
   const creditBalanceRef = useRef<number>(0);
 
-  // Check for payment success in URL params
+  // Check for payment success in URL params and verify credit purchases
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('payment');
-    const purchaseType = urlParams.get('type');
+    const handlePaymentCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      const purchaseType = urlParams.get('type');
+      const sessionId = urlParams.get('session_id');
 
-    if (paymentStatus === 'success') {
-      if (purchaseType === 'credits') {
-        toast.success(isFrench ? 'Crédits achetés avec succès! Votre solde a été mis à jour.' : 'Credits purchased successfully! Your balance has been updated.', {
-          duration: 5000,
-          icon: <PartyPopper className="h-5 w-5" />,
-        });
-      } else if (purchaseType === 'session') {
-        toast.success(isFrench ? 'Séance réservée avec succès!' : 'Session booked successfully!', {
-          duration: 5000,
-          icon: <PartyPopper className="h-5 w-5" />,
-        });
+      if (paymentStatus === 'success') {
+        if (purchaseType === 'credits' && sessionId) {
+          // Credit purchase - verify with backend and fulfill order
+          try {
+            const response = await fetch('/api/verify-credit-purchase', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: sessionId }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to verify payment');
+            }
+
+            if (data.already_processed) {
+              toast.info(
+                isFrench
+                  ? 'Ce paiement a déjà été traité.'
+                  : 'This payment was already processed.'
+              );
+            } else {
+              toast.success(
+                isFrench
+                  ? `${data.credits_added} crédit${data.credits_added > 1 ? 's' : ''} ajouté${data.credits_added > 1 ? 's' : ''} avec succès!`
+                  : `${data.credits_added} credit${data.credits_added > 1 ? 's' : ''} added successfully!`,
+                { duration: 5000, icon: <PartyPopper className="h-5 w-5" /> }
+              );
+            }
+
+            // Refresh credit balance to show new total
+            fetchCreditBalance();
+          } catch (err) {
+            console.error('Credit verification error:', err);
+            toast.error(
+              err instanceof Error
+                ? err.message
+                : (isFrench ? 'Erreur lors de la vérification du paiement' : 'Error verifying payment')
+            );
+          }
+
+          // Clean up URL
+          window.history.replaceState({}, '', '/dashboard');
+
+        } else if (purchaseType === 'session') {
+          // Direct session purchase (Sunday ice, private, semi-private)
+          toast.success(
+            isFrench ? 'Séance réservée avec succès!' : 'Session booked successfully!',
+            { duration: 5000, icon: <PartyPopper className="h-5 w-5" /> }
+          );
+          window.history.replaceState({}, '', '/dashboard');
+          fetchUpcomingBookings();
+
+        } else if (purchaseType === 'credits' && !sessionId) {
+          // Credits success but no session_id - show warning (shouldn't happen)
+          console.warn('Credit purchase success without session_id');
+          toast.warning(
+            isFrench
+              ? 'Paiement reçu mais la vérification a échoué. Contactez le support si vos crédits n\'apparaissent pas.'
+              : 'Payment received but verification failed. Contact support if credits don\'t appear.'
+          );
+          window.history.replaceState({}, '', '/dashboard');
+          fetchCreditBalance();
+
+        } else {
+          // Generic success
+          toast.success(isFrench ? 'Paiement réussi!' : 'Payment successful!');
+          window.history.replaceState({}, '', '/dashboard');
+          fetchCreditBalance();
+          fetchUpcomingBookings();
+        }
+
+      } else if (paymentStatus === 'cancelled') {
+        toast.error(
+          isFrench
+            ? 'Le paiement a été annulé. Vous pouvez réessayer quand vous êtes prêt.'
+            : 'Payment was cancelled. You can try again when ready.'
+        );
+        window.history.replaceState({}, '', '/dashboard');
       }
-      // Clean up URL
-      window.history.replaceState({}, '', '/dashboard');
-      // Refresh data
-      fetchCreditBalance();
-      fetchUpcomingBookings();
-    } else if (paymentStatus === 'cancelled') {
-      toast.error(isFrench ? 'Le paiement a été annulé. Vous pouvez réessayer quand vous êtes prêt.' : 'Payment was cancelled. You can try again when ready.');
-      window.history.replaceState({}, '', '/dashboard');
-    }
+    };
+
+    handlePaymentCallback();
   }, []);
 
   // Fetch credit balance
@@ -118,7 +184,8 @@ const NewDashboard: React.FC = () => {
 
     try {
       setBookingsLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+      // Use local date to avoid timezone shift (toISOString converts to UTC)
+      const today = getLocalDateString();
       const response = await fetch(
         `/api/my-bookings?firebase_uid=${user.uid}&status=booked&from_date=${today}`
       );

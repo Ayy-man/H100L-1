@@ -186,6 +186,11 @@ export default async function handler(
 
     // Create Stripe Checkout Session for one-time payment
     const stripe = getStripe();
+
+    // Fix URL construction: use & if URL already has query params, otherwise use ?
+    const separator = success_url.includes('?') ? '&' : '?';
+    const finalSuccessUrl = `${success_url}${separator}session_id={CHECKOUT_SESSION_ID}`;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -197,7 +202,7 @@ export default async function handler(
       ],
       customer_email: customerEmail,
       metadata,
-      success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: finalSuccessUrl,
       cancel_url,
       // Collect billing address for tax purposes
       billing_address_collection: 'required',

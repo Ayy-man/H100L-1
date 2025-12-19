@@ -35,6 +35,7 @@ import {
 } from './ui/select';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getLocalDateString } from '@/lib/dateUtils';
 import { toast } from 'sonner';
 import type { SessionBookingWithDetails } from '@/types/credits';
 import type { ChildProfile } from '@/contexts/ProfileContext';
@@ -66,11 +67,11 @@ const SchedulePage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Get first and last day of month
+      // Get first and last day of month (use local date to avoid timezone shift)
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth();
-      const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
-      const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+      const firstDay = getLocalDateString(new Date(year, month, 1));
+      const lastDay = getLocalDateString(new Date(year, month + 1, 0));
 
       const response = await fetch(
         `/api/my-bookings?firebase_uid=${user.uid}&from_date=${firstDay}&to_date=${lastDay}`
