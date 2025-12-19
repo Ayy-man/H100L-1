@@ -123,7 +123,34 @@ const SetupRecurringModal: React.FC<SetupRecurringModalProps> = ({
         throw new Error(data.error || 'Failed to create recurring schedule');
       }
 
-      toast.success(isFrench ? 'Horaire récurrent configuré avec succès!' : 'Recurring schedule set up successfully!');
+      // Show success toast with details about immediate booking
+      const firstBooking = data.first_booking;
+      if (firstBooking?.success) {
+        // First booking was created immediately
+        toast.success(
+          isFrench
+            ? `Horaire récurrent configuré! Première séance réservée pour le ${new Date(firstBooking.booking_date + 'T00:00:00').toLocaleDateString('fr-CA', { weekday: 'long', month: 'long', day: 'numeric' })}. Les prochaines réservations seront créées automatiquement chaque semaine.`
+            : `Recurring schedule set up! First session booked for ${new Date(firstBooking.booking_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. Future bookings will be created automatically each week.`,
+          { duration: 8000 }
+        );
+      } else if (firstBooking?.message?.includes('Insufficient credits')) {
+        // Schedule created but no immediate booking due to no credits
+        toast.warning(
+          isFrench
+            ? 'Horaire récurrent configuré, mais pas assez de crédits pour réserver maintenant. Achetez des crédits pour que les réservations automatiques fonctionnent.'
+            : 'Recurring schedule set up, but not enough credits to book now. Buy credits for auto-booking to work.',
+          { duration: 8000 }
+        );
+      } else {
+        // Schedule created, booking will happen via CRON
+        toast.success(
+          isFrench
+            ? 'Horaire récurrent configuré! Les réservations seront créées automatiquement chaque semaine (1 crédit/semaine).'
+            : 'Recurring schedule set up! Bookings will be created automatically each week (1 credit/week).',
+          { duration: 6000 }
+        );
+      }
+
       onSuccess();
       handleClose();
     } catch (err) {

@@ -99,6 +99,27 @@ export default async function handler(
             })
             .eq('id', schedule.id);
 
+          // Notify parent about paused schedule
+          try {
+            await supabase.from('notifications').insert({
+              user_id: schedule.firebase_uid,
+              user_type: 'parent',
+              type: 'system',
+              title: 'Recurring Booking Paused',
+              message: `Your recurring ${schedule.day_of_week} ${schedule.time_slot} booking was paused due to insufficient credits. Buy more credits to resume automatic bookings.`,
+              priority: 'high',
+              data: {
+                schedule_id: schedule.id,
+                day_of_week: schedule.day_of_week,
+                time_slot: schedule.time_slot,
+                reason: 'insufficient_credits',
+              },
+              action_url: '/dashboard',
+            });
+          } catch (notifyErr) {
+            console.warn('Failed to create notification for paused schedule:', notifyErr);
+          }
+
           stats.paused_insufficient_credits++;
           continue;
         }
