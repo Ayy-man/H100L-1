@@ -30,6 +30,8 @@ interface Registration {
   form_data: any;
   payment_status: string;
   payment_method_id?: string;
+  firebase_uid?: string;
+  credit_balance?: number;
 }
 
 interface StatsCardProps {
@@ -192,7 +194,8 @@ const AdminDashboard: React.FC = () => {
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [programFilter, setProgramFilter] = useState<string>('all');
-  const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [creditFilter, setCreditFilter] = useState<string>('all');
+  const [registrationStatusFilter, setRegistrationStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -231,11 +234,16 @@ const AdminDashboard: React.FC = () => {
     clickToView: isFrench ? 'Cliquez pour voir les inscriptions' : '{t.clickToView}',
 
     // {t.filters}
-    filters: isFrench ? 'Filtres' : '{t.filters}',
+    filters: isFrench ? 'Filtres' : 'Filters',
     searchPlaceholder: isFrench ? 'Rechercher par nom ou courriel...' : 'Search by name or email...',
-    allPrograms: isFrench ? 'Tous les programmes' : '{t.allPrograms}',
-    allPaymentStatus: isFrench ? 'Tous les statuts de paiement' : '{t.allPaymentStatus}',
-    allCategories: isFrench ? 'Toutes les catégories' : '{t.allCategories}',
+    allPrograms: isFrench ? 'Tous les programmes' : 'All Programs',
+    allCreditStatus: isFrench ? 'Tous les crédits' : 'All Credit Status',
+    hasCredits: isFrench ? 'Avec crédits' : 'Has Credits',
+    noCredits: isFrench ? 'Sans crédits' : 'No Credits',
+    allRegistrationStatus: isFrench ? 'Tous les statuts' : 'All Status',
+    complete: isFrench ? 'Complet' : 'Complete',
+    incomplete: isFrench ? 'Incomplet' : 'Incomplete',
+    allCategories: isFrench ? 'Toutes les catégories' : 'All Categories',
     showing: isFrench ? 'Affichage' : '{t.showing}',
     of: isFrench ? 'de' : 'of',
     registrations: isFrench ? 'inscriptions' : 'registrations',
@@ -395,14 +403,25 @@ const AdminDashboard: React.FC = () => {
   };
 
   const fetchRegistrations = async () => {
-    const { data: regData, error: regError } = await supabase
-      .from('registrations')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Fetch registrations and credit balances in parallel
+    const [regResult, creditResult] = await Promise.all([
+      supabase
+        .from('registrations')
+        .select('*')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('parent_credits')
+        .select('firebase_uid, total_credits')
+    ]);
 
-    if (regError) throw regError;
+    if (regResult.error) throw regResult.error;
 
-    const parsedData = regData.map((reg: any) => {
+    // Create lookup map: firebase_uid → credit balance
+    const creditMap = new Map(
+      (creditResult.data || []).map((c: any) => [c.firebase_uid, c.total_credits])
+    );
+
+    const parsedData = regResult.data.map((reg: any) => {
       let formData = reg.form_data;
       if (typeof formData === 'string' && formData) {
         try {
@@ -412,7 +431,11 @@ const AdminDashboard: React.FC = () => {
           formData = null;
         }
       }
-      return { ...reg, form_data: formData };
+      return {
+        ...reg,
+        form_data: formData,
+        credit_balance: creditMap.get(reg.firebase_uid) ?? 0
+      };
     });
 
     setRegistrations(parsedData);
@@ -655,6 +678,25 @@ const AdminDashboard: React.FC = () => {
     return { total, paid, pending, todayCount };
   }, [registrations]);
 
+  // Helper to check if registration is complete
+  const isRegistrationComplete = (reg: Registration): boolean => {
+    const formData = reg.form_data || {};
+    // Check required fields
+    const hasRequiredFields = !!(
+      formData.playerFullName &&
+      formData.dateOfBirth &&
+      formData.playerCategory &&
+      formData.parentFullName &&
+      formData.parentEmail &&
+      formData.parentPhone &&
+      formData.programType
+    );
+    // Check if documents are uploaded (medicalFiles object has at least one file)
+    const medicalFiles = formData.medicalFiles || {};
+    const hasDocuments = Object.values(medicalFiles).some((url: any) => url && url.length > 0);
+    return hasRequiredFields && hasDocuments;
+  };
+
   // Filtered registrations
   const filteredRegistrations = useMemo(() => {
     return registrations.filter(reg => {
@@ -665,15 +707,23 @@ const AdminDashboard: React.FC = () => {
 
       const matchesSearch = playerName.includes(search) || parentEmail.includes(search);
       const matchesProgram = programFilter === 'all' || formData.programType === programFilter;
-      // Handle legacy 'paid' status as 'succeeded' for filtering
-      const matchesPayment = paymentFilter === 'all' ||
-        reg.payment_status === paymentFilter ||
-        (paymentFilter === 'succeeded' && reg.payment_status === 'paid');
+
+      // Credit status filter
+      const matchesCredit = creditFilter === 'all' ||
+        (creditFilter === 'has_credits' && (reg.credit_balance ?? 0) > 0) ||
+        (creditFilter === 'no_credits' && (reg.credit_balance ?? 0) === 0);
+
+      // Registration status filter (complete = has all required fields + documents)
+      const isComplete = isRegistrationComplete(reg);
+      const matchesStatus = registrationStatusFilter === 'all' ||
+        (registrationStatusFilter === 'complete' && isComplete) ||
+        (registrationStatusFilter === 'incomplete' && !isComplete);
+
       const matchesCategory = categoryFilter === 'all' || formData.playerCategory === categoryFilter;
 
-      return matchesSearch && matchesProgram && matchesPayment && matchesCategory;
+      return matchesSearch && matchesProgram && matchesCredit && matchesStatus && matchesCategory;
     });
-  }, [registrations, searchTerm, programFilter, paymentFilter, categoryFilter]);
+  }, [registrations, searchTerm, programFilter, creditFilter, registrationStatusFilter, categoryFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredRegistrations.length / itemsPerPage);
@@ -1209,7 +1259,7 @@ const AdminDashboard: React.FC = () => {
         {/* {t.filters} */}
         <div className="bg-black border border-white/10 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-white mb-4 uppercase tracking-wider">{t.filters}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {/* Search */}
             <input
               type="text"
@@ -1232,18 +1282,27 @@ const AdminDashboard: React.FC = () => {
               </SelectContent>
             </Select>
 
-            {/* Payment Status Filter */}
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            {/* Credit Status Filter */}
+            <Select value={creditFilter} onValueChange={setCreditFilter}>
               <SelectTrigger className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px] h-auto">
-                <SelectValue placeholder={t.allPaymentStatus} />
+                <SelectValue placeholder={t.allCreditStatus} />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border border-white/10">
-                <SelectItem value="all" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.allPaymentStatus}</SelectItem>
-                <SelectItem value="verified" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Verified (Admin Confirmed)</SelectItem>
-                <SelectItem value="succeeded" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Succeeded (Stripe Paid)</SelectItem>
-                <SelectItem value="pending" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Pending</SelectItem>
-                <SelectItem value="canceled" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Canceled</SelectItem>
-                <SelectItem value="failed" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Failed</SelectItem>
+                <SelectItem value="all" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.allCreditStatus}</SelectItem>
+                <SelectItem value="has_credits" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.hasCredits}</SelectItem>
+                <SelectItem value="no_credits" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.noCredits}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Registration Status Filter */}
+            <Select value={registrationStatusFilter} onValueChange={setRegistrationStatusFilter}>
+              <SelectTrigger className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px] h-auto">
+                <SelectValue placeholder={t.allRegistrationStatus} />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.allRegistrationStatus}</SelectItem>
+                <SelectItem value="complete" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.complete}</SelectItem>
+                <SelectItem value="incomplete" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.incomplete}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -1262,7 +1321,7 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Active {t.filters} Summary */}
-          {(searchTerm || programFilter !== 'all' || paymentFilter !== 'all' || categoryFilter !== 'all') && (
+          {(searchTerm || programFilter !== 'all' || creditFilter !== 'all' || registrationStatusFilter !== 'all' || categoryFilter !== 'all') && (
             <div className="mt-4 flex items-center gap-2 flex-wrap">
               <span className="text-gray-400 text-sm">Active filters:</span>
               {searchTerm && (
@@ -1275,9 +1334,14 @@ const AdminDashboard: React.FC = () => {
                   {programFilter}
                 </span>
               )}
-              {paymentFilter !== 'all' && (
-                <span className="bg-[#9BD4FF]/20 text-[#9BD4FF] px-3 py-1 rounded-full text-sm capitalize">
-                  {paymentFilter}
+              {creditFilter !== 'all' && (
+                <span className="bg-[#9BD4FF]/20 text-[#9BD4FF] px-3 py-1 rounded-full text-sm">
+                  {creditFilter === 'has_credits' ? t.hasCredits : t.noCredits}
+                </span>
+              )}
+              {registrationStatusFilter !== 'all' && (
+                <span className="bg-[#9BD4FF]/20 text-[#9BD4FF] px-3 py-1 rounded-full text-sm">
+                  {registrationStatusFilter === 'complete' ? t.complete : t.incomplete}
                 </span>
               )}
               {categoryFilter !== 'all' && (
@@ -1289,7 +1353,8 @@ const AdminDashboard: React.FC = () => {
                 onClick={() => {
                   setSearchTerm('');
                   setProgramFilter('all');
-                  setPaymentFilter('all');
+                  setCreditFilter('all');
+                  setRegistrationStatusFilter('all');
                   setCategoryFilter('all');
                 }}
                 className="text-red-400 hover:text-red-300 text-sm underline"
