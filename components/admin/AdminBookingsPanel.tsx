@@ -21,6 +21,13 @@ import {
   UserX,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Types
 interface Booking {
@@ -686,38 +693,44 @@ const AdminBookingsPanel: React.FC = () => {
                 />
               </div>
             </div>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-[#9BD4FF] focus:outline-none"
-            >
-              <option value="all">{isFrench ? 'Tous les types' : 'All Types'}</option>
-              {SESSION_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {formatSessionType(type, isFrench)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-[#9BD4FF] focus:outline-none"
-            >
-              <option value="all">{isFrench ? 'Tous les statuts' : 'All Statuses'}</option>
-              {BOOKING_STATUSES.map((status) => {
-                const statusLabels: Record<string, { en: string; fr: string }> = {
-                  confirmed: { en: 'Confirmed', fr: 'Confirmé' },
-                  attended: { en: 'Attended', fr: 'Présent' },
-                  cancelled: { en: 'Cancelled', fr: 'Annulé' },
-                  no_show: { en: 'No-Show', fr: 'Absent' },
-                };
-                return (
-                  <option key={status} value={status}>
-                    {isFrench ? statusLabels[status]?.fr : statusLabels[status]?.en || status}
-                  </option>
-                );
-              })}
-            </select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-[#9BD4FF] focus:outline-none h-auto min-w-[140px]">
+                <SelectValue placeholder={isFrench ? 'Tous les types' : 'All Types'} />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">
+                  {isFrench ? 'Tous les types' : 'All Types'}
+                </SelectItem>
+                {SESSION_TYPES.map((type) => (
+                  <SelectItem key={type} value={type} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">
+                    {formatSessionType(type, isFrench)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:border-[#9BD4FF] focus:outline-none h-auto min-w-[140px]">
+                <SelectValue placeholder={isFrench ? 'Tous les statuts' : 'All Statuses'} />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">
+                  {isFrench ? 'Tous les statuts' : 'All Statuses'}
+                </SelectItem>
+                {BOOKING_STATUSES.map((status) => {
+                  const statusLabels: Record<string, { en: string; fr: string }> = {
+                    confirmed: { en: 'Confirmed', fr: 'Confirmé' },
+                    attended: { en: 'Attended', fr: 'Présent' },
+                    cancelled: { en: 'Cancelled', fr: 'Annulé' },
+                    no_show: { en: 'No-Show', fr: 'Absent' },
+                  };
+                  return (
+                    <SelectItem key={status} value={status} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">
+                      {isFrench ? statusLabels[status]?.fr : statusLabels[status]?.en || status}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-2">
               <input
                 type="date"

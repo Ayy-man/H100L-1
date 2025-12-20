@@ -14,6 +14,13 @@ import ConfirmPaymentButton from './ConfirmPaymentButton';
 import { NotificationBell } from './notifications';
 import AdminCreditDashboard from './admin/AdminCreditDashboard';
 import AdminBookingsPanel from './admin/AdminBookingsPanel';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { MedicalFiles, WeekDay, Language } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -933,21 +940,28 @@ const AdminDashboard: React.FC = () => {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Select Your Name
               </label>
-              <select
+              <Select
                 value={selectedAdmin}
-                onChange={(e) => {
-                  setSelectedAdmin(e.target.value);
+                onValueChange={(value) => {
+                  setSelectedAdmin(value);
                   setLoginError(null);
                 }}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9BD4FF] appearance-none cursor-pointer"
               >
-                <option value="" className="bg-gray-900">-- Select Admin --</option>
-                {ADMIN_USERS.map((admin) => (
-                  <option key={admin.id} value={admin.id} className="bg-gray-900">
-                    {admin.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#9BD4FF] h-auto">
+                  <SelectValue placeholder="-- Select Admin --" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border border-white/10">
+                  {ADMIN_USERS.map((admin) => (
+                    <SelectItem
+                      key={admin.id}
+                      value={admin.id}
+                      className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer"
+                    >
+                      {admin.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Password Input */}
@@ -1206,42 +1220,45 @@ const AdminDashboard: React.FC = () => {
             />
 
             {/* Program Type Filter */}
-            <select
-              value={programFilter}
-              onChange={(e) => setProgramFilter(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
-            >
-              <option value="all">{t.allPrograms}</option>
-              <option value="group">Group Training</option>
-              <option value="private">Private Training</option>
-              <option value="semi-private">Semi-Private</option>
-            </select>
+            <Select value={programFilter} onValueChange={setProgramFilter}>
+              <SelectTrigger className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px] h-auto">
+                <SelectValue placeholder={t.allPrograms} />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.allPrograms}</SelectItem>
+                <SelectItem value="group" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Group Training</SelectItem>
+                <SelectItem value="private" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Private Training</SelectItem>
+                <SelectItem value="semi-private" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Semi-Private</SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* Payment Status Filter */}
-            <select
-              value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
-            >
-              <option value="all">{t.allPaymentStatus}</option>
-              <option value="verified">Verified (Admin Confirmed)</option>
-              <option value="succeeded">Succeeded (Stripe Paid)</option>
-              <option value="pending">Pending</option>
-              <option value="canceled">Canceled</option>
-              <option value="failed">Failed</option>
-            </select>
+            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+              <SelectTrigger className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px] h-auto">
+                <SelectValue placeholder={t.allPaymentStatus} />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.allPaymentStatus}</SelectItem>
+                <SelectItem value="verified" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Verified (Admin Confirmed)</SelectItem>
+                <SelectItem value="succeeded" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Succeeded (Stripe Paid)</SelectItem>
+                <SelectItem value="pending" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Pending</SelectItem>
+                <SelectItem value="canceled" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Canceled</SelectItem>
+                <SelectItem value="failed" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">Failed</SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* Category Filter */}
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px]"
-            >
-              <option value="all">{t.allCategories}</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#9BD4FF] transition-colors min-h-[48px] h-auto">
+                <SelectValue placeholder={t.allCategories} />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-900 border border-white/10">
+                <SelectItem value="all" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{t.allCategories}</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat} value={cat} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white cursor-pointer">{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Active {t.filters} Summary */}

@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Minus, AlertTriangle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface CreditUser {
   firebase_uid: string;
@@ -182,17 +189,18 @@ const CreditAdjustmentModal: React.FC<CreditAdjustmentModalProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Reason
                 </label>
-                <select
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Select a reason</option>
-                  {reasons.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
+                <Select value={reason} onValueChange={setReason} required>
+                  <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 h-auto">
+                    <SelectValue placeholder="Select a reason" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border border-gray-300">
+                    {reasons.map((r) => (
+                      <SelectItem key={r} value={r} className="text-gray-900 hover:bg-gray-100 focus:bg-gray-100 cursor-pointer">
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Admin Notes */}

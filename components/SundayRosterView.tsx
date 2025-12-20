@@ -19,6 +19,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
   SUNDAY_PRACTICE_CONFIG,
@@ -304,28 +311,31 @@ const SundayRosterView: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <select
+            <Select
               value={selectedDate}
-              onChange={(e) => {
-                setSelectedDate(e.target.value);
-                fetchRoster(e.target.value);
+              onValueChange={(value) => {
+                setSelectedDate(value);
+                fetchRoster(value);
               }}
               disabled={loading}
-              className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="" disabled>Select a Sunday...</option>
-              {getAvailableSundays.map((sunday) => {
-                const capacity = sundayCapacities[sunday.value];
-                const capacityText = capacity
-                  ? ` [${capacity.booked}/${capacity.total} booked]`
-                  : '';
-                return (
-                  <option key={sunday.value} value={sunday.value}>
-                    {sunday.label}{capacityText}
-                  </option>
-                );
-              })}
-            </select>
+              <SelectTrigger className="w-full max-w-md h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <SelectValue placeholder="Select a Sunday..." />
+              </SelectTrigger>
+              <SelectContent className="bg-background border border-input">
+                {getAvailableSundays.map((sunday) => {
+                  const capacity = sundayCapacities[sunday.value];
+                  const capacityText = capacity
+                    ? ` [${capacity.booked}/${capacity.total} booked]`
+                    : '';
+                  return (
+                    <SelectItem key={sunday.value} value={sunday.value} className="cursor-pointer">
+                      {sunday.label}{capacityText}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
           {practiceDate && (
             <p className="text-sm text-muted-foreground">
